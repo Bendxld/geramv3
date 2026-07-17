@@ -2454,3 +2454,50 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
   padding: 8px; border-radius: 8px; cursor: pointer;
 }
 .dashboard-ver-ocultos:hover { color: var(--principal-clr); border-color: var(--principal-med); }
+
+/* ============================================================
+   Extensiones (importar/crear/usar contribuciones de VS Code)
+   ============================================================ */
+.ext-panel { position: fixed; inset: 0; z-index: 60; display: none; }
+.ext-panel.activo { display: block; }
+.ext-fondo { position: absolute; inset: 0; background: rgba(2,4,8,0.72); backdrop-filter: blur(3px); }
+.ext-caja {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(680px, 94vw); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--panel, #0c0e14); border: 1px solid var(--linea-suave); border-radius: 14px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.6); overflow: hidden;
+}
+.ext-header { display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 18px; border-bottom: 1px solid var(--linea-suave); }
+.ext-cerrar { background: transparent; border: 0; color: var(--texto-dim); font-size: 22px; cursor: pointer; line-height: 1; }
+.ext-cerrar:hover { color: var(--texto); }
+.ext-cuerpo { padding: 16px 18px 20px; overflow-y: auto; }
+.ext-nota { font-family: var(--f-mono); font-size: 10px; line-height: 1.6; color: var(--texto-dim); margin: 0 0 14px; }
+.ext-fila { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.ext-fila label { font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); }
+.ext-file { flex: 1; min-width: 160px; color: var(--texto-dim); font-family: var(--f-mono); font-size: 10px; }
+.ext-select { flex: 1; min-width: 160px; padding: 7px 9px; background: var(--contraste-suave);
+  color: var(--texto); border: 1px solid var(--linea-suave); border-radius: 8px; font-family: var(--f-mono); font-size: 11px; }
+.ext-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--linea-suave);
+  background: transparent; color: var(--texto-dim); cursor: pointer; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.6px; }
+.ext-btn:hover { color: var(--texto); border-color: var(--principal-med); }
+.ext-btn.principal { color: var(--principal-clr, var(--principal)); border-color: var(--principal-med); background: rgba(232,67,147,0.1); }
+.ext-estado { min-height: 15px; font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); margin: 4px 0 10px; }
+.ext-estado.error { color: #ff6b8a; }
+.ext-crear { margin: 8px 0; border: 1px solid var(--linea-suave); border-radius: 9px; padding: 6px 12px; }
+.ext-crear summary { cursor: pointer; font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); padding: 4px 0; }
+.ext-form { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
+.ext-form input[type=text], .ext-form input:not([type]), .ext-form textarea {
+  padding: 7px 9px; background: var(--contraste-suave); color: var(--texto);
+  border: 1px solid var(--linea-suave); border-radius: 7px; font-family: var(--f-mono); font-size: 11px; }
+.ext-colores { display: flex; flex-wrap: wrap; gap: 10px; }
+.ext-colores label { display: flex; flex-direction: column; gap: 3px; font-family: var(--f-mono); font-size: 8px; color: var(--texto-dim); }
+.ext-sub { font-family: var(--f-mono); font-size: 10px; letter-spacing: 1px; color: var(--texto-dim); margin: 16px 0 8px; }
+.ext-lista { display: flex; flex-direction: column; gap: 8px; }
+.ext-vacio { font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); }
+.ext-card { border: 1px solid var(--linea-suave); border-radius: 9px; padding: 10px 12px; background: var(--contraste-suave); }
+.ext-card-head { display: flex; align-items: center; justify-content: space-between; }
+.ext-card-head b { font-family: var(--f-mono); font-size: 11px; color: var(--texto); }
+.ext-card-del { background: transparent; border: 0; color: var(--texto-dim); font-size: 18px; cursor: pointer; line-height: 1; }
+.ext-card-del:hover { color: #ff6b8a; }
+.ext-card-meta { font-family: var(--f-mono); font-size: 9px; color: var(--texto-dim); margin: 4px 0 0; }
