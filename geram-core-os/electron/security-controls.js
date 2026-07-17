@@ -38,7 +38,10 @@ function createContentSecurityPolicy(port) {
     "img-src 'self' data:",
     "media-src 'self'",
     "object-src 'none'",
-    "script-src 'self'",
+    // 'wasm-unsafe-eval' lets ONLY WebAssembly instantiate (the oniguruma
+    // regex engine behind TextMate grammar highlighting). It does NOT permit
+    // eval() of strings — that stays blocked.
+    "script-src 'self' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "worker-src 'self'",
   ].join('; ');
