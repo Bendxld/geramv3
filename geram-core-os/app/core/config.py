@@ -41,11 +41,21 @@ DEFAULT_APP_HOST = "127.0.0.1"
 # explorador/editor/A.R.E.S. se limitan a esta carpeta; nunca al código
 # fuente de GERAM. Se puede sobreescribir con GERAM_WORKSPACE_ROOT (.env).
 DEFAULT_WORKSPACE_DIRNAME = "geram-workspace"
-SUPPORTED_PROVIDER_IDS = frozenset({"openai", "gemini", "groq", "ollama"})
+# Text providers selectable for the IRIS/ARES roles. The first four have
+# first-party clients + optional legacy .env keys; the rest are added via the
+# generic OpenAI-compatible adapter (+ Anthropic) and authenticate purely
+# through the local credential pool (round-robin) — no .env field needed.
+SUPPORTED_PROVIDER_IDS = frozenset({
+    "openai", "gemini", "groq", "ollama",
+    "anthropic",
+    "mistral", "deepseek", "xai", "perplexity", "together",
+    "openrouter", "cerebras", "fireworks", "moonshot",
+})
 DEFAULT_IRIS_PROVIDER = "gemini"
 DEFAULT_ARES_PROVIDER = "openai"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_MODEL = "gpt-5.1-codex"
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_OLLAMA_MODEL = "llama3.2:1b"
 DEFAULT_PROVIDER_TIMEOUT_SECONDS = 30.0
@@ -567,9 +577,16 @@ class Settings:
         return str(getattr(self, credential_field))
 
     def provider_timeout(self, provider_id: str) -> float:
-        """Return the configured timeout for a supported provider."""
+        """Return the configured timeout for a supported provider.
+
+        Providers added via the pool (no dedicated *_TIMEOUT_SECONDS setting)
+        fall back to the shared default instead of raising a KeyError.
+        """
         normalized = normalize_provider_id(provider_id, "provider")
-        return float(getattr(self, PROVIDER_TIMEOUT_FIELDS[normalized]))
+        field = PROVIDER_TIMEOUT_FIELDS.get(normalized)
+        if field is None:
+            return float(DEFAULT_PROVIDER_TIMEOUT_SECONDS)
+        return float(getattr(self, field))
 
 
 settings = Settings(_runtime_environment)

@@ -21,9 +21,11 @@ from app.core.providers.base import (
     ProviderUnavailableError,
     UnsupportedProviderError,
 )
+from app.core.providers.anthropic_client import AnthropicProvider
 from app.core.providers.gemini_client import GeminiProvider
 from app.core.providers.groq_client import GroqProvider
 from app.core.providers.openai_client import OpenAIProvider
+from app.core.providers.openai_compatible import build_openai_compatible_providers
 from app.core.providers.ollama_client import OllamaProvider
 
 
@@ -45,9 +47,11 @@ class ProviderRegistry:
         configured_providers = (
             (
                 OpenAIProvider(),
+                AnthropicProvider(),
                 GeminiProvider(),
                 GroqProvider(),
                 OllamaProvider(),
+                *build_openai_compatible_providers(),
             )
             if providers is None
             else providers
