@@ -1202,15 +1202,53 @@ body.modo-dia .toggle-tema .icono-luna { display: block; }
 }
 .config-cerrar:hover { color: var(--principal-clr); border-color: var(--principal-med); }
 .config-layout {
-  display: grid; grid-template-columns: 220px minmax(0, 1fr);
-  flex: 1; min-height: 0; margin: 0 -22px;
+  display: flex; flex: 1; min-height: 0; margin: 0 -22px;
 }
 .config-sidebar {
-  display: flex; flex-direction: column; gap: 7px;
-  min-width: 0; padding: 18px 12px;
+  width: 210px; flex: none;
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 0; padding: 16px 12px;
   border-right: 1px solid var(--linea-suave);
   background: rgba(255,255,255,0.015);
 }
+/* Sub-sidebar de proveedores de IA (Roles + Claude/OpenAI/…). */
+.config-subsidebar {
+  width: 190px; flex: none;
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: 0; padding: 16px 10px; overflow-y: auto;
+  border-right: 1px solid var(--linea-suave);
+  background: rgba(255,255,255,0.028);
+}
+.config-subsidebar[hidden] { display: none; }
+/* Ocultar por navegación: .config-seccion fija display:flex, así que el
+   atributo [hidden] necesita una regla de mayor especificidad para ganar. */
+.config-seccion[hidden],
+.config-integracion[hidden],
+.config-pool-provider[hidden] { display: none !important; }
+.config-nav-grupo {
+  margin: 10px 8px 3px; font-family: var(--f-mono);
+  font-size: 8px; letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--texto-dim); opacity: 0.75;
+}
+.config-nav-grupo:first-child { margin-top: 0; }
+.config-nav-txt {
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.6px;
+}
+.config-subnav-item {
+  width: 100%; display: block; text-align: left;
+  padding: 8px 10px; color: var(--texto-dim); background: transparent;
+  border: 1px solid transparent; border-radius: 8px;
+  cursor: pointer; transition: all 0.15s;
+}
+.config-subnav-item:hover, .config-subnav-item:focus {
+  color: var(--texto); border-color: var(--linea-suave); outline: none;
+  background: var(--contraste-suave);
+}
+.config-subnav-item.activo {
+  color: var(--principal-clr); border-color: var(--principal-med);
+  background: rgba(232, 67, 147, 0.1);
+}
+.config-subnav-item .config-nav-txt { font-size: 9px; }
 .config-nav-item {
   width: 100%; display: flex; align-items: center; gap: 10px;
   padding: 10px; text-align: left;
@@ -1242,7 +1280,7 @@ body.modo-dia .toggle-tema .icono-luna { display: block; }
   margin: auto 8px 0; font-family: var(--f-mono); font-size: 8px;
   line-height: 1.55; color: var(--texto-dim);
 }
-.config-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.config-main { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .config-view-header {
   flex: none; padding: 18px 20px 13px; border-bottom: 1px solid var(--linea-suave);
 }
@@ -1517,9 +1555,12 @@ body.modo-dia .toggle-tema .icono-luna { display: block; }
 
 @media (max-width: 640px) {
   .config-caja { width: 96vw; height: 92vh; padding: 14px; }
-  .config-layout { grid-template-columns: 1fr; margin: 0 -14px; }
-  .config-sidebar { flex-direction: row; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--linea-suave); }
+  .config-layout { flex-direction: column; margin: 0 -14px; }
+  .config-sidebar { width: auto; flex-direction: row; flex-wrap: wrap; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--linea-suave); }
+  .config-subsidebar { width: auto; flex-direction: row; flex-wrap: wrap; overflow-x: auto; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--linea-suave); }
   .config-nav-item { width: auto; flex: 1; }
+  .config-subnav-item { width: auto; }
+  .config-nav-grupo { width: 100%; margin: 4px 8px 2px; }
   .config-nav-item small, .config-sidebar-note { display: none; }
   .config-view-header { padding: 13px 14px 11px; }
   .config-cuerpo { padding: 12px 14px 16px; }

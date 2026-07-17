@@ -2087,14 +2087,32 @@ function toggleAgente(nombre, suspender) {
     }
   ];
 
-  var CAMPOS_INTEGRACIONES = [
-    { field: 'SUPABASE_URL', label: 'Supabase URL' },
-    { field: 'SUPABASE_KEY', label: 'Supabase key' },
-    { field: 'NOTION_API_KEY', label: 'Notion API key' },
-    { field: 'NOTION_DATABASE_ID', label: 'Notion database ID' },
-    { field: 'TELEGRAM_BOT_TOKEN', label: 'Telegram bot token' },
-    { field: 'TELEGRAM_ALLOWED_CHAT_IDS', label: 'Telegram allowed chat IDs' }
+  // Integraciones agrupadas por servicio: cada grupo es un item del sidebar
+  // externo (debajo de "API IA"). Un grupo con `info` en vez de `campos` es
+  // solo informativo (p.ej. Google Calendar, que usa credenciales OAuth por
+  // archivo, no una API key en este panel).
+  var GRUPOS_INTEGRACIONES = [
+    { id: 'notion', label: 'Notion', campos: [
+      { field: 'NOTION_API_KEY', label: 'Notion API key' },
+      { field: 'NOTION_DATABASE_ID', label: 'Notion database ID' }
+    ] },
+    { id: 'telegram', label: 'Telegram', campos: [
+      { field: 'TELEGRAM_BOT_TOKEN', label: 'Telegram bot token' },
+      { field: 'TELEGRAM_ALLOWED_CHAT_IDS', label: 'Telegram allowed chat IDs' }
+    ] },
+    { id: 'supabase', label: 'Supabase', campos: [
+      { field: 'SUPABASE_URL', label: 'Supabase URL' },
+      { field: 'SUPABASE_KEY', label: 'Supabase key' }
+    ] },
+    { id: 'google-calendar', label: 'Google Calendar', info:
+      'Google Calendar connects through an OAuth credentials file (credenciales/), managed outside this panel — no API key is entered here.' }
   ];
+
+  // Lista plana derivada, para cargar/guardar valores por campo sin cambios.
+  var CAMPOS_INTEGRACIONES = [];
+  GRUPOS_INTEGRACIONES.forEach(function(grupo) {
+    (grupo.campos || []).forEach(function(campo) { CAMPOS_INTEGRACIONES.push(campo); });
+  });
 
   var catalogo = [];
   var catalogoPorId = {};
@@ -2307,13 +2325,22 @@ function toggleAgente(nombre, suspender) {
     var seccionIntegraciones = crearSeccion(
       'configIntegrations',
       'Integrations',
-      'Existing Supabase, Notion, and Telegram settings.'
+      'Connect apps and data sources. Credentials stay masked and are stored only on this device.'
     );
-    var integracionesGrid = crearElemento('div', 'config-grid');
-    CAMPOS_INTEGRACIONES.forEach(function(definicion) {
-      integracionesGrid.appendChild(crearCampoSeguro(definicion));
+    GRUPOS_INTEGRACIONES.forEach(function(grupo) {
+      var bloque = crearElemento('div', 'config-integracion');
+      bloque.dataset.integration = grupo.id;
+      if (grupo.info) {
+        bloque.appendChild(crearElemento('p', 'config-seccion-ayuda', grupo.info));
+      } else {
+        var grid = crearElemento('div', 'config-grid');
+        (grupo.campos || []).forEach(function(definicion) {
+          grid.appendChild(crearCampoSeguro(definicion));
+        });
+        bloque.appendChild(grid);
+      }
+      seccionIntegraciones.contenido.appendChild(bloque);
     });
-    seccionIntegraciones.contenido.appendChild(integracionesGrid);
 
     conectarEventosRoles();
   }
@@ -2865,6 +2892,7 @@ function toggleAgente(nombre, suspender) {
     catalogo.forEach(function(spec) {
       if (!spec.requires_api_key) { return; }
       var tarjeta = crearElemento('section', 'config-pool-provider');
+      tarjeta.dataset.providerId = spec.provider_id;
       var encabezado = crearElemento('div', 'config-pool-provider-header');
       encabezado.appendChild(
         crearElemento('h4', 'config-pool-provider-title', spec.display_label)
@@ -2896,6 +2924,10 @@ function toggleAgente(nombre, suspender) {
       }
       contenedor.appendChild(tarjeta);
     });
+    // El sub-sidebar de proveedores depende de este catálogo; (re)constrúyelo
+    // y reaplica el filtro de tarjeta activa tras cada re-render del pool.
+    construirSubnavProveedores();
+    aplicarVistaConfig();
   }
 
   function aplicarValorSeguro(field, value) {
@@ -3205,6 +3237,156 @@ function toggleAgente(nombre, suspender) {
       });
   }
 
+  // ---- Navegación: sidebar externo (API IA + integraciones) + sub-sidebar
+  //      de proveedores de IA. Solo muestra/oculta secciones ya construidas;
+  //      no toca la lógica de pools, guardado ni validación. ----
+  var navConfig = { vista: 'ai', proveedor: '__roles__', integracion: null };
+
+  function porId(elId) { return document.getElementById(elId); }
+
+  function mostrarSeccionConfig(elId, visible) {
+    var seccion = porId(elId);
+    if (seccion) { seccion.hidden = !visible; }
+  }
+
+  function crearItemNav(clase, etiqueta, onClick) {
+    var boton = crearElemento('button', clase);
+    boton.type = 'button';
+    boton.appendChild(crearElemento('span', 'config-nav-txt', etiqueta));
+    boton.addEventListener('click', onClick);
+    return boton;
+  }
+
+  function construirNavExterna() {
+    var barra = porId('configSidebar');
+    if (!barra) { return; }
+    barra.innerHTML = '';
+    barra.appendChild(crearElemento('p', 'config-nav-grupo', 'AI'));
+    var itemAi = crearItemNav('config-nav-item', 'API IA', function() {
+      navConfig.vista = 'ai';
+      if (!navConfig.proveedor) { navConfig.proveedor = '__roles__'; }
+      aplicarVistaConfig();
+    });
+    itemAi.dataset.nav = 'ai';
+    barra.appendChild(itemAi);
+
+    barra.appendChild(crearElemento('p', 'config-nav-grupo', 'Integrations'));
+    GRUPOS_INTEGRACIONES.forEach(function(grupo) {
+      var item = crearItemNav('config-nav-item', grupo.label, function() {
+        navConfig.vista = 'int';
+        navConfig.integracion = grupo.id;
+        aplicarVistaConfig();
+      });
+      item.dataset.nav = 'int:' + grupo.id;
+      barra.appendChild(item);
+    });
+
+    barra.appendChild(crearElemento(
+      'p', 'config-sidebar-note',
+      'Credentials stay masked and are stored only on this device.'
+    ));
+  }
+
+  function construirSubnavProveedores() {
+    var sub = porId('configSubsidebar');
+    if (!sub) { return; }
+    sub.innerHTML = '';
+    sub.appendChild(crearElemento('p', 'config-nav-grupo', 'AI providers'));
+    var itemRoles = crearItemNav('config-subnav-item', 'Roles (IRIS / A.R.E.S.)', function() {
+      navConfig.proveedor = '__roles__';
+      aplicarVistaConfig();
+    });
+    itemRoles.dataset.sub = '__roles__';
+    sub.appendChild(itemRoles);
+
+    catalogo.forEach(function(spec) {
+      if (!spec.requires_api_key) { return; }
+      var item = crearItemNav('config-subnav-item', spec.display_label, function() {
+        navConfig.proveedor = spec.provider_id;
+        aplicarVistaConfig();
+      });
+      item.dataset.sub = spec.provider_id;
+      sub.appendChild(item);
+    });
+  }
+
+  function actualizarActivosNav() {
+    var externos = document.querySelectorAll('#configSidebar .config-nav-item');
+    Array.prototype.forEach.call(externos, function(boton) {
+      var activo = (navConfig.vista === 'ai' && boton.dataset.nav === 'ai') ||
+        (navConfig.vista === 'int' && boton.dataset.nav === 'int:' + navConfig.integracion);
+      boton.classList.toggle('activo', activo);
+      if (activo) { boton.setAttribute('aria-current', 'page'); }
+      else { boton.removeAttribute('aria-current'); }
+    });
+    var subs = document.querySelectorAll('#configSubsidebar .config-subnav-item');
+    Array.prototype.forEach.call(subs, function(boton) {
+      boton.classList.toggle(
+        'activo',
+        navConfig.vista === 'ai' && boton.dataset.sub === navConfig.proveedor
+      );
+    });
+  }
+
+  function actualizarEncabezadoNav() {
+    var titulo = $('#configViewTitle');
+    var descripcion = $('#configViewDescription');
+    if (!titulo || !descripcion) { return; }
+    if (navConfig.vista === 'int') {
+      var grupo = null;
+      GRUPOS_INTEGRACIONES.forEach(function(g) {
+        if (g.id === navConfig.integracion) { grupo = g; }
+      });
+      titulo.textContent = grupo ? grupo.label : 'Integrations';
+      descripcion.textContent = 'Connect this service. Credentials stay on this device.';
+      return;
+    }
+    if (navConfig.proveedor === '__roles__') {
+      titulo.textContent = 'AI roles';
+      descripcion.textContent =
+        'Assign a primary and fallback AI provider to I.R.I.S. and A.R.E.S.';
+      return;
+    }
+    var spec = obtenerSpec(navConfig.proveedor);
+    titulo.textContent = spec ? spec.display_label : 'AI provider';
+    descripcion.textContent =
+      'Add one or more API keys. Multiple keys of the same provider rotate in a round-robin pool.';
+  }
+
+  function aplicarVistaConfig() {
+    var esAi = navConfig.vista === 'ai';
+    var sub = porId('configSubsidebar');
+    if (sub) { sub.hidden = !esAi; }
+
+    var enRoles = esAi && navConfig.proveedor === '__roles__';
+    var enProveedor = esAi && navConfig.proveedor && navConfig.proveedor !== '__roles__';
+
+    mostrarSeccionConfig('configAiRoles', enRoles);
+    mostrarSeccionConfig('configProviderCredentials', enProveedor);
+    mostrarSeccionConfig('configIntegrations', !esAi);
+
+    if (enProveedor) {
+      var cards = document.querySelectorAll('#configCredentialPools .config-pool-provider');
+      Array.prototype.forEach.call(cards, function(card) {
+        card.hidden = card.dataset.providerId !== navConfig.proveedor;
+      });
+    }
+    if (!esAi) {
+      var grupos = document.querySelectorAll('#configIntegrations [data-integration]');
+      Array.prototype.forEach.call(grupos, function(g) {
+        g.hidden = g.dataset.integration !== navConfig.integracion;
+      });
+    }
+    actualizarActivosNav();
+    actualizarEncabezadoNav();
+  }
+
+  function configurarNavegacion() {
+    construirNavExterna();
+    construirSubnavProveedores();
+    aplicarVistaConfig();
+  }
+
   function abrirConfig() {
     overlay.classList.add('activo');
     btnAbrir.classList.add('activo');
@@ -3219,6 +3401,7 @@ function toggleAgente(nombre, suspender) {
   }
 
   construirPanel();
+  configurarNavegacion();
   actualizarBotonGuardar();
 
   btnAbrir.addEventListener('click', function() {

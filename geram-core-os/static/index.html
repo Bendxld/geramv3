@@ -566,17 +566,12 @@
       <button class="config-cerrar" id="configCerrar" title="Close" aria-label="Close settings">&times;</button>
     </div>
     <div class="config-layout">
-      <aside class="config-sidebar" aria-label="Settings sections">
-        <button class="config-nav-item activo" type="button" data-config-view="ai" aria-current="page">
-          <span class="config-nav-icon" aria-hidden="true">AI</span>
-          <span><strong>AI APIs</strong><small>Models and credentials</small></span>
-        </button>
-        <button class="config-nav-item" type="button" data-config-view="integrations">
-          <span class="config-nav-icon" aria-hidden="true">+</span>
-          <span><strong>Integrations</strong><small>Apps and data access</small></span>
-        </button>
-        <p class="config-sidebar-note">Credentials stay masked and are stored only on this device.</p>
-      </aside>
+      <!-- Sidebar externo (API IA + integraciones). Lo llena script.js
+           §22 desde el catálogo de proveedores para no duplicar la lista. -->
+      <aside class="config-sidebar" id="configSidebar" aria-label="Settings sections"></aside>
+      <!-- Sub-sidebar de proveedores de IA (Roles + Claude/OpenAI/…). Solo
+           visible cuando "API IA" está seleccionado. -->
+      <aside class="config-subsidebar" id="configSubsidebar" aria-label="AI providers" hidden></aside>
       <div class="config-main">
         <div class="config-view-header">
           <h3 id="configViewTitle">AI APIs</h3>
