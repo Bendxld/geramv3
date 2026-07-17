@@ -11,6 +11,8 @@ import subprocess
 import threading
 import time
 
+from agents import agentes_estado
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("clipboard_agent")
 
@@ -112,7 +114,10 @@ def iniciar_monitor(intervalo=2):
 
     def _bucle():
         while True:
-            obtener_actual()
+            # Suspender clipboard_agent desde el HUD pausa el monitoreo
+            # automático sin matar el hilo (reactivar lo reanuda en caliente).
+            if not agentes_estado.esta_suspendido("clipboard_agent"):
+                obtener_actual()
             time.sleep(intervalo)
 
     threading.Thread(target=_bucle, daemon=True).start()

@@ -17,3 +17,6 @@ modelos/
 *.pid.lock
 *.zip
 .claude/
+
+# Estado local de activación de agentes (suspender/reactivar desde el HUD)
+config/agentes_estado.json

@@ -27,7 +27,8 @@ from pydantic import BaseModel
 
 import config
 from agents import (
-    adjuntos_agent, clipboard_agent, control_agent, daily_briefing_agent, director, escuchar,
+    adjuntos_agent, agentes_estado, clipboard_agent, control_agent, daily_briefing_agent,
+    director, escuchar,
     examen_agent, figura_agent, habla, heartbeat_agent, lock_agent,
     observador, offline_agent, proactividad_agent, reminder_agent, retrospectiva_agent,
     screenshot_agent, telegram_agent,
@@ -517,9 +518,59 @@ def info():
 
 
 # ============================================================
+# AGENTES: listar + suspender/reactivar desde el dashboard del HUD.
+# El estado vive en agents/agentes_estado.py (JSON local). "Suspender"
+# apaga lo AUTOMÁTICO del agente (proactividad, schedulers, monitores);
+# las peticiones explícitas por chat siguen funcionando.
+# ============================================================
+def _etiqueta_agente(nombre: str) -> str:
+    """Nombre legible para el HUD: 'daily_briefing_agent' -> 'Daily Briefing'."""
+    limpio = nombre.replace("_agent", "").replace("_", " ").strip()
+    return limpio.title() if limpio else nombre
+
+
+class _AgenteToggle(BaseModel):
+    suspendido: bool
+
+
+@app.get("/agentes")
+def listar_agentes():
+    """Lista todos los agentes con su estado, para el dashboard del HUD."""
+    suspendidos = agentes_estado.listar_suspendidos()
+    return {
+        "agentes": [
+            {
+                "nombre": nombre,
+                "etiqueta": _etiqueta_agente(nombre),
+                "nucleo": nombre in agentes_estado.NUCLEO,
+                "suspendido": nombre in suspendidos,
+            }
+            for nombre in AGENTES_ACTIVOS
+        ]
+    }
+
+
+@app.post("/agentes/{nombre}")
+def toggle_agente(nombre: str, payload: _AgenteToggle):
+    """Suspende o reactiva un agente. Los de núcleo no se pueden suspender."""
+    if nombre not in AGENTES_ACTIVOS:
+        raise HTTPException(status_code=404, detail=f"Agente desconocido: {nombre}")
+    if nombre in agentes_estado.NUCLEO:
+        raise HTTPException(
+            status_code=409,
+            detail=f"'{nombre}' es un agente de núcleo y no puede suspenderse.",
+        )
+    nuevo = agentes_estado.fijar(nombre, payload.suspendido)
+    log.info("server: agente %s -> %s", nombre, "suspendido" if nuevo else "activo")
+    return {"nombre": nombre, "suspendido": nuevo}
+
+
+# ============================================================
 # SCHEDULER: briefing matutino automático (BRIEFING_HOUR en .env)
 # ============================================================
 def _ejecutar_briefing_programado():
+    if agentes_estado.esta_suspendido("daily_briefing_agent"):
+        return
     log.info("server: ejecutando briefing matutino programado")
     try:
         texto = daily_briefing_agent.generar_briefing(hablar_en_voz=True)
@@ -537,6 +588,8 @@ def _hilo_scheduler():
 
 
 def _revisar_recordatorios():
+    if agentes_estado.esta_suspendido("reminder_agent"):
+        return
     try:
         reminder_agent.revisar_recordatorios_vencidos()
     except Exception as e:
@@ -544,6 +597,8 @@ def _revisar_recordatorios():
 
 
 def _revisar_proactividad_local():
+    if agentes_estado.esta_suspendido("proactividad_agent"):
+        return
     try:
         proactividad_agent.revisar_local()
     except Exception as e:
@@ -551,6 +606,8 @@ def _revisar_proactividad_local():
 
 
 def _revisar_proactividad_externa():
+    if agentes_estado.esta_suspendido("proactividad_agent"):
+        return
     try:
         proactividad_agent.revisar_externo()
     except Exception as e:
@@ -558,6 +615,8 @@ def _revisar_proactividad_externa():
 
 
 def _ejecutar_retrospectiva_programada():
+    if agentes_estado.esta_suspendido("retrospectiva_agent"):
+        return
     log.info("server: ejecutando retrospectiva semanal programada")
     try:
         retrospectiva_agent.generar_retrospectiva(hablar_en_voz=True)

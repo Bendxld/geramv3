@@ -1761,10 +1761,17 @@ function toggleGestos(activar) {
 }
 
 // ===================== 20. DASHBOARD DE AGENTES =====================
-// Botón junto al de modo día/noche (ver .controles-superiores):
-// abre un overlay con la lista REAL de agentes activos que server.py
-// ya expone en /info (AGENTES_ACTIVOS) — antes esa lista solo vivía
-// hardcodeada por categorías en el panel lateral "AGENTES 27/27".
+// El dashboard vive en el HUD de GERAM CORE OS (8000), pero los agentes
+// REALES son de IRIS (server.py, 8010). IRIS expone:
+//   GET  /agentes           -> lista [{nombre,etiqueta,nucleo,suspendido}]
+//   POST /agentes/{nombre}   -> {suspendido:bool}  (suspender/reactivar)
+// CORS abierto en IRIS + localhost permitido por la network-policy de
+// Electron => el fetch entre puertos funciona desde aquí. "Suspender"
+// apaga lo AUTOMÁTICO del agente (proactividad/schedulers/monitores); las
+// peticiones explícitas por chat siguen funcionando. Los agentes de núcleo
+// (director, memory, …) no se pueden suspender: se marcan como "core".
+var IRIS_BASE = 'http://localhost:8010';
+
 function prettificarNombreAgente(nombre) {
   var limpio = nombre.replace(/_agent$/, '').replace(/_/g, ' ');
   return limpio.toUpperCase();
@@ -1773,21 +1780,90 @@ function prettificarNombreAgente(nombre) {
 var dashboardGrid = $('#dashboardGrid');
 var dashboardConteo = $('#dashboardConteo');
 
+function _tarjetaAgente(agente) {
+  var card = document.createElement('div');
+  card.className = 'dashboard-card' + (agente.suspendido ? ' suspendido' : '');
+  if (agente.suspendido) { card.style.opacity = '0.5'; }
+
+  var dot = document.createElement('span');
+  dot.className = 'dot';
+  if (agente.suspendido) { dot.style.background = '#888'; dot.style.boxShadow = 'none'; }
+
+  var texto = document.createElement('span');
+  texto.className = 'dashboard-card-nombre';
+  texto.style.flex = '1';
+  texto.textContent = agente.etiqueta || prettificarNombreAgente(agente.nombre);
+
+  card.appendChild(dot);
+  card.appendChild(texto);
+
+  if (agente.nucleo) {
+    var badge = document.createElement('span');
+    badge.className = 'dashboard-card-badge';
+    badge.textContent = 'core';
+    badge.title = 'Core agent — always on';
+    badge.style.cssText = 'font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:1px;';
+    card.appendChild(badge);
+  } else {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dashboard-card-toggle';
+    btn.textContent = agente.suspendido ? 'Reactivate' : 'Suspend';
+    btn.style.cssText = 'cursor:pointer;font-size:11px;padding:2px 8px;border-radius:4px;' +
+      'border:1px solid currentColor;background:transparent;color:inherit;white-space:nowrap;';
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      btn.disabled = true;
+      btn.textContent = '…';
+      toggleAgente(agente.nombre, !agente.suspendido);
+    });
+    card.appendChild(btn);
+  }
+  return card;
+}
+
 function renderDashboardAgentes(agentes) {
   if (!dashboardGrid) { return; }
   dashboardGrid.innerHTML = '';
-  agentes.forEach(function(nombreAgente) {
-    var card = document.createElement('div');
-    card.className = 'dashboard-card';
-    var dot = document.createElement('span');
-    dot.className = 'dot';
-    var texto = document.createElement('span');
-    texto.textContent = prettificarNombreAgente(nombreAgente);
-    card.appendChild(dot);
-    card.appendChild(texto);
-    dashboardGrid.appendChild(card);
+  var activos = 0;
+  agentes.forEach(function(agente) {
+    if (!agente.suspendido) { activos++; }
+    dashboardGrid.appendChild(_tarjetaAgente(agente));
   });
-  if (dashboardConteo) { dashboardConteo.textContent = agentes.length + '/' + agentes.length; }
+  if (dashboardConteo) { dashboardConteo.textContent = activos + '/' + agentes.length; }
+}
+
+function _mensajeDashboard(texto) {
+  if (!dashboardGrid) { return; }
+  dashboardGrid.innerHTML = '';
+  var p = document.createElement('p');
+  p.className = 'dashboard-hint';
+  p.textContent = texto;
+  dashboardGrid.appendChild(p);
+}
+
+function cargarAgentes() {
+  if (!dashboardGrid) { return; }
+  dashboardGrid.setAttribute('aria-busy', 'true');
+  fetch(IRIS_BASE + '/agentes', { cache: 'no-store' })
+    .then(function(res) { if (!res.ok) { throw new Error('HTTP ' + res.status); } return res.json(); })
+    .then(function(d) { renderDashboardAgentes(d.agentes || []); })
+    .catch(function() {
+      _mensajeDashboard('IRIS is offline — agents can’t be loaded right now.');
+      if (dashboardConteo) { dashboardConteo.textContent = '0/0'; }
+    })
+    .then(function() { dashboardGrid.setAttribute('aria-busy', 'false'); });
+}
+
+function toggleAgente(nombre, suspender) {
+  fetch(IRIS_BASE + '/agentes/' + encodeURIComponent(nombre), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ suspendido: suspender })
+  })
+    .then(function(res) { if (!res.ok) { throw new Error('HTTP ' + res.status); } return res.json(); })
+    .then(function() { cargarAgentes(); })
+    .catch(function() { cargarAgentes(); });
 }
 
 (function() {
@@ -1800,6 +1876,7 @@ function renderDashboardAgentes(agentes) {
   function abrirDashboard() {
     overlay.classList.add('activo');
     btnAbrir.classList.add('activo');
+    cargarAgentes();
   }
   function cerrarDashboard() {
     overlay.classList.remove('activo');
