@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GERAM OS · I.R.I.S. · HUD</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Capas de ambiente -->
+<div class="fondo-grid"></div>
+<div class="destello"></div>
+<div class="scanlines"></div>
+<div class="vineta"></div>
+
+<!-- Controles superiores: modo Día/Noche + Toggle 3D -->
+<div class="controles-superiores">
+  <button class="toggle-tema" id="toggleTema" title="Cambiar entre modo día y modo noche">
+    <svg class="icono-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icono-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+  <button class="toggle-agentes" id="toggleAgentes" title="Dashboard de agentes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7"/>
+      <rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  </button>
+  <button class="toggle-3d" id="toggle3d" title="Activar/desactivar efecto 3D">
+    <span class="toggle-dot"></span>3D
+  </button>
+</div>
+
+<!-- Escena 3D -->
+<div class="escena" id="escena">
+<div class="escena-int">
+
+  <!-- Marco de esquinas -->
+  <div class="marco m-tl"></div>
+  <div class="marco m-tr"></div>
+  <div class="marco m-bl"></div>
+  <div class="marco m-br"></div>
+
+  <!-- Encabezado -->
+  <header class="hud-header">
+    <h1>GERAM<span>OS</span></h1>
+    <p class="subtitulo">I.R.I.S &middot; SISTEMA HOLOGRÁFICO v2.1</p>
+    <div class="estado-pill"><span class="dot"></span>SISTEMA EN LÍNEA</div>
+  </header>
+
+  <!-- Cinta de datos -->
+  <div class="ticker"><div class="ticker-int"><span id="tickerA"></span><span id="tickerB"></span></div></div>
+
+  <!-- Núcleo central -->
+  <main class="nucleo-zona">
+    <div class="nucleo">
+      <svg class="aros" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <path id="rutaTexto" d="M 250,250 m -236,0 a 236,236 0 1,1 472,0 a 236,236 0 1,1 -472,0"/>
+        </defs>
+        <circle class="anillo a-brackets"  cx="250" cy="250" r="248"/>
+        <circle class="anillo a-borde"     cx="250" cy="250" r="242"/>
+        <g class="gira-texto">
+          <text class="txt-anillo">
+            <textPath id="anilloAgentes" href="#rutaTexto">GERAM OS V2 &#183; NODO IRIS &#183; ENLACE NEURAL ACTIVO &#183; MTY MX 25.68N 100.31O &#183; SUPABASE SYNC &#183; AGENTES &#183; PROTOCOLO VERDE &#183;</textPath>
+          </text>
+        </g>
+        <circle class="anillo a-ticks"     cx="250" cy="250" r="222"/>
+        <circle class="anillo a-regla"     cx="250" cy="250" r="208"/>
+        <circle class="anillo a-segmentos" cx="250" cy="250" r="196"/>
+        <circle class="anillo a-fino"      cx="250" cy="250" r="184"/>
+        <circle class="anillo a-puntos"    cx="250" cy="250" r="176"/>
+        <circle class="anillo a-arco"      cx="250" cy="250" r="162"/>
+        <circle class="anillo a-arco2"     cx="250" cy="250" r="150"/>
+        <circle class="anillo a-gauge"     cx="250" cy="250" r="138"/>
+        <text class="a-label" x="250" y="6"   text-anchor="middle">000</text>
+        <text class="a-label" x="497" y="254" text-anchor="middle">090</text>
+        <text class="a-label" x="250" y="502" text-anchor="middle">180</text>
+        <text class="a-label" x="3"   y="254" text-anchor="middle">270</text>
+      </svg>
+
+      <div class="orbita o1"><i></i></div>
+      <div class="orbita o2"><i></i></div>
+      <div class="pulso"></div>
+      <div class="pulso p2"></div>
+      <div class="pulso p3"></div>
+      <div class="nucleo-glow"></div>
+
+      <div class="nucleo-centro">
+        <div class="nucleo-canvas-wrap">
+          <canvas id="nucleoCanvas"></canvas>
+        </div>
+        <span class="nombre">IRIS</span>
+        <span class="pwr" id="pwr">PWR 98.6%</span>
+        <span class="nodo-tag">NÚCLEO &middot; ESTABLE</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Botón "volver": solo visible en modo hablando (ver style.css
+       "MODO HABLANDO" y script.js sección 15/19) — corta la voz de
+       IRIS a la mitad y regresa al HUD normal. -->
+  <button class="btn-volver-normal" id="btnVolverNormal" title="Volver a la vista normal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+    <span>VOLVER</span>
+  </button>
+
+  <!-- ====== BOTONES DE SENTIDOS (NUEVO) ====== -->
+  <div class="sentidos" id="sentidos">
+    <button class="sentido activo" id="btn-mic" data-sentido="mic" title="Micrófono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+      </svg>
+      <span>MIC</span>
+    </button>
+    <button class="sentido activo" id="btn-voz" data-sentido="voz" title="Voz de salida">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+      <span>VOZ</span>
+    </button>
+    <button class="sentido" id="btn-vista" data-sentido="vista" title="Cámara / Visión">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <span>VISTA</span>
+    </button>
+  </div>
+
+  <!-- Medidores flotantes -->
+  <div class="gauges">
+    <svg class="gauge" viewBox="0 0 120 80" aria-hidden="true">
+      <path class="g-fondo" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <path class="g-valor" id="gEner" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <line class="g-aguja" id="aEner" x1="60" y1="64" x2="60" y2="26"/>
+      <circle class="g-centro" cx="60" cy="64" r="2.5"/>
+      <text class="g-num" id="nEner" x="60" y="50" text-anchor="middle">98%</text>
+      <text class="g-label" x="60" y="78" text-anchor="middle">ENERGÍA</text>
+    </svg>
+    <svg class="gauge" viewBox="0 0 120 80" aria-hidden="true">
+      <path class="g-fondo" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <path class="g-valor" id="gApi" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <line class="g-aguja" id="aApi" x1="60" y1="64" x2="60" y2="26"/>
+      <circle class="g-centro" cx="60" cy="64" r="2.5"/>
+      <text class="g-num" id="nApi" x="60" y="50" text-anchor="middle">40%</text>
+      <text class="g-label" x="60" y="78" text-anchor="middle">CARGA API</text>
+    </svg>
+  </div>
+
+  <!-- Columna izquierda -->
+  <aside class="col col-izq">
+    <section class="panel">
+      <h2 class="panel-titulo"><span class="dot"></span>ESTADO DEL SISTEMA</h2>
+      <div class="stat"><label>CPU</label><div class="barra"><i id="bCpu"></i></div><b id="vCpu">34%</b></div>
+      <div class="stat"><label>RAM</label><div class="barra"><i id="bRam"></i></div><b id="vRam">68%</b></div>
+      <div class="stat"><label>RED</label><div class="barra"><i id="bRed"></i></div><b id="vRed">120 KB/s</b></div>
+      <div class="kv"><span>TEMP NÚCLEO</span><b id="vTemp">42°C</b></div>
+      <div class="kv"><span>UPTIME</span><b id="vUp">00:00:00</b></div>
+      <div class="kv"><span>ESTADO</span><b class="ok">NOMINAL</b></div>
+    </section>
+
+    <section class="panel consola">
+      <h2 class="panel-titulo"><span class="dot"></span>CONSOLA</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </aside>
+
+  <!-- Columna derecha -->
+  <aside class="col col-der">
+    <section class="panel centrado">
+      <h2 class="panel-titulo"><span class="dot"></span>CRONOMETRÍA</h2>
+      <div class="reloj" id="reloj">00:00:00</div>
+      <div class="fecha" id="fecha">&mdash;</div>
+      <div class="mini-datos">
+        <span>MONTERREY, N.L. &middot; 25.6866° N &middot; 100.3161° O</span>
+        <span>USUARIO: <b>MAURICIO</b> &middot; ACCESO: <b>TOTAL</b></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-titulo"><span class="dot"></span>ANÁLISIS DE VOZ</h2>
+      <canvas id="osc" width="256" height="56"></canvas>
+      <p class="micro-label" id="vozEstado">ESCUCHANDO&hellip;</p>
+    </section>
+
+  </aside>
+
+  <!-- ====== CHAT / SUBTÍTULOS (NUEVO) ====== -->
+  <div class="chat-zona" id="chatZona">
+    <div class="chat-historial" id="chatHistorial">
+      <div class="chat-msg iris">
+        <span class="chat-quien">IRIS</span>
+        <span class="chat-texto">A sus órdenes, jefe. ¿En qué le ayudo?</span>
+      </div>
+    </div>
+    <div class="chat-adjunto-chip" id="chatAdjuntoChip" style="display:none;">
+      <span id="chatAdjuntoNombre"></span>
+      <button id="chatAdjuntoQuitar" title="Quitar adjunto">&times;</button>
+    </div>
+    <div class="chat-input-zona">
+      <input type="file" id="chatArchivoInput" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" style="display:none;">
+      <button class="chat-adjuntar" id="chatAdjuntar" title="Adjuntar imagen o PDF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+      <input type="file" id="examenPdfInput" accept="application/pdf" style="display:none;">
+      <button class="chat-adjuntar" id="examenPdfBoton" title="Subir PDF para generar un examen de él">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+          <line x1="9" y1="11" x2="12" y2="11"/>
+        </svg>
+      </button>
+      <input type="text" class="chat-input" id="chatInput" placeholder="Escribe un mensaje..." autocomplete="off" spellcheck="false">
+      <button class="chat-enviar" id="chatEnviar" title="Enviar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Firma -->
+  <div class="firma">GERAM OS v2 &middot; NODO: IRIS &middot; SUPABASE SYNC <span class="dot"></span></div>
+
+</div>
+</div>
+
+
+<!-- Overlay para paneles expandidos (NUEVO) -->
+<div class="overlay-panel" id="overlayPanel"></div>
+
+<!-- Dashboard de agentes (NUEVO): botón junto al de modo día/noche -->
+<div class="dashboard-agentes" id="dashboardAgentes">
+  <div class="dashboard-fondo" id="dashboardFondo"></div>
+  <div class="dashboard-panel">
+    <div class="dashboard-header">
+      <h2 class="panel-titulo"><span class="dot"></span>DASHBOARD DE AGENTES <b id="dashboardConteo">0/0</b></h2>
+      <button class="dashboard-cerrar" id="dashboardCerrar" title="Cerrar">&times;</button>
+    </div>
+    <div class="dashboard-grid" id="dashboardGrid"></div>
+  </div>
+</div>
+
+<!-- Examen interactivo (NUEVO): "hazme un examen de X" arranca esto,
+     ver script.js sección 21 y /examen/actual, /examen/responder,
+     /examen/cancelar en server.py. -->
+<div class="examen-modal" id="examenModal">
+  <div class="examen-fondo" id="examenFondo"></div>
+  <div class="examen-panel">
+    <div class="examen-header">
+      <h2 class="panel-titulo"><span class="dot"></span>EXAMEN <b id="examenTemaLabel"></b></h2>
+      <button class="examen-cerrar" id="examenCerrar" title="Salir del examen">&times;</button>
+    </div>
+
+    <div class="examen-progreso">
+      <div class="examen-progreso-barra"><i id="examenProgresoBarra"></i></div>
+      <span class="examen-progreso-texto" id="examenProgresoTexto">Pregunta 1 de 10</span>
+    </div>
+
+    <div class="examen-cuerpo" id="examenCuerpo">
+      <p class="examen-pregunta" id="examenPregunta"></p>
+      <div class="examen-opciones" id="examenOpciones"></div>
+    </div>
+
+    <div class="examen-feedback" id="examenFeedback" style="display:none;">
+      <p class="examen-feedback-texto" id="examenFeedbackTexto"></p>
+      <p class="examen-feedback-explicacion" id="examenFeedbackExplicacion"></p>
+      <button class="examen-siguiente" id="examenSiguiente">Siguiente &rarr;</button>
+    </div>
+
+    <div class="examen-final" id="examenFinal" style="display:none;">
+      <p class="examen-final-nota" id="examenFinalNota"></p>
+      <div class="examen-final-fallos" id="examenFinalFallos"></div>
+      <button class="examen-cerrar-final" id="examenCerrarFinal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Retícula de objetivo -->
+<div id="reticula">
+  <svg viewBox="0 0 84 84" aria-hidden="true">
+    <circle class="ret-anillo" cx="42" cy="42" r="30"/>
+    <circle class="ret-anillo" cx="42" cy="42" r="18" style="animation-direction:reverse;animation-duration:3.4s;stroke-dasharray:4 5"/>
+    <line class="ret-cruz" x1="42" y1="0"  x2="42" y2="16"/>
+    <line class="ret-cruz" x1="42" y1="68" x2="42" y2="84"/>
+    <line class="ret-cruz" x1="0"  y1="42" x2="16" y2="42"/>
+    <line class="ret-cruz" x1="68" y1="42" x2="84" y2="42"/>
+    <circle class="ret-punto" cx="42" cy="42" r="1.6"/>
+  </svg>
+  <span class="ret-coords" id="retCoords">X 000 &middot; Y 000</span>
+</div>
+
+<!-- Pantalla de arranque -->
+<div id="boot">
+  <div class="boot-aro"></div>
+  <pre id="bootLog"></pre>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

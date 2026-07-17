@@ -1,0 +1,39 @@
+.env
+.env.*
+!.env.example
+
+# Config local de perfil/identidad/privacidad (v3): puede incluir nombre,
+# edad y prompt personal del usuario — nunca se versiona (perms 0600).
+.geram-config.json
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+node_modules/
+
+*.log
+*.jsonl
+logs/
+*.pid
+*.pid.*
+*.pid.lock
+.local-data/
+credential_pool.sqlite3*
+.kiosk.pid
+.electron_app.pid
+
+.kiosk-profile/
+*browser-profile*/
+credenciales/
+
+*.zip
+.DS_Store
+.claude/
+
+# Binario cloudflared: es específico del SO y pesa ~30 MB. No se versiona;
+# cada quien lo baja con scripts/instalar_cloudflared.sh (o su equivalente).
+bin/

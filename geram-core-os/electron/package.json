@@ -1,0 +1,19 @@
+{
+  "name": "geram-core-os-electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron container for the GERAM CORE OS HUD (FastAPI serves static/; Electron displays it in its own window).",
+  "main": "main.js",
+  "scripts": {
+    "postinstall": "npm run prepare:monaco",
+    "prepare:monaco": "node scripts/prepare-monaco-assets.js",
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "monaco-editor": "0.52.2",
+    "pyright": "1.1.411"
+  }
+}

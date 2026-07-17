@@ -1,0 +1,131 @@
+/* Estilos globales y para el cuerpo */
+body {
+    font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%); /* Fondo degradado suave y moderno */
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Ocupa al menos el 100% de la altura de la ventana */
+    color: #333; /* Color de texto base */
+    box-sizing: border-box;
+}
+
+/* Contenedor principal de la aplicación (la "tarjeta" centrada) */
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px; /* Esquinas redondeadas */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); /* Sombra suave para efecto de profundidad */
+    width: 90%;
+    max-width: 500px; /* Ancho máximo para que no sea demasiado grande en pantallas grandes */
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Estilo para el título H1 (si existe en index.html) */
+h1 {
+    color: #2c3e50;
+    margin-bottom: 25px;
+    font-size: 2.2em;
+    font-weight: 600;
+}
+
+/* Sección de entrada de nuevas tareas */
+.task-input-section {
+    display: flex;
+    gap: 10px; /* Espacio entre el input y el botón */
+    margin-bottom: 30px;
+}
+
+#newTaskInput {
+    flex-grow: 1; /* Permite que el input ocupe el espacio disponible */
+    padding: 12px 15px;
+    border: 2px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1.1em;
+    outline: none; /* Elimina el contorno al enfocar */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Transiciones suaves */
+}
+
+#newTaskInput:focus {
+    border-color: #007bff; /* Color del borde al enfocar */
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); /* Sombra al enfocar */
+}
+
+#addTaskButton {
+    background-color: #007bff; /* Color de fondo del botón */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Transiciones suaves */
+    flex-shrink: 0; /* Evita que el botón se achique */
+}
+
+#addTaskButton:hover {
+    background-color: #0056b3; /* Color al pasar el ratón */
+    transform: translateY(-2px); /* Pequeño efecto de elevación */
+}
+
+#addTaskButton:active {
+    transform: translateY(0); /* Vuelve a la posición original al hacer clic */
+}
+
+/* Lista de tareas */
+#taskList {
+    list-style: none; /* Elimina los puntos de la lista */
+    padding: 0;
+    margin: 0;
+}
+
+#taskList li {
+    background-color: #f8f9fa; /* Fondo suave para cada tarea */
+    padding: 15px 20px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between; /* Espacia el texto y el botón de eliminar */
+    align-items: center;
+    font-size: 1.1em;
+    cursor: pointer; /* Indica que se puede interactuar con la tarea */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Sombra ligera */
+    border-left: 5px solid transparent; /* Borde izquierdo para indicar estado, inicialmente transparente */
+    word-break: break-word; /* Evita desbordamiento de texto largo */
+}
+
+#taskList li:last-child {
+    margin-bottom: 0; /* No hay margen en la última tarea */
+}
+
+#taskList li:hover:not(.completed) { /* Efecto hover solo en tareas no completadas */
+    background-color: #e9ecef;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Estilo para tareas completadas (se asume que JS añade la clase 'completed' al LI) */
+#taskList li.completed {
+    text-decoration: line-through; /* Tachar el texto */
+    color: #6c757d; /* Color de texto gris */
+    background-color: #e2e6ea; /* Fondo ligeramente más oscuro */
+    border-left-color: #28a745; /* Línea verde para indicar completado */
+}
+
+/* Botón/icono de eliminar tarea (se asume que JS añade un span con esta clase dentro de cada LI) */
+.delete-task {
+    color: #dc3545; /* Color rojo para eliminar */
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 15px; /* Espacio a la izquierda del botón */
+    transition: color 0.2s ease, transform 0.2s ease;
+    flex-shrink: 0; /* Evita que el botón se achique */
+}
+
+.delete-task:hover {
+    color: #c82333; /* Rojo más oscuro al pasar el ratón */
+    transform: scale(1.1); /* Pequeño efecto de escala */
+}<ctrl63>

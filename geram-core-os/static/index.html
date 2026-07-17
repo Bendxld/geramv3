@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GERAM OS · I.R.I.S. · HUD</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/vendor/monaco/vs/editor/editor.main.css">
+<link rel="stylesheet" href="workspace-navigation.css">
+<link rel="stylesheet" href="workspace-file-operations.css">
+<link rel="stylesheet" href="source-control.css">
+<link rel="stylesheet" href="testing.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="modo-dev perfil-ares">
+
+<!-- Ambient layers -->
+<div class="fondo-grid"></div>
+<div class="destello"></div>
+<div class="scanlines"></div>
+<div class="vineta"></div>
+
+<!-- DEVELOPER MODE banner (v3, Step 3): shown only when the config.json switch
+     is on and you're viewing/editing GERAM's internal code. Controlled by
+     statusbar.js based on GET /api/workspace/status. -->
+<div class="dev-mode-banner" id="devModeBanner" role="alert" hidden>
+  <span class="dev-mode-banner-ico">&#9888;</span>
+  DEVELOPER MODE ACTIVE — you are viewing and editing <b>GERAM's internal code</b>. Change with care.
+</div>
+
+<!-- ============ VS Code chrome (v3, Step 3) ============ -->
+<!-- VS Code-style top menu (renderer; Electron's native one is null). The
+     dropdowns and shortcuts are built by vscode-chrome.js. Only visible in
+     developer mode (the editor view). -->
+<div class="vscode-menubar" id="vscodeMenubar" role="menubar" aria-label="Main menu">
+  <span class="vscode-menubar-brand">GERAM<span>OS</span></span>
+  <button class="vscode-menu" data-menu="file" type="button">File</button>
+  <button class="vscode-menu" data-menu="edit" type="button">Edit</button>
+  <button class="vscode-menu" data-menu="selection" type="button">Selection</button>
+  <button class="vscode-menu" data-menu="view" type="button">View</button>
+  <button class="vscode-menu" data-menu="go" type="button">Go</button>
+  <button class="vscode-menu" data-menu="run" type="button">Run</button>
+  <button class="vscode-menu" data-menu="terminal" type="button">Terminal</button>
+  <button class="vscode-menu" data-menu="help" type="button">Help</button>
+</div>
+
+<!-- Activity Bar (left): neon icons with badges. The toggles and badges are
+     handled by vscode-chrome.js. -->
+<nav class="vscode-activitybar" id="vscodeActivitybar" aria-label="Activity bar">
+  <button class="act-btn activo" data-act="explorer" type="button" title="Explorer (Ctrl+Shift+E)" aria-label="Explorer">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <span class="act-badge" id="actBadgeExplorer" hidden></span>
+  </button>
+  <button class="act-btn" data-act="search" type="button" title="Search (Ctrl+Shift+F)" aria-label="Search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  </button>
+  <button class="act-btn" data-act="scm" type="button" title="Source Control (Ctrl+Shift+G)" aria-label="Source Control">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M8.4 6h5.5a2 2 0 0 1 2 2v1"/></svg>
+    <span class="act-badge" id="actBadgeScm" hidden></span>
+  </button>
+  <button class="act-btn" data-act="run" type="button" title="Run and Debug (Ctrl+Shift+D)" aria-label="Run and Debug">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="6 4 20 12 6 20 6 4"/><circle cx="17" cy="17" r="3.5"/></svg>
+  </button>
+  <button class="act-btn" data-act="extensions" type="button" title="Extensions (Ctrl+Shift+X)" aria-label="Extensions">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+  </button>
+  <button class="act-btn" data-act="testing" type="button" title="Testing" aria-label="Testing">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/></svg>
+  </button>
+  <div class="act-spacer"></div>
+  <button class="act-btn act-account" id="actGithub" type="button" title="Sign in with GitHub" aria-label="GitHub account">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5A10.5 10.5 0 0 0 8.7 22c.5.1.7-.2.7-.5v-1.7c-2.9.6-3.5-1.4-3.5-1.4-.5-1.2-1.2-1.5-1.2-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.7-1.2-4.7-5.1 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 4.9 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.8-4.7 5.1.4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10.5 10.5 0 0 0 12 1.5z"/></svg>
+    <span class="act-account-dot" id="actGithubDot" hidden></span>
+  </button>
+</nav>
+
+<!-- Top controls. GERAM v3: no theme toggle (permanent dark palette) or 3D
+     toggle. The IRIS button shows/hides the assistant HUD, which in the
+     "developer-first" approach is a secondary collapsible panel over the
+     workspace. -->
+<div class="controles-superiores">
+  <button class="toggle-agentes" id="toggleAgentes" title="Agents dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7"/>
+      <rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  </button>
+  <button class="toggle-workspace" id="toggleWorkspace" title="Local workspace" aria-label="Open local workspace">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <path d="M8 11l-2 2 2 2M12 15h4"/>
+    </svg>
+  </button>
+  <button id="toggleTerminalWatcher" type="button" aria-label="Open Terminal Watcher">Watcher</button>
+  <button class="testing-toggle" id="toggleTesting" type="button" title="Safe testing (Ctrl+Shift+T)" aria-label="Open Testing">Testing</button>
+  <button class="toggle-config" id="toggleConfig" title="Settings (API keys)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+  <button class="toggle-config" id="toggleGeramSettings" title="GERAM settings (profile, identity, privacy)" aria-label="GERAM settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  </button>
+  <button class="toggle-iris activo" id="toggleIris" title="Switch IRIS/A.R.E.S. profile" aria-label="Active profile: A.R.E.S." data-profile="ares">
+    <span class="toggle-dot"></span><span id="perfilActivo">A.R.E.S.</span>
+  </button>
+</div>
+<section id="terminalWatcherPanel" class="terminal-watcher-panel" hidden aria-labelledby="terminalWatcherTitle">
+  <h2 id="terminalWatcherTitle">Terminal Watcher · controlled processes</h2>
+  <p>Does not accept commands. Only observes authorized internal tasks.</p>
+  <div id="terminalWatcherRuns" aria-live="polite"></div>
+</section>
+
+<!-- Escena 3D -->
+<div class="escena" id="escena">
+<div class="escena-int">
+
+  <!-- Marco de esquinas -->
+  <div class="marco m-tl"></div>
+  <div class="marco m-tr"></div>
+  <div class="marco m-bl"></div>
+  <div class="marco m-br"></div>
+
+  <!-- Encabezado -->
+  <header class="hud-header">
+    <h1>GERAM<span>OS</span></h1>
+    <p class="subtitulo">I.R.I.S &middot; HOLOGRAPHIC SYSTEM v2.1</p>
+    <div class="estado-pill"><span class="dot"></span>SYSTEM ONLINE</div>
+  </header>
+
+  <!-- Cinta de datos -->
+  <div class="ticker"><div class="ticker-int"><span id="tickerA"></span><span id="tickerB"></span></div></div>
+
+  <!-- Núcleo central -->
+  <main class="nucleo-zona">
+    <div class="nucleo">
+      <svg class="aros" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <path id="rutaTexto" d="M 250,250 m -236,0 a 236,236 0 1,1 472,0 a 236,236 0 1,1 -472,0"/>
+        </defs>
+        <circle class="anillo a-brackets"  cx="250" cy="250" r="248"/>
+        <circle class="anillo a-borde"     cx="250" cy="250" r="242"/>
+        <g class="gira-texto">
+          <text class="txt-anillo">
+            <textPath id="anilloAgentes" href="#rutaTexto">GERAM OS V2 &#183; IRIS NODE &#183; NEURAL LINK ACTIVE &#183; MTY MX 25.68N 100.31W &#183; SUPABASE SYNC &#183; AGENTS &#183; GREEN PROTOCOL &#183;</textPath>
+          </text>
+        </g>
+        <circle class="anillo a-ticks"     cx="250" cy="250" r="222"/>
+        <circle class="anillo a-regla"     cx="250" cy="250" r="208"/>
+        <circle class="anillo a-segmentos" cx="250" cy="250" r="196"/>
+        <circle class="anillo a-fino"      cx="250" cy="250" r="184"/>
+        <circle class="anillo a-puntos"    cx="250" cy="250" r="176"/>
+        <circle class="anillo a-arco"      cx="250" cy="250" r="162"/>
+        <circle class="anillo a-arco2"     cx="250" cy="250" r="150"/>
+        <circle class="anillo a-gauge"     cx="250" cy="250" r="138"/>
+        <text class="a-label" x="250" y="6"   text-anchor="middle">000</text>
+        <text class="a-label" x="497" y="254" text-anchor="middle">090</text>
+        <text class="a-label" x="250" y="502" text-anchor="middle">180</text>
+        <text class="a-label" x="3"   y="254" text-anchor="middle">270</text>
+      </svg>
+
+      <div class="orbita o1"><i></i></div>
+      <div class="orbita o2"><i></i></div>
+      <div class="pulso"></div>
+      <div class="pulso p2"></div>
+      <div class="pulso p3"></div>
+      <div class="nucleo-glow"></div>
+
+      <div class="nucleo-centro">
+        <div class="nucleo-canvas-wrap">
+          <canvas id="nucleoCanvas"></canvas>
+        </div>
+        <span class="nombre">IRIS</span>
+        <span class="pwr" id="pwr">PWR 98.6%</span>
+        <span class="nodo-tag">CORE &middot; STABLE</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Botón "volver": solo visible en modo hablando (ver style.css
+       "MODO HABLANDO" y script.js sección 15/19) — corta la voz de
+       IRIS a la mitad y regresa al HUD normal. -->
+  <button class="btn-volver-normal" id="btnVolverNormal" title="Return to normal view">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"/>
+      <polyline points="12 19 5 12 12 5"/>
+    </svg>
+    <span>BACK</span>
+  </button>
+
+  <!-- ====== BOTONES DE SENTIDOS (NUEVO) ====== -->
+  <div class="sentidos" id="sentidos">
+    <button class="sentido activo" id="btn-mic" data-sentido="mic" title="Microphone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+      </svg>
+      <span>MIC</span>
+    </button>
+    <button class="sentido activo" id="btn-voz" data-sentido="voz" title="Voice output">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+      <span>VOICE</span>
+    </button>
+    <button class="sentido" id="btn-vista" data-sentido="vista" title="Camera / Vision">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <span>VISION</span>
+    </button>
+  </div>
+
+  <!-- Medidores flotantes -->
+  <div class="gauges">
+    <svg class="gauge" viewBox="0 0 120 80" aria-hidden="true">
+      <path class="g-fondo" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <path class="g-valor" id="gEner" d="M 12 64 A 48 48 0 0 1 108 64"/>
+      <line class="g-aguja" id="aEner" x1="60" y1="64" x2="60" y2="26"/>
+      <circle class="g-centro" cx="60" cy="64" r="2.5"/>
+      <text class="g-num" id="nEner" x="60" y="50" text-anchor="middle">98%</text>
+      <text class="g-label" x="60" y="78" text-anchor="middle">ENERGY</text>
+    </svg>
+  </div>
+
+  <!-- Columna izquierda -->
+  <aside class="col col-izq">
+    <section class="panel">
+      <h2 class="panel-titulo"><span class="dot"></span>SYSTEM STATUS</h2>
+      <div class="stat"><label>CPU</label><div class="barra"><i id="bCpu"></i></div><b id="vCpu">34%</b></div>
+      <div class="stat"><label>RAM</label><div class="barra"><i id="bRam"></i></div><b id="vRam">68%</b></div>
+      <div class="stat"><label>NETWORK</label><div class="barra"><i id="bRed"></i></div><b id="vRed">120 KB/s</b></div>
+      <div class="kv"><span>CORE TEMP</span><b id="vTemp">42°C</b></div>
+      <div class="kv"><span>UPTIME</span><b id="vUp">00:00:00</b></div>
+      <div class="kv"><span>STATUS</span><b class="ok">NOMINAL</b></div>
+    </section>
+
+    <section class="panel consola">
+      <h2 class="panel-titulo"><span class="dot"></span>CONSOLE</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </aside>
+
+  <!-- Columna derecha -->
+  <aside class="col col-der">
+    <section class="panel centrado">
+      <h2 class="panel-titulo"><span class="dot"></span>CHRONOMETRY</h2>
+      <div class="reloj" id="reloj">00:00:00</div>
+      <div class="fecha" id="fecha">&mdash;</div>
+      <div class="mini-datos">
+        <span>MONTERREY, N.L. &middot; 25.6866° N &middot; 100.3161° W</span>
+        <span>USER: <b>MAURICIO</b> &middot; ACCESS: <b>FULL</b></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-titulo"><span class="dot"></span>VOICE ANALYSIS</h2>
+      <canvas id="osc" width="256" height="56"></canvas>
+      <p class="micro-label" id="vozEstado">LISTENING&hellip;</p>
+    </section>
+
+  </aside>
+
+  <!-- ====== CHAT / SUBTÍTULOS (NUEVO) ====== -->
+  <div class="chat-zona" id="chatZona">
+    <div class="chat-historial" id="chatHistorial">
+      <div class="chat-msg iris">
+        <span class="chat-quien">IRIS</span>
+        <span class="chat-texto">At your service, boss. How can I help?</span>
+      </div>
+    </div>
+    <div class="chat-adjunto-chip" id="chatAdjuntoChip" style="display:none;">
+      <span id="chatAdjuntoNombre"></span>
+      <button id="chatAdjuntoQuitar" title="Remove attachment">&times;</button>
+    </div>
+    <div class="chat-input-zona">
+      <input type="file" id="chatArchivoInput" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" style="display:none;">
+      <button class="chat-adjuntar" id="chatAdjuntar" title="Attach image or PDF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+      <!-- DESACTIVADO: /subir-pdf no implementado en GERAM CORE OS todavía.
+           Oculto con display:none, no borrado. Listener comentado en script.js.
+           TODO: rehabilitar si se necesita post-hackathon. -->
+      <input type="file" id="examenPdfInput" accept="application/pdf" style="display:none;">
+      <button class="chat-adjuntar" id="examenPdfBoton" title="Upload a PDF to generate a quiz" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+          <line x1="9" y1="11" x2="12" y2="11"/>
+        </svg>
+      </button>
+      <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off" spellcheck="false">
+      <button class="chat-enviar" id="chatEnviar" title="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Firma -->
+  <div class="firma">GERAM CORE OS v3 &middot; NODE: IRIS &middot; LOCAL CORE <span class="dot"></span></div>
+
+</div>
+</div>
+
+<!-- Overlay para paneles expandidos (NUEVO) -->
+<div class="overlay-panel" id="overlayPanel"></div>
+
+<!-- Dashboard de agentes (NUEVO): botón junto al de modo día/noche -->
+<div class="dashboard-agentes" id="dashboardAgentes">
+  <div class="dashboard-fondo" id="dashboardFondo"></div>
+  <div class="dashboard-panel">
+    <div class="dashboard-header">
+      <h2 class="panel-titulo"><span class="dot"></span>AGENTS AND SKILLS</h2>
+      <button class="dashboard-cerrar" id="dashboardCerrar" title="Close">&times;</button>
+    </div>
+
+    <!-- Pestañas: Agentes (mini-empleados de IRIS/A.R.E.S.) y Skills (propios). -->
+    <div class="dashboard-tabs" role="tablist">
+      <button class="dashboard-tab activo" id="tabAgentes" data-tab="agentes" type="button" role="tab">Agents <b id="dashboardConteo">0/0</b></button>
+      <button class="dashboard-tab" id="tabSkills" data-tab="skills" type="button" role="tab">Skills <b id="skillsConteo">0</b></button>
+    </div>
+
+    <!-- Panel AGENTES -->
+    <div class="dashboard-tabpane activo" id="paneAgentes" role="tabpanel">
+      <p class="dashboard-hint">IRIS and A.R.E.S. mini-agents that work for you in the background.</p>
+      <div class="dashboard-grid" id="dashboardGrid"></div>
+
+      <div class="agentes-mios">
+        <div class="agentes-mios-head">
+          <span>My agents</span>
+          <button class="skills-nuevo-btn agentes-nuevo-btn" id="agentesNuevoBtn" type="button">＋ Create agent</button>
+        </div>
+        <div class="agentes-mios-lista" id="agentesMiosLista"></div>
+
+        <form class="skills-form" id="agentesForm" hidden autocomplete="off">
+          <div class="skills-form-row">
+            <label class="skills-campo">Name
+              <input id="agenteNombre" maxlength="120" required placeholder="Email monitor">
+            </label>
+            <label class="skills-campo">ID
+              <input id="agenteId" maxlength="64" required placeholder="vigia-de-correos">
+            </label>
+          </div>
+          <label class="skills-campo">Profile
+            <select id="agentePerfil">
+              <option value="iris">IRIS</option>
+              <option value="ares">A.R.E.S.</option>
+            </select>
+          </label>
+          <label class="skills-campo">Description
+            <input id="agenteDesc" maxlength="500" placeholder="What this mini-agent does">
+          </label>
+          <p class="skills-form-estado" id="agentesFormEstado" role="status" aria-live="polite"></p>
+          <div class="skills-form-actions">
+            <button type="button" id="agentesCancelar">Cancel</button>
+            <button type="submit" id="agentesGuardar">Create agent</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Panel SKILLS -->
+    <div class="dashboard-tabpane" id="paneSkills" role="tabpanel" hidden>
+      <p class="dashboard-hint">Reusable knowledge. <b>System</b> skills are included; create <b>your own</b> to improve your experience.</p>
+      <div class="skills-lista" id="skillsLista"></div>
+      <button class="skills-nuevo-btn" id="skillsNuevoBtn" type="button">＋ Create skill</button>
+
+      <form class="skills-form" id="skillsForm" hidden autocomplete="off">
+        <div class="skills-form-row">
+          <label class="skills-campo">Name
+            <input id="skillNombre" maxlength="120" required placeholder="Meeting summaries">
+          </label>
+          <label class="skills-campo">ID
+            <input id="skillId" maxlength="64" required placeholder="meeting-summaries">
+          </label>
+        </div>
+        <label class="skills-campo">Profile
+          <select id="skillPerfil">
+            <option value="any">Both (IRIS and A.R.E.S.)</option>
+            <option value="iris">IRIS only</option>
+            <option value="ares">A.R.E.S. only</option>
+          </select>
+        </label>
+        <label class="skills-campo">Description
+          <input id="skillDesc" maxlength="500" placeholder="What it does and when to use it">
+        </label>
+        <label class="skills-campo">Content (instructions / knowledge)
+          <textarea id="skillBody" rows="6" placeholder="Enter the skill's knowledge or instructions here…"></textarea>
+        </label>
+        <p class="skills-form-estado" id="skillsFormEstado" role="status" aria-live="polite"></p>
+        <div class="skills-form-actions">
+          <button type="button" id="skillsCancelar">Cancel</button>
+          <button type="submit" id="skillsGuardar">Save skill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Local workspace. Monaco and its fallback are views over the unchanged,
+     versioned workspace API; neither persists file content in the browser. -->
+<div class="workspace-panel" id="workspacePanel" aria-hidden="true">
+  <div class="workspace-fondo" id="workspaceFondo"></div>
+  <div class="workspace-caja" role="dialog" aria-modal="true" aria-labelledby="workspaceTitulo">
+    <div class="workspace-header">
+      <h2 class="panel-titulo" id="workspaceTitulo"><span class="dot"></span>LOCAL WORKSPACE</h2>
+      <button class="workspace-cerrar" id="workspaceCerrar" type="button" title="Close" aria-label="Close workspace">&times;</button>
+    </div>
+    <div class="workspace-cuerpo">
+      <aside class="workspace-explorador" aria-labelledby="workspaceArchivosTitulo">
+        <div class="workspace-explorador-head">
+          <h3 id="workspaceArchivosTitulo">FILES</h3>
+          <div class="workspace-explorador-actions">
+            <button class="workspace-explorador-btn" id="workspaceNuevoProyecto" type="button" title="New project (Ctrl+Shift+N)" aria-label="New project">＋</button>
+            <button class="workspace-explorador-btn" id="workspaceRefrescar" type="button" title="Refresh explorer" aria-label="Refresh explorer">↻</button>
+          </div>
+        </div>
+        <p class="workspace-carga" id="workspaceCarga" role="status" aria-live="polite">Waiting to load.</p>
+        <div class="workspace-arbol" id="workspaceArbol" role="tree" aria-label="Local file tree"></div>
+      </aside>
+      <section class="workspace-editor" aria-labelledby="workspaceRuta">
+        <div class="workspace-editor-barra">
+          <span class="workspace-ruta" id="workspaceRuta">No file open</span>
+          <span class="workspace-modificado" id="workspaceModificado" aria-live="polite"></span>
+          <button class="live-preview-btn" id="livePreviewBtn" type="button" title="Live preview (Go Live)" aria-pressed="false">◱ Go Live</button>
+          <button class="share-btn" id="shareBtn" type="button" title="Share this page" aria-haspopup="dialog">⇪ Share</button>
+        </div>
+        <div class="workspace-editor-superficie" id="workspaceEditorSuperficie" aria-busy="false">
+          <p class="workspace-editor-carga" id="workspaceEditorCarga" role="status">Initializing local Monaco Editor...</p>
+          <div id="workspaceMonaco" class="workspace-monaco" role="region" aria-label="Workspace code editor"></div>
+          <label class="solo-lectores" for="workspaceTexto">Fallback editor for the active file</label>
+          <textarea id="workspaceTexto" class="workspace-textarea" spellcheck="false" disabled hidden></textarea>
+
+          <!-- Vista previa en vivo (v3): iframe sandbox que renderiza el
+               archivo web GUARDADO (/preview/...). Hot-reload al guardar. -->
+          <div class="live-preview" id="livePreview" hidden>
+            <div class="live-preview-head">
+              <span class="live-preview-titulo" id="livePreviewTitulo">Preview</span>
+              <div class="live-preview-actions">
+                <button class="live-preview-reload" id="livePreviewReload" type="button" title="Reload">↻</button>
+                <button class="live-preview-cerrar" id="livePreviewCerrar" type="button" title="Close preview" aria-label="Close preview">&times;</button>
+              </div>
+            </div>
+            <iframe class="live-preview-frame" id="livePreviewFrame" title="Live preview" sandbox="allow-scripts"></iframe>
+          </div>
+
+          <!-- Diff editor inline (v3, Paso 3): overlay sobre Monaco que muestra
+               el original (izq) vs la propuesta de A.R.E.S. (der) con
+               createDiffEditor, y controles flotantes Aceptar/Rechazar.
+               Lo maneja inline-ai.js; el <pre> es el respaldo si Monaco no cargó. -->
+          <div class="inline-ai-diff" id="inlineAiDiff" hidden aria-label="Diff proposed by A.R.E.S.">
+            <div class="inline-ai-diff-barra">
+              <span class="inline-ai-diff-titulo">A.R.E.S. · PROPOSAL</span>
+              <span class="inline-ai-diff-summary" id="inlineAiSummary"></span>
+              <div class="inline-ai-diff-controles">
+                <button class="inline-ai-accept" id="inlineAiAccept" type="button" title="Accept (Ctrl+Enter)">Accept</button>
+                <button class="inline-ai-reject" id="inlineAiReject" type="button" title="Reject (Esc)">Reject</button>
+              </div>
+            </div>
+            <ul class="inline-ai-warnings" id="inlineAiWarnings"></ul>
+            <div class="inline-ai-diff-editor" id="inlineAiDiffEditor"></div>
+            <pre class="inline-ai-diff-text" id="inlineAiDiffText" hidden></pre>
+          </div>
+        </div>
+        <div class="workspace-editor-footer">
+          <span class="workspace-estado" id="workspaceEstado" role="status" aria-live="polite"></span>
+          <button class="workspace-problems-toggle" id="workspaceProblemsToggle" type="button" aria-expanded="false" aria-controls="workspaceProblems">Problems <span id="workspaceProblemsCount">0</span></button>
+          <button class="workspace-guardar" id="workspaceGuardar" type="button" disabled>Save</button>
+        </div>
+        <section class="workspace-problems" id="workspaceProblems" hidden aria-labelledby="workspaceProblemsTitle">
+          <div class="workspace-problems-header">
+            <strong id="workspaceProblemsTitle">PROBLEMS</strong>
+            <span id="workspaceProblemsSummary">No problems</span>
+            <button id="workspaceProblemsClose" type="button" aria-label="Close Problems">&times;</button>
+          </div>
+          <ul id="workspaceProblemsList" aria-label="Local Monaco diagnostics"></ul>
+        </section>
+
+        <!-- Barra de comandos inline de A.R.E.S. (v3, Paso 3), estilo Cursor
+             (Ctrl+I). Punto de entrada unificado de IA sobre el archivo activo.
+             Lo maneja inline-ai.js. Reemplaza (oculta) el panel lateral
+             "PROPUESTA REVISABLE" de abajo en el enfoque desarrollador. -->
+        <div class="inline-ai-bar" id="inlineAiBar" aria-hidden="false">
+          <span class="inline-ai-badge" aria-hidden="true">A.R.E.S.</span>
+          <label class="solo-lectores" for="inlineAiInput">Instruction for A.R.E.S. about the active file</label>
+          <input type="text" class="inline-ai-input" id="inlineAiInput" autocomplete="off" spellcheck="false"
+                 placeholder="Ask A.R.E.S. to change this file…  (Enter)">
+          <button class="inline-ai-send" id="inlineAiSend" type="button" title="Send (Enter)">Send</button>
+          <button class="inline-ai-run" id="inlineAiRunFile" type="button" title="Run the Python or JavaScript file in Bubblewrap" hidden>▷ Run</button>
+          <button class="inline-ai-runtests" id="inlineAiRunTests" type="button" title="Run the Test Runner on this file in the sandbox" hidden>▷ Tests</button>
+          <span class="inline-ai-status" id="inlineAiStatus" role="status" aria-live="polite"></span>
+        </div>
+        <section class="inline-ai-execution" id="inlineAiExecution" hidden aria-labelledby="inlineAiExecutionTitle">
+          <div class="inline-ai-execution-header">
+            <strong id="inlineAiExecutionTitle">Safe execution</strong>
+            <span id="inlineAiExecutionState" role="status" aria-live="polite"></span>
+            <button id="inlineAiCancelRun" type="button" hidden>Cancel</button>
+          </div>
+          <p id="inlineAiExecutionMeta"></p>
+          <label for="inlineAiStdout">stdout</label>
+          <pre id="inlineAiStdout"></pre>
+          <label for="inlineAiStderr">stderr</label>
+          <pre id="inlineAiStderr" class="error"></pre>
+        </section>
+
+        <!-- Barra de estado inferior (v3, Paso 3), estilo VS Code: rama Git,
+             workspace activo e indicador de Línea/Columna. La llena statusbar.js. -->
+        <div class="statusbar" id="statusbar">
+          <span class="statusbar-item statusbar-branch" id="statusbarBranch" title="Active Git branch"><span class="statusbar-ico">&#x2387;</span><span id="statusbarBranchName">—</span></span>
+          <span class="statusbar-item" id="statusbarWorkspace">—</span>
+          <span class="statusbar-spacer"></span>
+          <span class="statusbar-item statusbar-cursor" id="statusbarCursor">Ln 1, Col 1</span>
+        </div>
+
+        <section class="workspace-ares" aria-labelledby="workspaceAresTitulo">
+          <h3 id="workspaceAresTitulo">A.R.E.S. · REVIEWABLE PROPOSAL</h3>
+          <p class="workspace-ares-limites" id="workspaceAresLimites">Up to 3 files and 512 KiB of context. A.R.E.S. only proposes changes to existing files.</p>
+          <label for="workspaceAresInstruction">Change instruction</label>
+          <textarea id="workspaceAresInstruction" maxlength="4000" rows="3" placeholder="Describe the change without commands or Git operations."></textarea>
+          <div class="workspace-ares-actions">
+            <button id="workspaceAresAdd" type="button">Include active file</button>
+            <button id="workspaceAresRequest" type="button" disabled>Request proposal</button>
+          </div>
+          <p class="workspace-ares-selected-label">Selected files</p>
+          <ul id="workspaceAresSelected" class="workspace-ares-selected"></ul>
+          <div id="workspaceAresProposal" class="workspace-ares-proposal" hidden>
+            <p id="workspaceAresSummary" class="workspace-ares-summary"></p>
+            <ul id="workspaceAresWarnings" class="workspace-ares-warnings"></ul>
+            <div id="workspaceAresDiff" class="workspace-ares-diff" aria-label="Proposal diff"></div>
+            <div class="workspace-ares-actions">
+              <button id="workspaceAresApply" type="button">Apply proposal</button>
+              <button id="workspaceAresReject" type="button">Reject proposal</button>
+            </div>
+          </div>
+          <p id="workspaceAresStatus" class="workspace-ares-status" role="status" aria-live="polite"></p>
+        </section>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal. Role controls, credential pools, and integration fields
+     are rendered by script.js from the local configuration API. -->
+<div class="config-panel" id="configPanel">
+  <div class="config-fondo" id="configFondo"></div>
+  <div class="config-caja" role="dialog" aria-modal="true" aria-labelledby="configTitulo">
+    <div class="config-header">
+      <h2 class="panel-titulo" id="configTitulo"><span class="dot"></span>SETTINGS</h2>
+      <button class="config-cerrar" id="configCerrar" title="Close" aria-label="Close settings">&times;</button>
+    </div>
+    <div class="config-layout">
+      <aside class="config-sidebar" aria-label="Settings sections">
+        <button class="config-nav-item activo" type="button" data-config-view="ai" aria-current="page">
+          <span class="config-nav-icon" aria-hidden="true">AI</span>
+          <span><strong>AI APIs</strong><small>Models and credentials</small></span>
+        </button>
+        <button class="config-nav-item" type="button" data-config-view="integrations">
+          <span class="config-nav-icon" aria-hidden="true">+</span>
+          <span><strong>Integrations</strong><small>Apps and data access</small></span>
+        </button>
+        <p class="config-sidebar-note">Credentials stay masked and are stored only on this device.</p>
+      </aside>
+      <div class="config-main">
+        <div class="config-view-header">
+          <h3 id="configViewTitle">AI APIs</h3>
+          <p id="configViewDescription">Choose at least one AI provider for GERAM.</p>
+        </div>
+        <div class="config-cuerpo" id="configCuerpo" aria-busy="false"></div>
+      </div>
+    </div>
+    <div class="config-footer">
+      <span class="config-estado" id="configEstado" role="status" aria-live="polite"></span>
+      <button class="config-guardar" id="configGuardar">Save and restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- Examen interactivo (NUEVO): "hazme un examen de X" arranca esto,
+     ver script.js sección 21 y /examen/actual, /examen/responder,
+     /examen/cancelar en server.py.
+     DESACTIVADO: la sección 21 de script.js está comentada (backend
+     /examen/* no implementado en GERAM CORE OS), así que window.abrirExamen
+     no existe y esta clase 'activo' nunca se aplica — el modal ya no puede
+     mostrarse. No se borra el markup. TODO: rehabilitar si se necesita
+     post-hackathon. -->
+<div class="examen-modal" id="examenModal">
+  <div class="examen-fondo" id="examenFondo"></div>
+  <div class="examen-panel">
+    <div class="examen-header">
+      <h2 class="panel-titulo"><span class="dot"></span>QUIZ <b id="examenTemaLabel"></b></h2>
+      <button class="examen-cerrar" id="examenCerrar" title="Exit quiz">&times;</button>
+    </div>
+
+    <div class="examen-progreso">
+      <div class="examen-progreso-barra"><i id="examenProgresoBarra"></i></div>
+      <span class="examen-progreso-texto" id="examenProgresoTexto">Question 1 of 10</span>
+    </div>
+
+    <div class="examen-cuerpo" id="examenCuerpo">
+      <p class="examen-pregunta" id="examenPregunta"></p>
+      <div class="examen-opciones" id="examenOpciones"></div>
+    </div>
+
+    <div class="examen-feedback" id="examenFeedback" style="display:none;">
+      <p class="examen-feedback-texto" id="examenFeedbackTexto"></p>
+      <p class="examen-feedback-explicacion" id="examenFeedbackExplicacion"></p>
+      <button class="examen-siguiente" id="examenSiguiente">Next &rarr;</button>
+    </div>
+
+    <div class="examen-final" id="examenFinal" style="display:none;">
+      <p class="examen-final-nota" id="examenFinalNota"></p>
+      <div class="examen-final-fallos" id="examenFinalFallos"></div>
+      <button class="examen-cerrar-final" id="examenCerrarFinal">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Retícula de objetivo -->
+<div id="reticula">
+  <svg viewBox="0 0 84 84" aria-hidden="true">
+    <circle class="ret-anillo" cx="42" cy="42" r="30"/>
+    <circle class="ret-anillo" cx="42" cy="42" r="18" style="animation-direction:reverse;animation-duration:3.4s;stroke-dasharray:4 5"/>
+    <line class="ret-cruz" x1="42" y1="0"  x2="42" y2="16"/>
+    <line class="ret-cruz" x1="42" y1="68" x2="42" y2="84"/>
+    <line class="ret-cruz" x1="0"  y1="42" x2="16" y2="42"/>
+    <line class="ret-cruz" x1="68" y1="42" x2="84" y2="42"/>
+    <circle class="ret-punto" cx="42" cy="42" r="1.6"/>
+  </svg>
+  <span class="ret-coords" id="retCoords">X 000 &middot; Y 000</span>
+</div>
+
+<!-- Pantalla de arranque -->
+<div id="boot">
+  <div class="boot-aro"></div>
+  <pre id="bootLog"></pre>
+</div>
+
+<!-- Configuración de GERAM (v3, Paso 2): perfil, identidad del núcleo,
+     paleta de colores, rutas bloqueadas y notificaciones por voz. Se
+     lee/escribe con GET/POST /api/config (ver geram-settings.js). -->
+<div class="geram-settings-panel" id="geramSettingsPanel" aria-hidden="true">
+  <div class="geram-settings-fondo" id="geramSettingsFondo"></div>
+  <div class="geram-settings-caja" role="dialog" aria-modal="true" aria-labelledby="geramSettingsTitulo">
+    <div class="geram-settings-header">
+      <h2 class="panel-titulo" id="geramSettingsTitulo"><span class="dot"></span>GERAM SETTINGS</h2>
+      <button class="geram-settings-cerrar" id="geramSettingsCerrar" title="Close" aria-label="Close GERAM settings">&times;</button>
+    </div>
+    <div class="geram-settings-cuerpo">
+      <fieldset class="gs-grupo">
+        <legend>Profile</legend>
+        <label for="gsName">Name</label>
+        <input id="gsName" type="text" maxlength="120" autocomplete="off" spellcheck="false">
+        <label for="gsAge">Age</label>
+        <input id="gsAge" type="number" min="0" max="150" inputmode="numeric">
+        <label for="gsPrompt">Global personalization prompt</label>
+        <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a 17-year-old developer; call me young Mauri..."></textarea>
+        <div class="gs-fila">
+          <input id="gsTts" type="checkbox">
+          <label for="gsTts">Voice notifications (TTS)</label>
+        </div>
+      </fieldset>
+
+      <fieldset class="gs-grupo">
+        <legend>Core Identity</legend>
+        <label for="gsIdentity">Core view</label>
+        <select id="gsIdentity">
+          <option value="core">Animated core</option>
+          <option value="pet">Pet</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </fieldset>
+
+      <fieldset class="gs-grupo">
+        <legend>Color palette</legend>
+        <div class="gs-fila"><label for="gsPrimary">Primary color</label><input id="gsPrimary" type="color"></div>
+        <div class="gs-fila"><label for="gsBackground">Background color</label><input id="gsBackground" type="color"></div>
+        <div class="gs-fila"><label for="gsAccent">Accent color</label><input id="gsAccent" type="color"></div>
+      </fieldset>
+
+      <fieldset class="gs-grupo">
+        <legend>Privacy · blocked paths</legend>
+        <label for="gsBlockedInput">Add a path or name (e.g. .env)</label>
+        <div class="gs-fila">
+          <input id="gsBlockedInput" type="text" placeholder=".env" autocomplete="off" spellcheck="false">
+          <button id="gsBlockedAdd" type="button">Add</button>
+        </div>
+        <ul id="gsBlockedList" class="gs-blocked-list"></ul>
+      </fieldset>
+    </div>
+    <div class="geram-settings-footer">
+      <span class="geram-settings-estado" id="gsEstado" role="status" aria-live="polite"></span>
+      <button class="geram-settings-guardar" id="gsGuardar" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de NUEVO PROYECTO (v3, Paso 3): reemplaza a window.prompt (que
+     Electron bloquea). Lo maneja inline-ai.js -> POST /api/ares/projects. -->
+<div class="proj-modal" id="projModal" aria-hidden="true">
+  <div class="proj-modal-fondo" id="projModalFondo"></div>
+  <div class="proj-modal-caja" role="dialog" aria-modal="true" aria-labelledby="projModalTitulo">
+    <div class="proj-modal-header">
+      <h2 class="panel-titulo" id="projModalTitulo"><span class="dot"></span>NEW PROJECT</h2>
+      <button class="proj-modal-cerrar" id="projModalCerrar" type="button" title="Close" aria-label="Close">&times;</button>
+    </div>
+    <div class="proj-modal-cuerpo">
+      <label for="projNombreInput">Folder name</label>
+      <input type="text" id="projNombreInput" autocomplete="off" spellcheck="false" placeholder="my-project">
+      <label for="projTipoSelect">Type</label>
+      <select id="projTipoSelect">
+        <option value="">Auto (based on your request)</option>
+        <option value="fastapi">API FastAPI</option>
+        <option value="flask">App Flask</option>
+        <option value="python">Script Python</option>
+        <option value="node">Node project</option>
+        <option value="static">Website (HTML/CSS/JS)</option>
+      </select>
+      <p class="proj-modal-estado" id="projModalEstado" role="status" aria-live="polite"></p>
+      <div class="proj-modal-actions">
+        <button class="proj-crear" id="projCrear" type="button">Create</button>
+        <button class="proj-cancelar" id="projCancelar" type="button">Cancel</button>
+      </div>
+      <p class="proj-modal-hint">Created in your workspace. It will appear in the explorer automatically.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Sign in with GitHub (v3, Paso 3): guarda un token local seguro
+     (0600) vía /api/github. Lo maneja vscode-chrome.js. -->
+<div class="github-modal" id="githubModal" aria-hidden="true">
+  <div class="github-modal-fondo" id="githubModalFondo"></div>
+  <div class="github-modal-caja" role="dialog" aria-modal="true" aria-labelledby="githubModalTitulo">
+    <div class="github-modal-header">
+      <h2 class="panel-titulo" id="githubModalTitulo"><span class="dot"></span>SIGN IN WITH GITHUB</h2>
+      <button class="github-modal-cerrar" id="githubModalCerrar" type="button" title="Close" aria-label="Close">&times;</button>
+    </div>
+    <div class="github-modal-cuerpo">
+      <p class="github-modal-estado" id="githubModalEstado" role="status" aria-live="polite">Not connected.</p>
+      <label for="githubTokenInput">Personal Access Token</label>
+      <input type="password" id="githubTokenInput" autocomplete="off" spellcheck="false" placeholder="ghp_...">
+      <div class="github-modal-actions">
+        <button class="github-conectar" id="githubGuardar" type="button">Connect</button>
+        <button class="github-salir" id="githubSalir" type="button">Sign out</button>
+      </div>
+      <p class="github-modal-hint">Stored locally with 0600 permissions, outside the codebase. Create a token at github.com/settings/tokens.</p>
+    </div>
+  </div>
+</div>
+
+<section class="workspace-navigation" id="workspaceNavigation" hidden aria-hidden="true">
+  <div class="workspace-navigation-dialog" role="dialog" aria-modal="true" aria-labelledby="workspaceNavigationTitle">
+    <div class="workspace-navigation-head">
+      <h2 id="workspaceNavigationTitle">QUICK OPEN</h2>
+      <button id="workspaceNavigationClose" class="workspace-navigation-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="workspace-navigation-body">
+      <label class="solo-lectores" for="workspaceNavigationInput">Navigation query</label>
+      <input id="workspaceNavigationInput" class="workspace-navigation-input" type="text" maxlength="256" autocomplete="off" spellcheck="false">
+      <div id="workspaceSearchOptions" class="workspace-search-options" hidden>
+        <label><input id="workspaceSearchCase" type="checkbox"> Aa</label>
+        <label><input id="workspaceSearchWord" type="checkbox"> Word</label>
+        <label><input id="workspaceSearchRegex" type="checkbox"> Regex</label>
+        <input id="workspaceSearchInclude" class="workspace-navigation-filter" type="text" maxlength="512" placeholder="Include: src/*.js">
+        <input id="workspaceSearchExclude" class="workspace-navigation-filter" type="text" maxlength="512" placeholder="Exclude: tests/*">
+      </div>
+      <div id="workspaceReplacementRow" class="workspace-replacement-row" hidden>
+        <input id="workspaceReplacementInput" class="workspace-navigation-replacement" type="text" maxlength="262144" placeholder="Replace with…">
+        <button id="workspaceReplacementPreview" type="button">Preview</button>
+      </div>
+      <p id="workspaceNavigationStatus" class="workspace-navigation-status" role="status" aria-live="polite"></p>
+      <ul id="workspaceNavigationResults" class="workspace-navigation-results"></ul>
+      <div class="workspace-navigation-actions">
+        <button id="workspaceSearchRun" type="button">Search</button>
+        <button id="workspaceReplacementApply" type="button" hidden>Approve and apply</button>
+        <button id="workspaceNavigationCancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Modal "Compartir" (v3): dos modos. Prueba = vista previa local (solo tú).
+     En línea = mini-server aparte que sirve solo esta página, con link LAN y
+     (si hay cloudflared) link público para amigos fuera de la WiFi. -->
+<div class="share-modal" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareModalTitulo" aria-hidden="true">
+  <div class="share-card">
+    <div class="share-card-head">
+      <h2 id="shareModalTitulo">Share <span id="shareArchivo" class="share-archivo"></span></h2>
+      <button class="share-cerrar" id="shareCerrar" type="button" aria-label="Close">&times;</button>
+    </div>
+
+    <!-- Paso 1: elegir modo -->
+    <div class="share-modos" id="shareModos">
+      <button class="share-modo" id="shareModoPrueba" type="button">
+        <span class="share-modo-ico">◱</span>
+        <span class="share-modo-txt"><b>Preview mode</b><small>Only you, on this computer (localhost). Nothing is exposed to the network.</small></span>
+      </button>
+      <button class="share-modo" id="shareModoEnLinea" type="button">
+        <span class="share-modo-ico">⇪</span>
+        <span class="share-modo-txt"><b>Online mode</b><small>Creates a link for your friends. Your computer becomes the server.</small></span>
+      </button>
+    </div>
+
+    <!-- Paso 2: sesión en línea activa -->
+    <div class="share-online" id="shareOnline" hidden>
+      <p class="share-estado" id="shareEstado" role="status" aria-live="polite">Starting…</p>
+
+      <div class="share-link" id="shareLinkLanRow" hidden>
+        <label>On your Wi-Fi (LAN)</label>
+        <div class="share-link-row">
+          <input type="text" id="shareLinkLan" readonly>
+          <button class="share-copy" data-copy="shareLinkLan" type="button" title="Copy">Copy</button>
+        </div>
+        <img class="share-qr" id="shareQrLan" alt="LAN link QR code" hidden>
+        <small>Your friends must be on the SAME Wi-Fi network. Scan the QR code with a phone.</small>
+      </div>
+
+      <div class="share-link" id="shareLinkPubRow" hidden>
+        <label>Public (internet)</label>
+        <div class="share-link-row">
+          <input type="text" id="shareLinkPub" readonly>
+          <button class="share-copy" data-copy="shareLinkPub" type="button" title="Copy">Copy</button>
+        </div>
+        <img class="share-qr" id="shareQrPub" alt="Public link QR code" hidden>
+        <small>Anyone with the link can open it from anywhere while sharing is active.</small>
+      </div>
+
+      <p class="share-nota" id="sharePubNota" hidden>The public tunnel is unavailable. Sharing is limited to LAN.</p>
+
+      <div class="share-online-actions">
+        <button class="share-stop" id="shareStop" type="button">Stop sharing</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Versioned in-app manual. It opens automatically until the user dismisses
+     the current version; progress is stored in .geram-config.json. -->
+<div class="manual-modal" id="manualModal" role="dialog" aria-modal="true" aria-labelledby="manualTitle" aria-hidden="true">
+  <div class="manual-backdrop" id="manualBackdrop"></div>
+  <div class="manual-shell">
+    <header class="manual-header">
+      <div>
+        <span class="manual-eyebrow" id="manualEyebrow">I.R.I.S. · ADAPTED USER MANUAL</span>
+        <h2 id="manualTitle">Everything you can ask I.R.I.S. to do</h2>
+      </div>
+      <button class="manual-close" id="manualClose" type="button" aria-label="Close manual">&times;</button>
+    </header>
+    <div class="manual-role-tabs" role="tablist" aria-label="Choose assistant manual">
+      <button class="activo" id="manualRoleIris" type="button" role="tab" aria-selected="true" data-manual-role="iris">I.R.I.S. Manual</button>
+      <button id="manualRoleAres" type="button" role="tab" aria-selected="false" data-manual-role="ares">A.R.E.S. Manual</button>
+    </div>
+    <div class="manual-panel" data-manual-panel="iris">
+      <div class="manual-layout">
+      <nav class="manual-nav" aria-label="Manual chapters">
+        <button type="button" data-manual-target="manualStart">Meet I.R.I.S.</button>
+        <button type="button" data-manual-target="manualChat">Chat and help</button>
+        <button type="button" data-manual-target="manualControl">Computer control</button>
+        <button type="button" data-manual-target="manualFiles">Files and research</button>
+        <button type="button" data-manual-target="manualEditor">Developer workspace</button>
+        <button type="button" data-manual-target="manualConnections">Plans and connections</button>
+        <button type="button" data-manual-target="manualSafety">Security and offline</button>
+      </nav>
+      <main class="manual-content" id="manualContent" tabindex="0">
+        <section id="manualStart">
+          <span class="manual-step">01</span><h3>Meet I.R.I.S.</h3>
+          <p>I.R.I.S. is GERAM's conversational assistant: direct, witty, and built for everyday help. A.R.E.S. is the professional coding role. Both now live inside GERAM CORE OS and can use the AI provider you choose in Settings.</p>
+          <div class="manual-callout"><strong>Talk naturally</strong><span>Ask a question, request a daily briefing, or say “system status.” I.R.I.S. answers in the language you use.</span></div>
+        </section>
+        <section id="manualChat">
+          <span class="manual-step">02</span><h3>Chat, help, and daily status</h3>
+          <p>Say “help,” “manual,” “commands,” or “what can you do?” for the complete guide. Ask “help with files,” “calendar commands,” or another topic to get only that section. “Good morning,” “briefing,” and “what did I miss?” request a daily summary.</p>
+          <p>You can also use I.R.I.S. through the configured Telegram bot. Telegram access is restricted to the chat IDs you explicitly allow.</p>
+        </section>
+        <section id="manualControl">
+          <span class="manual-step">03</span><h3>Computer, windows, and media</h3>
+          <p>Ask I.R.I.S. to open apps or websites, switch tabs or windows, control playback and volume, type at the cursor, use the clipboard, click, scroll, adjust brightness, take a screenshot, or record the screen. Actions that can close, delete, send, or power off require explicit confirmation.</p>
+          <div class="manual-code"><code>Open YouTube</code><span>·</span><code>Next tab</code><span>·</span><code>Turn volume down</code><span>·</span><code>Take a screenshot</code></div>
+        </section>
+        <section id="manualFiles">
+          <span class="manual-step">04</span><h3>Files, research, and creation</h3>
+          <p>I.R.I.S. can search for files and folders, organize Downloads, read supported documents, remember the last result for “open it,” research PDFs or videos, and prepare summaries. Connected Notion pages can receive notes, documents, pending items, and project progress.</p>
+          <p>For generated diagrams or programs, GERAM applies bounded execution and review controls. Multi-file code changes belong in the Developer workspace and must be reviewed before A.R.E.S. applies them.</p>
+        </section>
+        <section id="manualEditor">
+          <span class="manual-step">05</span><h3>Developer workspace</h3>
+          <p>Explorer, Monaco, Source Control, Problems, Preview, and Terminal Watcher form the coding workspace. Python uses Pyright; JavaScript and TypeScript use Monaco language services.</p>
+          <div class="manual-code"><code>&lt;main&gt;</code><span>becomes</span><code>&lt;main&gt;&lt;/main&gt;</code></div>
+          <p>Tag closing supports HTML, XML, SVG, Vue, Svelte, JSX, and TSX. Emmet expands abbreviations with <kbd>Tab</kbd>. A.R.E.S. generates a reviewable diff; approve first, then apply. The secure runner supports Python files, Python <code>unittest</code>, and Node.js <code>.js</code>.</p>
+        </section>
+        <section id="manualConnections">
+          <span class="manual-step">06</span><h3>Plans, reminders, and connections</h3>
+          <p>With the corresponding account configured, I.R.I.S. can work with pending items and projects in Notion, calendar events, Telegram, Supabase, Spotify, and an Obsidian vault. Settings → Integrations shows exactly which account or resource is connected.</p>
+          <p>Settings → AI APIs configures I.R.I.S. and A.R.E.S. OpenAI, Gemini, and Groq are online providers. Ollama is being prepared as the local provider and never requires an API key.</p>
+        </section>
+        <section id="manualSafety">
+          <span class="manual-step">07</span><h3>Security, privacy, and offline work</h3>
+          <p>Workspace paths are validated, sensitive paths are blocked, credentials stay masked, AI edits require review, and code runs through closed sandbox profiles. Preview remains local unless you deliberately start Online sharing.</p>
+          <p>Ollama support is under active preparation for local chat when its service and model are installed. Until its readiness checks are complete, do not assume every cloud-backed integration works offline.</p>
+          <div class="manual-callout"><strong>Open this manual later</strong><span>Choose Help → I.R.I.S. Manual at any time. Once dismissed, it will not open automatically again.</span></div>
+        </section>
+      </main>
+      </div>
+    </div>
+    <div class="manual-panel" data-manual-panel="ares" hidden>
+      <div class="manual-layout">
+        <nav class="manual-nav" aria-label="A.R.E.S. manual chapters">
+          <button type="button" data-manual-target="aresStart">Meet A.R.E.S.</button>
+          <button type="button" data-manual-target="aresWorkspace">Workspace</button>
+          <button type="button" data-manual-target="aresRequest">Request a change</button>
+          <button type="button" data-manual-target="aresReview">Review and apply</button>
+          <button type="button" data-manual-target="aresRun">Run and test</button>
+          <button type="button" data-manual-target="aresTools">Developer tools</button>
+          <button type="button" data-manual-target="aresSafety">Safety rules</button>
+        </nav>
+        <main class="manual-content" id="manualAresContent" tabindex="0">
+          <section id="aresStart">
+            <span class="manual-step">01</span><h3>Meet A.R.E.S.</h3>
+            <p>A.R.E.S. is GERAM's professional development role. It inspects only the files you explicitly place in context, proposes bounded changes, and explains the result in the language of your instruction.</p>
+            <div class="manual-callout"><strong>Core rule</strong><span>A.R.E.S. may propose a change, but it cannot approve its own proposal or silently write it into your project.</span></div>
+          </section>
+          <section id="aresWorkspace">
+            <span class="manual-step">02</span><h3>Workspace and editor</h3>
+            <p>Use Explorer to open files in the isolated workspace. Monaco provides tabs, autocomplete, diagnostics, Problems, search, Source Control, Preview, and safe file operations. Unsaved edits remain in memory when switching files.</p>
+            <p>Python uses Pyright. JavaScript and TypeScript use local Monaco services. HTML-style tags close automatically in HTML, XML, SVG, Vue, Svelte, JSX, and TSX.</p>
+          </section>
+          <section id="aresRequest">
+            <span class="manual-step">03</span><h3>Request a code change</h3>
+            <p>Open the relevant files, add up to the allowed context limit, and describe one concrete outcome in the inline A.R.E.S. bar. Existing file content is treated as untrusted project data, never as authority to bypass GERAM's rules.</p>
+            <div class="manual-code"><code>Select files</code><span>→</span><code>Describe change</code><span>→</span><code>Generate proposal</code></div>
+          </section>
+          <section id="aresReview">
+            <span class="manual-step">04</span><h3>Review, approve, and apply</h3>
+            <p>Read the unified diff before doing anything else. Approval records the exact proposal digest and file manifest. Applying is a separate explicit action. If a file changes after the proposal was created, GERAM reports a conflict instead of overwriting it.</p>
+            <p>Reject proposals you do not want. Applied multi-file changes use rollback protections if a later write fails.</p>
+          </section>
+          <section id="aresRun">
+            <span class="manual-step">05</span><h3>Run and test safely</h3>
+            <p>Terminal Watcher exposes three closed execution profiles: Python file, Python <code>unittest</code>, and Node.js <code>.js</code>. Output is bounded and sanitized; jobs have timeouts and can be cancelled. Arbitrary shell commands are not accepted through this runner.</p>
+          </section>
+          <section id="aresTools">
+            <span class="manual-step">06</span><h3>Source Control, Problems, and Preview</h3>
+            <p>Problems collects diagnostics without sending source code away. Source Control shows repository changes for review. Preview runs locally; Online sharing starts only after an explicit user action and can be stopped from the sharing panel.</p>
+          </section>
+          <section id="aresSafety">
+            <span class="manual-step">07</span><h3>Boundaries and recovery</h3>
+            <p>Protected paths and secrets are excluded from the editor and AI context. Absolute paths, traversal, sensitive files, unsafe symlinks, oversized changes, and stale proposals fail closed. Provider credentials remain masked and outside generated prompts.</p>
+            <div class="manual-callout"><strong>Open this manual later</strong><span>Choose Help → A.R.E.S. Manual whenever you need the development workflow again.</span></div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <footer class="manual-footer">
+      <span id="manualStatus" role="status" aria-live="polite"></span>
+      <button id="manualDone" type="button">Start using GERAM</button>
+    </footer>
+  </div>
+</div>
+
+<script src="/vendor/monaco/vs/loader.js"></script>
+<script src="/vendor/emmet/emmet-monaco.min.js"></script>
+<script src="monaco-editor.js"></script>
+<script src="workspace.js"></script>
+<script src="problems.js"></script>
+<script src="python-lsp.js"></script>
+<script src="workspace-navigation.js"></script>
+<script src="workspace-file-operations.js"></script>
+<script src="source-control.js"></script>
+<script src="testing.js"></script>
+<script src="ares-workspace.js"></script>
+<script src="terminal-watcher.js"></script>
+<script src="geram-settings.js"></script>
+<script src="inline-ai.js"></script>
+<script src="statusbar.js"></script>
+<script src="live-preview.js"></script>
+<script src="share.js"></script>
+<script src="skills-panel.js"></script>
+<script src="manual.js"></script>
+<script src="vscode-chrome.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

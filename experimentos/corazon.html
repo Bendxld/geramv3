@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Valeria ❤</title>
+<style>
+  :root {
+    --bg: #0f0f12;
+    --red: #e6193c;
+    --red-soft: #ff5470;
+    --pink-glow: #ff8fa3;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: radial-gradient(circle at 50% 30%, #1a1a1f, var(--bg) 70%);
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hint {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+    transition: opacity 0.6s ease;
+    text-align: center;
+  }
+
+  input#box {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #444;
+    color: #fff;
+    font-size: 24px;
+    text-align: center;
+    padding: 10px;
+    outline: none;
+    letter-spacing: 4px;
+    width: 260px;
+    transition: border-color 0.4s ease, opacity 0.6s ease;
+    z-index: 5;
+  }
+
+  input#box:focus {
+    border-color: var(--red-soft);
+  }
+
+  input#box.hidden-input {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .hint.hidden-input {
+    opacity: 0;
+  }
+
+  #heart-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .letter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    color: var(--red);
+    font-weight: 700;
+    font-size: 20px;
+    text-shadow: 0 0 8px rgba(230,25,60,0.85), 0 0 18px rgba(255,80,110,0.5);
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+    transition: transform 1.4s cubic-bezier(.17,.89,.32,1.28), opacity 1s ease;
+    will-change: transform, opacity;
+  }
+
+  .letter.placed {
+    opacity: 1;
+  }
+
+  .letter.fade-out {
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+
+  .pulse {
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.06); }
+  }
+
+  #caption {
+    position: absolute;
+    bottom: 8%;
+    width: 100%;
+    text-align: center;
+    color: var(--red-soft);
+    font-size: 22px;
+    letter-spacing: 3px;
+    opacity: 0;
+    transition: opacity 1.2s ease 1s;
+    pointer-events: none;
+  }
+
+  #caption.show {
+    opacity: 1;
+  }
+
+  .reset-tip {
+    position: absolute;
+    top: 22px;
+    width: 100%;
+    text-align: center;
+    color: #555;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 1s ease 1.2s;
+  }
+
+  .reset-tip.show { opacity: 1; }
+
+  #dot-heart-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.2s ease;
+    z-index: 1;
+  }
+
+  #dot-heart-container.show {
+    opacity: 1;
+  }
+
+  #dotCanvas {
+    display: block;
+    width: min(80vw, 560px);
+    height: min(80vw, 560px);
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="reset-tip" id="resetTip">presiona ESC o borra el texto para reiniciar</div>
+  <div class="hint" id="hint">Escribe "tu nombre" y presiona Enter</div>
+  <input id="box" type="text" autocomplete="off" spellcheck="false" placeholder="escribe aquí..." autofocus>
+  <div id="heart-container"></div>
+  <div id="dot-heart-container">
+    <canvas id="dotCanvas" width="560" height="560"></canvas>
+  </div>
+  <div id="caption">valeria ❤</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+try {
+
+const input = document.getElementById('box');
+const hint = document.getElementById('hint');
+const heartContainer = document.getElementById('heart-container');
+const caption = document.getElementById('caption');
+const resetTip = document.getElementById('resetTip');
+
+let formed = false;
+
+// Genera puntos dentro y en el contorno del corazón usando la ecuación paramétrica
+function heartPoints(count) {
+  const points = [];
+  // contorno
+  const outlineCount = Math.round(count * 0.45);
+  for (let i = 0; i < outlineCount; i++) {
+    const t = (i / outlineCount) * Math.PI * 2;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+    points.push({x, y});
+  }
+  // relleno (puntos aleatorios dentro del corazón)
+  let filled = 0;
+  let attempts = 0;
+  while (filled < count - outlineCount && attempts < count * 40) {
+    attempts++;
+    const t = Math.random() * Math.PI * 2;
+    const scale = Math.sqrt(Math.random());
+    const x = 16 * Math.pow(Math.sin(t), 3) * scale;
+    const y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) * scale;
+    points.push({x, y});
+    filled++;
+  }
+  return points;
+}
+
+const dotContainer = document.getElementById('dot-heart-container');
+const canvas = document.getElementById('dotCanvas');
+const ctx = canvas.getContext('2d');
+
+let nodes3d = [];
+let links3d = [];
+let dotAnimId = null;
+let dotHeartBuilt = false;
+let dotStartTime = null;
+
+function resizeCanvas() {
+  const size = canvas.clientWidth || canvas.parentElement.clientWidth || 400;
+  const safeSize = size > 10 ? size : 400;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = safeSize * dpr;
+  canvas.height = safeSize * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  canvas._logicalSize = safeSize;
+}
+
+window.addEventListener('resize', () => {
+  if (dotContainer.classList.contains('show')) resizeCanvas();
+});
+
+function buildDotHeart(count = 90) {
+  const pts2d = heartPoints(count);
+  nodes3d = pts2d.map(p => ({
+    x: p.x,
+    y: p.y,
+    z: (Math.random() - 0.5) * 16 // profundidad para el efecto 3D
+  }));
+
+  // enlaces con los vecinos más cercanos en 3D (fijos, la rotación es rígida)
+  links3d = [];
+  const maxLinksPerNode = 2;
+  const maxDist = 8;
+  for (let i = 0; i < nodes3d.length; i++) {
+    const dists = [];
+    for (let j = 0; j < nodes3d.length; j++) {
+      if (i === j) continue;
+      const dx = nodes3d[i].x - nodes3d[j].x;
+      const dy = nodes3d[i].y - nodes3d[j].y;
+      const dz = nodes3d[i].z - nodes3d[j].z;
+      const d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+      if (d < maxDist) dists.push({ j, d });
+    }
+    dists.sort((a, b) => a.d - b.d);
+    dists.slice(0, maxLinksPerNode).forEach(({ j }) => {
+      if (i < j || !links3d.some(l => l.a === j && l.b === i)) {
+        links3d.push({ a: i, b: j });
+      }
+    });
+  }
+
+  dotHeartBuilt = true;
+}
+
+function drawDotHeart(timestamp) {
+  if (!dotStartTime) dotStartTime = timestamp;
+  const t = (timestamp - dotStartTime) / 1000;
+
+  const w = canvas._logicalSize || 400;
+  const h = w;
+  ctx.clearRect(0, 0, w, h);
+
+  // latido: doble pulso, como un corazón real
+  const beatCycle = t % 1.1;
+  let beat = 1;
+  if (beatCycle < 0.15) beat = 1 + 0.10 * Math.sin((beatCycle / 0.15) * Math.PI);
+  else if (beatCycle > 0.30 && beatCycle < 0.45) beat = 1 + 0.06 * Math.sin(((beatCycle - 0.30) / 0.15) * Math.PI);
+
+  // suaviza el arranque: rotación y jitter entran gradualmente el primer segundo
+  const introFade = Math.min(1, t / 1.2);
+
+  // rotación continua y suave en 3D
+  const angleY = t * 0.5 * introFade;
+  const angleX = Math.sin(t * 0.3) * 0.25 * introFade;
+
+  const focal = 260;
+  const scale = Math.min(w, h) / 46 * beat;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const projected = nodes3d.map(n => {
+    // ligero movimiento orgánico individual (como actividad neuronal)
+    const jitter = Math.sin(t * 1.6 + n.x * 0.7 + n.z) * 0.25 * introFade;
+
+    let x = n.x;
+    let y = n.y + jitter;
+    let z = n.z;
+
+    // rotación Y
+    let x1 = x * Math.cos(angleY) - z * Math.sin(angleY);
+    let z1 = x * Math.sin(angleY) + z * Math.cos(angleY);
+    // rotación X
+    let y1 = y * Math.cos(angleX) - z1 * Math.sin(angleX);
+    let z2 = y * Math.sin(angleX) + z1 * Math.cos(angleX);
+
+    const persp = focal / (focal + z2 + 20);
+    return {
+      sx: cx + x1 * scale * persp,
+      sy: cy + y1 * scale * persp,
+      depth: z2,
+      persp
+    };
+  });
+
+  // (líneas de conexión removidas: solo se dibujan los puntos)
+
+  // nodos, ordenados por profundidad para que se vean bien superpuestos
+  projected
+    .map((p, i) => ({ ...p, i }))
+    .sort((p1, p2) => p1.depth - p2.depth)
+    .forEach(p => {
+      const r = Math.max(1.2, 2.6 * p.persp);
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,84,112,0.95)';
+      ctx.shadowColor = 'rgba(255,90,120,0.9)';
+      ctx.shadowBlur = 8 * p.persp;
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  ctx.shadowBlur = 0;
+
+  dotAnimId = requestAnimationFrame(drawDotHeart);
+}
+
+function showDotHeart() {
+  if (!dotHeartBuilt) buildDotHeart();
+  dotContainer.classList.add('show');
+  resizeCanvas();
+  dotStartTime = null;
+  if (!dotAnimId) dotAnimId = requestAnimationFrame(drawDotHeart);
+}
+
+function hideDotHeart() {
+  dotContainer.classList.remove('show');
+  if (dotAnimId) {
+    cancelAnimationFrame(dotAnimId);
+    dotAnimId = null;
+  }
+}
+
+function buildHeart(name, onDone) {
+  heartContainer.innerHTML = '';
+  const clean = name.replace(/\s/g, '');
+  const totalLetters = 120;
+  const repeated = [];
+  for (let i = 0; i < totalLetters; i++) {
+    repeated.push(clean[i % clean.length]);
+  }
+
+  const points = heartPoints(totalLetters);
+  const scaleFactor = window.innerWidth < 500 ? 9.5 : 13;
+  const letterSpans = [];
+
+  points.forEach((p, i) => {
+    const span = document.createElement('span');
+    span.className = 'letter';
+    span.textContent = repeated[i];
+    heartContainer.appendChild(span);
+    letterSpans.push(span);
+
+    const px = p.x * scaleFactor;
+    const py = p.y * scaleFactor;
+
+    setTimeout(() => {
+      span.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px)) scale(${0.8 + Math.random()*0.4}) rotate(${(Math.random()-0.5)*20}deg)`;
+      span.classList.add('placed');
+      setTimeout(() => span.classList.add('pulse'), 800);
+    }, i * 12);
+  });
+
+  setTimeout(() => {
+    caption.classList.add('show');
+    if (onDone) onDone(letterSpans);
+  }, totalLetters * 12 + 400);
+}
+
+function fadeOutLetters(letterSpans) {
+  letterSpans.forEach(span => {
+    span.classList.remove('pulse');
+    span.classList.add('fade-out');
+  });
+  setTimeout(() => { heartContainer.innerHTML = ''; }, 1000);
+}
+
+function clearLetterHeart() {
+  heartContainer.innerHTML = '';
+}
+
+function clearDotHeart() {
+  hideDotHeart();
+  caption.classList.remove('show');
+  resetTip.classList.remove('show');
+}
+
+const TARGET_NAME = 'valeria';
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = input.value.trim().toLowerCase();
+    if (val === TARGET_NAME && !formed) {
+      formed = true;
+      hint.classList.add('hidden-input');
+      input.classList.add('hidden-input');
+
+      buildHeart(TARGET_NAME, (letterSpans) => {
+        // el corazón de letras se queda un momento, luego se desvanece
+        setTimeout(() => {
+          fadeOutLetters(letterSpans);
+          caption.classList.remove('show');
+          setTimeout(() => {
+            showDotHeart();
+            setTimeout(() => {
+              caption.classList.add('show');
+              resetTip.classList.add('show');
+            }, 900);
+          }, 900);
+        }, 3200);
+      });
+    }
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    resetAll();
+  }
+});
+
+function resetAll() {
+  input.value = '';
+  formed = false;
+  hint.classList.remove('hidden-input');
+  input.classList.remove('hidden-input');
+  clearLetterHeart();
+  clearDotHeart();
+  input.focus();
+}
+
+} catch (err) {
+  console.error('Error inicializando la página:', err);
+}
+});
+</script>
+
+</body>
+</html>

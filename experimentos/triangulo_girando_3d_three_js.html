@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Triángulo Girando en 3D</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #111; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+// --- Escena, cámara y renderer: NO reescribir salvo que el jefe pida
+// explícitamente cambiar el fondo, el campo de visión o desactivar
+// sombras/controles. ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(
+  50, window.innerWidth / window.innerHeight, 0.1, 100
+);
+camera.position.set(0, 1.5, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// --- Luces: base razonable para que cualquier geometría se vea con
+// volumen (luz ambiental para que nada quede totalmente negro + luz
+// direccional con sombra para dar relieve). Ajustar intensidad/color
+// si el jefe lo pide, pero mantener AMBAS luces. ---
+const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(luzAmbiental);
+
+const luzDireccional = new THREE.DirectionalLight(0xffffff, 1.2);
+luzDireccional.position.set(3, 5, 4);
+luzDireccional.castShadow = true;
+// Ajustes para mejorar la calidad de la sombra de la luz direccional
+luzDireccional.shadow.mapSize.width = 1024;
+luzDireccional.shadow.mapSize.height = 1024;
+luzDireccional.shadow.camera.near = 0.5;
+luzDireccional.shadow.camera.far = 50;
+luzDireccional.shadow.camera.left = -5;
+luzDireccional.shadow.camera.right = 5;
+luzDireccional.shadow.camera.top = 5;
+luzDireccional.shadow.camera.bottom = -5;
+scene.add(luzDireccional);
+
+// --- Controles de mouse (orbit): ya cableados. Si el jefe NO pidió
+// interactividad, se puede dejar igual (no estorba) o quitar este
+// bloque completo. ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// ============================================================
+// Creación del triángulo girando en 3D
+// ============================================================
+// Se construye una forma 2D de triángulo usando THREE.Shape y luego se le da
+// volumen con THREE.ExtrudeGeometry para crear un objeto 3D real y no un prisma.
+
+const triangleShape = new THREE.Shape();
+// Puntos para un triángulo equilátero centrado en (0,0)
+const sideLength = 2; // Longitud de un lado del triángulo
+const halfSide = sideLength / 2; // 1
+const height = sideLength * Math.sqrt(3) / 2; // Aproximadamente 1.732
+const halfHeight = height / 2; // Aproximadamente 0.866
+
+triangleShape.moveTo(0, halfHeight); // Vértice superior
+triangleShape.lineTo(-halfSide, -halfHeight); // Vértice inferior izquierdo
+triangleShape.lineTo(halfSide, -halfHeight); // Vértice inferior derecho
+triangleShape.lineTo(0, halfHeight); // Cierra la forma
+
+const extrudeSettings = {
+  depth: 0.2, // Grosor del triángulo
+  bevelEnabled: true,
+  bevelThickness: 0.1, // Grosor del bisel
+  bevelSize: 0.05,     // Tamaño del bisel
+  bevelSegments: 2,    // Segmentos del bisel para suavizarlo
+};
+
+const geometria = new THREE.ExtrudeGeometry(triangleShape, extrudeSettings);
+// Centrar la geometría para que el punto de rotación esté en el centro del objeto
+geometria.center(); 
+
+const material = new THREE.MeshStandardMaterial({ color: 0x0077ff }); // Un color azul vibrante
+const objeto = new THREE.Mesh(geometria, material);
+objeto.castShadow = true;
+objeto.receiveShadow = true;
+scene.add(objeto);
+
+// --- Resize: NO quitar, evita que la escena se vea deformada si la
+// ventana cambia de tamaño. ---
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Loop de animación: si el jefe pidió rotación/animación, agrégala
+// aquí (ej. objeto.rotation.y += 0.01). controls.update() es
+// obligatorio si enableDamping está activo. ---
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Rotar el triángulo sobre sus ejes Y e X para un movimiento dinámico
+  objeto.rotation.y += 0.015; // Rotación alrededor del eje Y
+  objeto.rotation.x += 0.005; // Rotación más lenta alrededor del eje X
+
+  controls.update(); // Obligatorio para controles con damping
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

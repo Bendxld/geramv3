@@ -1,0 +1,4 @@
+# Preserve byte-for-byte third-party runtime and notice files. Project sources
+# outside this vendored directory retain the repository's whitespace checks.
+ThirdPartyNotices.txt -whitespace
+vs/** -whitespace

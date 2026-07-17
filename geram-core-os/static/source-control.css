@@ -1,0 +1,24 @@
+.source-control-open { margin-left:auto; min-width:120px; background:#171120; color:#eee!important; border:1px solid #604078; padding:5px 9px; font-size:11px!important; }
+.source-control-badge { margin-left:6px; border-radius:9px; background:#ff5db1; color:#140b14; padding:1px 5px; }
+.source-control-panel { position:fixed; inset:40px auto 8px 58px; z-index:9500; width:min(470px,calc(100vw - 76px)); overflow:auto; background:#0e0c15; color:#eee; border:1px solid #7547a1; box-shadow:0 16px 50px #000; padding:12px; }
+.source-control-panel[hidden], .source-control-diff[hidden], .source-control-overlay[hidden] { display:none; }
+.source-control-head, .source-control-diff-head { display:flex; align-items:center; gap:8px; }
+.source-control-head h3 { margin:0; }
+.source-control-branch { color:#ff80be; margin-left:auto; }
+.source-control-notice { font-size:12px; color:#aaa; }
+.source-control-state.error { color:#ff668c; }
+.source-control-list { list-style:none; padding:0; margin:8px 0; }
+.source-control-item { display:grid; grid-template-columns:auto minmax(90px,1fr) auto auto auto; align-items:center; gap:7px; border-bottom:1px solid #282133; padding:6px 0; }
+.source-control-file { overflow:hidden; text-overflow:ellipsis; text-align:left; background:transparent; color:#ddd; border:0; }
+.source-control-kind { font-size:10px; color:#b997df; }
+.source-control-toolbar { display:flex; flex-wrap:wrap; gap:6px; }
+.source-control-toolbar button, .source-control-head button, .source-control-diff-head button, .source-control-discard, .source-control-staged-diff { background:#251a34; color:#fff; border:1px solid #604078; padding:5px 8px; }
+.source-control-diff { margin-top:12px; border-top:1px solid #604078; padding-top:8px; }
+.source-control-diff-text { max-height:42vh; overflow:auto; white-space:pre; font:12px/1.45 monospace; background:#08070c; padding:9px; }
+.source-control-hunks { display:flex; gap:4px; margin-left:auto; }
+.source-control-overlay { position:fixed; inset:0; z-index:15000; background:#05030acc; display:flex; justify-content:center; align-items:flex-start; padding-top:12vh; }
+.source-control-dialog { width:min(500px,90vw); background:#11101a; color:#eee; border:1px solid #884dff; padding:18px; }
+.source-control-dialog label { display:block; margin:10px 0; }
+.source-control-dialog input, .source-control-dialog select { box-sizing:border-box; width:100%; padding:8px; background:#090812; color:#fff; border:1px solid #594078; }
+.source-control-dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+.source-control-dialog-actions button { background:#2c1e42; color:#fff; border:1px solid #594078; padding:7px 10px; }

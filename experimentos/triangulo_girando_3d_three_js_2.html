@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Escena 3D</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #111; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+// --- Escena, cámara y renderer: NO reescribir salvo que el jefe pida
+// explícitamente cambiar el fondo, el campo de visión o desactivar
+// sombras/controles. ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(
+  50, window.innerWidth / window.innerHeight, 0.1, 100
+);
+camera.position.set(0, 1.5, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// --- Luces: base razonable para que cualquier geometría se vea con
+// volumen (luz ambiental para que nada quede totalmente negro + luz
+// direccional con sombra para dar relieve). Ajustar intensidad/color
+// si el jefe lo pide, pero mantener AMBAS luces. ---
+const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(luzAmbiental);
+
+const luzDireccional = new THREE.DirectionalLight(0xffffff, 1.2);
+luzDireccional.position.set(3, 5, 4);
+luzDireccional.castShadow = true;
+// Configuración de sombra para que el triángulo sea visible en ella
+luzDireccional.shadow.mapSize.width = 1024;
+luzDireccional.shadow.mapSize.height = 1024;
+luzDireccional.shadow.camera.near = 0.5;
+luzDireccional.shadow.camera.far = 50;
+luzDireccional.shadow.camera.left = -5;
+luzDireccional.shadow.camera.right = 5;
+luzDireccional.shadow.camera.top = 5;
+luzDireccional.shadow.camera.bottom = -5;
+scene.add(luzDireccional);
+
+// --- Controles de mouse (orbit): ya cableados. Si el jefe NO pidió
+// interactividad, se puede dejar igual (no estorba) o quitar este
+// bloque completo. ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// ============================================================
+// TODO: reemplazar este placeholder por la geometría/objeto REAL que
+// pidió el jefe. Si pidió una forma compleja (ej. un corazón, una
+// estrella, un logo), usa THREE.Shape() + ExtrudeGeometry para tener
+// volumen real en vez de una geometría primitiva genérica — NO se vale
+// aproximar una forma pedida con una esfera/cubo/cono si la forma real
+// es reconocible (ej. un corazón NO es una esfera aplastada).
+// ============================================================
+
+// Crear la forma de un triángulo
+const triangleShape = new THREE.Shape();
+const halfBase = 1.5; // La mitad de la base del triángulo
+const height = halfBase * Math.sqrt(3); // Altura para un triángulo equilátero
+
+triangleShape.moveTo(0, height / 2); // Punto superior
+triangleShape.lineTo(-halfBase, -height / 2); // Punto inferior izquierdo
+triangleShape.lineTo(halfBase, -height / 2); // Punto inferior derecho
+triangleShape.lineTo(0, height / 2); // Cerrar la forma
+
+// Opciones para la extrusión, para darle volumen
+const extrudeSettings = {
+  depth: 0.5,
+  bevelEnabled: true,
+  bevelSegments: 4,
+  steps: 1,
+  bevelSize: 0.1,
+  bevelThickness: 0.1
+};
+
+// Crear la geometría del triángulo extruido
+const geometriaTriangulo = new THREE.ExtrudeGeometry(triangleShape, extrudeSettings);
+
+// Crear un material para el triángulo
+const materialTriangulo = new THREE.MeshStandardMaterial({
+  color: 0x007bff, // Un azul vibrante
+  roughness: 0.5,
+  metalness: 0.3
+});
+
+// Crear el objeto Mesh
+const objeto = new THREE.Mesh(geometriaTriangulo, materialTriangulo);
+objeto.castShadow = true;
+objeto.receiveShadow = true;
+scene.add(objeto);
+
+// Opcional: añadir un plano en el suelo para ver mejor las sombras
+const planeGeometry = new THREE.PlaneGeometry(10, 10);
+const planeMaterial = new THREE.MeshStandardMaterial({ color: 0x444444 });
+const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+plane.rotation.x = -Math.PI / 2;
+plane.position.y = -1.5; // Colocar debajo del triángulo
+plane.receiveShadow = true;
+scene.add(plane);
+
+// --- Resize: NO quitar, evita que la escena se vea deformada si la
+// ventana cambia de tamaño. ---
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Loop de animación: si el jefe pidió rotación/animación, agrégala
+// aquí (ej. objeto.rotation.y += 0.01). controls.update() es
+// obligatorio si enableDamping está activo. ---
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Animación de rotación del triángulo
+  objeto.rotation.y += 0.01;
+  objeto.rotation.x += 0.005;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GERAM
+Comment=GERAM — development environment (A.R.E.S.) with IRIS as a companion
+Exec=/home/mauri/geramv3/geram.sh
+TryExec=/home/mauri/geramv3/geram.sh
+Icon=/home/mauri/geramv3/geram-core-os/static/favicon.svg
+Path=/home/mauri/geramv3
+Terminal=false
+Categories=Development;
+StartupNotify=true
+StartupWMClass=geram-core-os

@@ -1,0 +1,9 @@
+{
+  "package": "monaco-editor",
+  "version": "0.52.2",
+  "source": "npm package monaco-editor",
+  "license": "MIT",
+  "runtime": "min/vs",
+  "asset_count": 103,
+  "source_maps": false
+}

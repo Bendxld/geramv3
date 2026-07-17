@@ -1,0 +1,29 @@
+# ============================================================
+# GERAM OS v2 · requirements-cloud.txt
+# Dependencias para el despliegue en la nube de cloud_bot.py (Telegram
+# sin la laptop prendida — ver ese archivo). Deliberadamente MUCHO más
+# corto que requirements.txt: con GERAM_MODO_NUBE=true, director.py no
+# importa los agentes que dependen de cámara/navegador/ejecutar código
+# arbitrario (ver director._ModuloLocal), así que sus dependencias
+# pesadas (selenium, playwright, sounddevice, faster-whisper,
+# piper-tts, edge-tts, cryptography, python-telegram-bot) NO hacen
+# falta — probado de verdad en un venv aislado, no es una lista teórica.
+#
+# pyautogui/psutil SÍ hacen falta aunque estén "bloqueados": control_
+# agent.py los importa a nivel de módulo (ver ese archivo) y control_
+# agent SIEMPRE se importa (ver el comentario en director.py sobre por
+# qué no se puede envenenar) — solo IMPORTA, nunca se USA en modo nube
+# (INTENTS_SOLO_LOCAL lo bloquea antes).
+# ============================================================
+python-dotenv
+google-genai
+supabase
+httpx
+google-auth
+google-auth-oauthlib
+google-api-python-client
+pdfplumber
+youtube-transcript-api
+spotipy
+psutil
+pyautogui

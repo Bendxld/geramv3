@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cerebro de Archivos</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div id="titulo">🧠 Cerebro de Archivos</div>
+    <div id="ruta">Cargando…</div>
+    <div id="stats"></div>
+  </div>
+
+  <div id="barra-superior">
+    <input id="buscador" type="text" placeholder="Buscar archivo o carpeta… (Enter)" autocomplete="off">
+    <button id="btn-expandir-todo" title="Expande todas las carpetas">Expandir todo</button>
+    <button id="btn-colapsar-todo" title="Colapsa todas las carpetas">Colapsar todo</button>
+  </div>
+
+  <div id="aviso-rendimiento" class="oculto">
+    <span id="aviso-texto"></span>
+    <button id="btn-aviso-colapsar">Colapsar todo</button>
+    <button id="btn-aviso-cerrar" aria-label="Cerrar">✕</button>
+  </div>
+
+  <div id="leyenda">
+    <div class="leyenda-seccion">
+      <div class="leyenda-titulo">Lóbulos</div>
+      <div id="leyenda-lobulos" class="leyenda-grid"><!-- poblado por cerebro.js según las carpetas reales --></div>
+    </div>
+    <div class="leyenda-divisor"></div>
+    <div class="leyenda-seccion">
+      <div class="leyenda-titulo">Tipo de archivo</div>
+      <div class="leyenda-grid">
+        <div class="item"><span class="anillo" style="border-color:#ff6b5e"></span>PDF</div>
+        <div class="item"><span class="anillo" style="border-color:#54e08d"></span>Imagen</div>
+        <div class="item"><span class="anillo" style="border-color:#8f5cff"></span>Código</div>
+        <div class="item"><span class="anillo" style="border-color:#4d8dff"></span>Documento</div>
+        <div class="item"><span class="anillo" style="border-color:#ff9d3d"></span>Video</div>
+        <div class="item"><span class="anillo" style="border-color:#ff5ec4"></span>Música</div>
+        <div class="item"><span class="anillo" style="border-color:#9aa4b2"></span>Otro</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tooltip" class="oculto"></div>
+
+  <div id="menu-contextual" class="oculto">
+    <button id="btn-abrir">Abrir archivo</button>
+  </div>
+
+  <div id="estado-conexion" class="desconectado">● conectando…</div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="/js/cerebro.js"></script>
+</body>
+</html>

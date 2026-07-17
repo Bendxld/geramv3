@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GERAM CORE OS
+Comment=Abrir GERAM CORE OS de forma local y segura
+Exec=/home/mauri/geramv3/geram-core-os/iniciar_app.sh
+TryExec=/home/mauri/geramv3/geram-core-os/iniciar_app.sh
+Icon=/home/mauri/geramv3/geram-core-os/static/favicon.svg
+Path=/home/mauri/geramv3/geram-core-os
+Terminal=false
+Categories=Development;
+StartupNotify=true
+StartupWMClass=geram-core-os

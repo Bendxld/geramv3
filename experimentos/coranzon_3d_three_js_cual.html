@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Corazón 3D Interactivo</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #111; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+// --- Escena, cámara y renderer: NO reescribir salvo que el jefe pida
+// explícitamente cambiar el fondo, el campo de visión o desactivar
+// sombras/controles. ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x111111);
+
+const camera = new THREE.PerspectiveCamera(
+  50, window.innerWidth / window.innerHeight, 0.1, 100
+);
+camera.position.set(0, 1.5, 6);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+// --- Luces: base razonable para que cualquier geometría se vea con
+// volumen (luz ambiental para que nada quede totalmente negro + luz
+// direccional con sombra para dar relieve). Ajustar intensidad/color
+// si el jefe lo pide, pero mantener AMBAS luces. ---
+const luzAmbiental = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(luzAmbiental);
+
+const luzDireccional = new THREE.DirectionalLight(0xffffff, 1.2);
+luzDireccional.position.set(3, 5, 4);
+luzDireccional.castShadow = true;
+// Ajustar la cámara de la sombra para asegurar que el corazón esté dentro del frustum
+luzDireccional.shadow.camera.left = -2.5;
+luzDireccional.shadow.camera.right = 2.5;
+luzDireccional.shadow.camera.top = 2.5;
+luzDireccional.shadow.camera.bottom = -2.5;
+luzDireccional.shadow.camera.near = 0.1;
+luzDireccional.shadow.camera.far = 15;
+luzDireccional.shadow.mapSize.width = 1024;
+luzDireccional.shadow.mapSize.height = 1024;
+scene.add(luzDireccional);
+
+// --- Controles de mouse (orbit): ya cableados. Si el jefe NO pidió
+// interactividad, se puede dejar igual (no estorba) o quitar este
+// bloque completo. ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// ============================================================
+// TODO: reemplazar este placeholder por la geometría/objeto REAL que
+// pidió el jefe. Si pidió una forma compleja (ej. un corazón, una
+// estrella, un logo), usa THREE.Shape() + ExtrudeGeometry para tener
+// volumen real en vez de una geometría primitiva genérica — NO se vale
+// aproximar una forma pedida con una esfera/cubo/cono si la forma real
+// es reconocible (ej. un corazón NO es una esfera aplastada).
+// ============================================================
+
+// Crear la forma 2D de un corazón usando THREE.Shape
+const heartShape = new THREE.Shape();
+
+// Escala y offset para centrar el corazón y darle un tamaño adecuado
+const customScale = 1.8; // Escala general del corazón
+const centerX_shift = -0.25 * customScale; // Desplazamiento X para centrar
+const centerY_shift = -0.475 * customScale; // Desplazamiento Y para centrar (el corazón original tiene su base en y=0)
+
+heartShape.moveTo( 0.25 * customScale + centerX_shift, 0.25 * customScale + centerY_shift );
+heartShape.bezierCurveTo( 0.25 * customScale + centerX_shift, 0.25 * customScale + centerY_shift, 0.20 * customScale + centerX_shift, 0.00 * customScale + centerY_shift, 0.00 * customScale + centerX_shift, 0.00 * customScale + centerY_shift );
+heartShape.bezierCurveTo( -0.30 * customScale + centerX_shift, 0.00 * customScale + centerY_shift, -0.30 * customScale + centerX_shift, 0.35 * customScale + centerY_shift, -0.30 * customScale + centerX_shift, 0.35 * customScale + centerY_shift );
+heartShape.bezierCurveTo( -0.30 * customScale + centerX_shift, 0.55 * customScale + centerY_shift, -0.10 * customScale + centerX_shift, 0.77 * customScale + centerY_shift, 0.25 * customScale + centerX_shift, 0.95 * customScale + centerY_shift );
+heartShape.bezierCurveTo( 0.60 * customScale + centerX_shift, 0.77 * customScale + centerY_shift, 0.80 * customScale + centerX_shift, 0.55 * customScale + centerY_shift, 0.80 * customScale + centerX_shift, 0.35 * customScale + centerY_shift );
+heartShape.bezierCurveTo( 0.80 * customScale + centerX_shift, 0.35 * customScale + centerY_shift, 0.80 * customScale + centerX_shift, 0.00 * customScale + centerY_shift, 0.50 * customScale + centerX_shift, 0.00 * customScale + centerY_shift );
+heartShape.bezierCurveTo( 0.35 * customScale + centerX_shift, 0.00 * customScale + centerY_shift, 0.25 * customScale + centerX_shift, 0.25 * customScale + centerY_shift, 0.25 * customScale + centerX_shift, 0.25 * customScale + centerY_shift );
+
+// Configuración para la extrusión de la forma 2D a 3D
+const extrudeSettings = {
+    steps: 2,
+    depth: 0.5, // Profundidad del corazón 3D
+    bevelEnabled: true, // Habilitar bisel para bordes suaves
+    bevelThickness: 0.1,
+    bevelSize: 0.1,
+    bevelOffset: 0,
+    bevelSegments: 4
+};
+
+// Crear la geometría 3D del corazón
+const geometriaCorazon = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+
+// Material del corazón (rojo brillante)
+const materialCorazon = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+
+// Crear el objeto Mesh del corazón y añadirlo a la escena
+const corazon = new THREE.Mesh(geometriaCorazon, materialCorazon);
+corazon.castShadow = true;
+corazon.receiveShadow = true;
+scene.add(corazon);
+
+// --- Resize: NO quitar, evita que la escena se vea deformada si la
+// ventana cambia de tamaño. ---
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// --- Loop de animación: si el jefe pidió rotación/animación, agrégala
+// aquí (ej. objeto.rotation.y += 0.01). controls.update() es
+// obligatorio si enableDamping está activo. ---
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update(); // Necesario para los controles de órbita con amortiguación
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
