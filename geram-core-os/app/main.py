@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.telegram_poller import poll_telegram_updates
 from app.middleware.session_logging import SessionLoggingMiddleware
-from app.api import orchestrator, agents, telemetry, config, workspace, ares_edits, terminal_watcher, user_config, github, preview, share, gcs, python_lsp, workspace_navigation, workspace_operations, instance
+from app.api import orchestrator, agents, telemetry, config, workspace, ares_edits, terminal_watcher, user_config, github, preview, share, gcs, python_lsp, workspace_navigation, workspace_operations, instance, iris_proxy
 from app.api import source_control
 from app.api import testing
 from app.core.user_config import CONFIG_PATH, load_config
@@ -182,6 +182,10 @@ app.include_router(instance.router)
 # System, local Skill Retriever, Integration Hub, Agent Factory, Context
 # Builder. Fully offline; localhost-only; no real external calls.
 app.include_router(gcs.router)
+
+# Same-origin proxy to IRIS (:8010) so the agents dashboard works under the
+# Electron CSP (connect-src 'self'). See app/api/iris_proxy.py.
+app.include_router(iris_proxy.router)
 
 # ------------------------------------------------------------------
 # Planned routes (not yet implemented — placeholders for roadmap clarity)

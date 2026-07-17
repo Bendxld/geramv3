@@ -1765,12 +1765,13 @@ function toggleGestos(activar) {
 // REALES son de IRIS (server.py, 8010). IRIS expone:
 //   GET  /agentes           -> lista [{nombre,etiqueta,nucleo,suspendido}]
 //   POST /agentes/{nombre}   -> {suspendido:bool}  (suspender/reactivar)
-// CORS abierto en IRIS + localhost permitido por la network-policy de
-// Electron => el fetch entre puertos funciona desde aquí. "Suspender"
-// apaga lo AUTOMÁTICO del agente (proactividad/schedulers/monitores); las
-// peticiones explícitas por chat siguen funcionando. Los agentes de núcleo
-// (director, memory, …) no se pueden suspender: se marcan como "core".
-var IRIS_BASE = 'http://localhost:8010';
+// core-os proxea IRIS en el MISMO origen (/api/iris/*, ver app/api/iris_proxy.py)
+// porque la CSP de Electron restringe connect-src a 'self': un fetch directo a
+// :8010 queda bloqueado. "Suspender" apaga lo AUTOMÁTICO del agente
+// (proactividad/schedulers/monitores); las peticiones explícitas por chat
+// siguen funcionando. Los agentes de núcleo (director, memory, …) no se pueden
+// suspender: se marcan como "core".
+var IRIS_BASE = '/api/iris';
 
 function prettificarNombreAgente(nombre) {
   var limpio = nombre.replace(/_agent$/, '').replace(/_/g, ' ');
