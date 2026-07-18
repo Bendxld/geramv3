@@ -51,7 +51,22 @@ y las features que controlan el escritorio son de Linux.
 ```bash
 git clone https://github.com/Bendxld/geramv3.git
 cd geramv3
+```
 
+**Automático — un comando** (crea los venvs, instala dependencias, Electron y el `.env`):
+
+```bash
+./setup.sh                                              # Linux / macOS
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1   # Windows (prepara GERAM CORE OS)
+```
+
+Después edita `.env` con tus claves (todas opcionales) y arranca (ver [Cómo se usa](#cómo-se-usa)).
+
+<details><summary><b>¿Prefieres a mano? Instalación paso a paso</b></summary>
+
+```bash
 # 1) Backend de IRIS (:8010)
 python3 -m venv venv
 source venv/bin/activate
@@ -79,6 +94,8 @@ $EDITOR .env
 > `source venv/bin/activate`), y podés **saltarte el paso 3 (Electron)** — se usa
 > en el navegador (ver [Cómo se usa → Windows](#windows-editor--ia--extensiones-en-el-navegador)).
 > Solo necesitás el venv de `geram-core-os` para la parte principal.
+
+</details>
 
 ---
 
