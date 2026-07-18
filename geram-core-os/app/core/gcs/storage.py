@@ -87,7 +87,8 @@ def write_json_atomic_0600(path: Path, payload: dict) -> None:
     directory = path.parent
     handle, temporary = tempfile.mkstemp(dir=str(directory), prefix=".gcs-", suffix=".tmp")
     try:
-        os.fchmod(handle, 0o600)
+        if hasattr(os, "fchmod"):  # Unix-only; en Windows lo maneja el perfil de usuario
+            os.fchmod(handle, 0o600)
         with os.fdopen(handle, "wb") as stream:
             stream.write(encoded)
         os.replace(temporary, path)

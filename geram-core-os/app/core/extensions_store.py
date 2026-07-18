@@ -84,7 +84,8 @@ def _write_manifest(manifest: dict) -> None:
     path = _manifest_path(manifest["id"])
     handle, temporary = tempfile.mkstemp(dir=str(path.parent), prefix=".ext-", suffix=".tmp")
     try:
-        os.fchmod(handle, 0o600)
+        if hasattr(os, "fchmod"):  # Unix-only; en Windows los permisos los da el perfil de usuario
+            os.fchmod(handle, 0o600)
         with os.fdopen(handle, "wb") as stream:
             stream.write(payload)
         os.replace(temporary, path)

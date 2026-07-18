@@ -26,14 +26,18 @@ cada sistema:
 
 | | **Linux (Mint / XFCE / etc.)** | **Windows** |
 |---|---|---|
-| Editor A.R.E.S. + IA + extensiones | ✅ (Electron o navegador) | ✅ (en el navegador) |
+| App + proveedores de IA + round-robin + extensiones | ✅ (Electron o navegador) | ✅ (en el navegador) |
+| Editor de archivos del workspace (abrir / editar / guardar) | ✅ | ➖ Linux-first (guardado endurecido con `openat`/`dir_fd`, que Windows no soporta) |
 | Ícono de escritorio (un clic) | ✅ (`scripts/install-desktop.sh`) | ➖ (se abre en el navegador) |
-| Asistente IRIS: voz, control del escritorio, portapapeles | ✅ | ➖ Linux-first (usa utilidades de Linux) |
-| Runner de código en sandbox | ✅ (bubblewrap) | ➖ Linux-only |
+| Asistente IRIS: voz, control del escritorio, portapapeles | ✅ | ➖ Linux-first |
+| Runner de código en sandbox · Git · Pyright | ✅ (bubblewrap) | ➖ Linux-only |
 
-En **Windows** usás la parte principal (editor + proveedores de IA +
-extensiones) corriendo el backend de CORE OS y abriéndolo en el navegador. IRIS
-y las features que controlan el escritorio son de Linux.
+En **Windows** la app corre en el navegador con la **configuración de
+proveedores de IA (con round-robin)** y la **gestión de extensiones**
+(importar/crear temas, snippets y gramáticas). El **editor de archivos del
+workspace** (abrir y guardar archivos del proyecto) y las features de
+IRIS/sandbox son **de Linux** — funcionarían en Windows con una capa de
+guardado alternativa, aún no escrita/probada.
 
 ## Requisitos
 
