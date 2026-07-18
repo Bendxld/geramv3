@@ -18,14 +18,30 @@ Todo corre **localmente** en tu máquina. Las apps se comunican entre sí en `lo
 
 ---
 
+## Sistemas operativos
+
+Las rutas son **portables** (relativas al repo y a tu carpeta personal), así que
+funciona sin editar nada sin importar el usuario o dónde lo clones. Qué corre en
+cada sistema:
+
+| | **Linux (Mint / XFCE / etc.)** | **Windows** |
+|---|---|---|
+| Editor A.R.E.S. + IA + extensiones | ✅ (Electron o navegador) | ✅ (en el navegador) |
+| Ícono de escritorio (un clic) | ✅ (`scripts/install-desktop.sh`) | ➖ (se abre en el navegador) |
+| Asistente IRIS: voz, control del escritorio, portapapeles | ✅ | ➖ Linux-first (usa utilidades de Linux) |
+| Runner de código en sandbox | ✅ (bubblewrap) | ➖ Linux-only |
+
+En **Windows** usás la parte principal (editor + proveedores de IA +
+extensiones) corriendo el backend de CORE OS y abriéndolo en el navegador. IRIS
+y las features que controlan el escritorio son de Linux.
+
 ## Requisitos
 
 - **Python 3.11+**
-- **Node.js 18+** y **npm** (para la ventana Electron y sus assets de Monaco)
-- **Linux** con entorno de escritorio (probado en XFCE). El lanzador `.desktop` y el sandbox usan utilidades de Linux.
+- **Node.js 18+** y **npm** (para la ventana Electron y sus assets de Monaco; en Windows en navegador no hace falta Electron)
 - Opcionales, según qué features uses:
   - **[Ollama](https://ollama.com)** — para modelos de IA locales (sin API key).
-  - `xclip`/`xsel` — historial de portapapeles de IRIS.
+  - `xclip`/`xsel` (Linux) — historial de portapapeles de IRIS.
   - Cuentas/API keys de los proveedores e integraciones que quieras (todo opcional).
 
 ---
@@ -59,6 +75,11 @@ cp .env.example .env
 $EDITOR .env
 ```
 
+> **En Windows:** activá el venv con `venv\Scripts\activate` (en vez de
+> `source venv/bin/activate`), y podés **saltarte el paso 3 (Electron)** — se usa
+> en el navegador (ver [Cómo se usa → Windows](#windows-editor--ia--extensiones-en-el-navegador)).
+> Solo necesitás el venv de `geram-core-os` para la parte principal.
+
 ---
 
 ## Configuración
@@ -78,15 +99,29 @@ Copia `.env.example` a `.env`. **Todas las claves son opcionales** — sin ningu
 
 ## Cómo se usa
 
-```bash
-./geram.sh          # lanzador unificado: levanta IRIS (si hace falta) y abre A.R.E.S. (Electron)
-```
+### Linux
 
-O instala el ícono de escritorio editando las rutas de `GERAM.desktop` a tu carpeta y copiándolo a `~/.local/share/applications/` (o al escritorio).
+```bash
+./geram.sh                      # lanzador unificado: IRIS (si hace falta) + A.R.E.S. (Electron)
+./scripts/install-desktop.sh    # (opcional) crea el ícono "GERAM" con TU ruta real automáticamente
+```
 
 - **A.R.E.S. / CORE OS**: la ventana principal (editor + workspace).
 - **IRIS**: panel secundario del asistente. Su HUD también responde en `http://localhost:8010`.
 - Reiniciar todo: `./reiniciar_geram.sh`
+
+### Windows (editor + IA + extensiones, en el navegador)
+
+No hace falta Electron: se corre el backend y se abre en el navegador.
+
+```powershell
+cd geram-core-os
+.\venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+Luego abrí **http://localhost:8000** en Chrome/Edge. Tenés el editor, los
+proveedores de IA (Settings → API IA) y las extensiones. IRIS y el runner en
+sandbox son de Linux.
 
 ---
 

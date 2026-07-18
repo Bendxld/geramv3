@@ -33,7 +33,11 @@ from agents import balancer, code_agent, code_memoria, control_agent
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("code_proyectos")
 
-CARPETA_PROYECTOS = "/home/mauri/geramv3/proyectos"
+# Relativa a la raíz del repo (agents/ -> raíz), para que funcione sin
+# importar dónde se clone GERAM ni en qué usuario/OS.
+CARPETA_PROYECTOS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "proyectos"
+)
 
 _TIMEOUT_EJECUCION_SEGUNDOS = 15
 _MAX_INTENTOS_PROYECTO = 3

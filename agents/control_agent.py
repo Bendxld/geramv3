@@ -784,7 +784,7 @@ def buscar_archivo(nombre):
         return "¿Qué archivo busco, jefe?"
     try:
         resultado = subprocess.run(
-            ["find", "/home/mauri", "-iname", f"*{nombre}*"],
+            ["find", os.path.expanduser("~"), "-iname", f"*{nombre}*"],
             capture_output=True, text=True, timeout=15,
         )
         rutas = [linea for linea in resultado.stdout.strip().splitlines() if linea][:20]
@@ -1088,6 +1088,17 @@ Reglas:
   /home/mauri/Music, /home/mauri/Pictures, /home/mauri/Videos
 - El sistema es Linux Mint con XFCE o similar
 - SOLO responde el JSON, nada más"""
+
+# Portabilidad: el prompt trae rutas de ejemplo con "/home/mauri". Las
+# reemplazamos por el home REAL del usuario (y su nombre de usuario) para que
+# funcione en cualquier equipo/OS sin editar el prompt a mano.
+_HOME_REAL = os.path.expanduser("~")
+_USUARIO_REAL = os.path.basename(_HOME_REAL) or "el jefe"
+SYSTEM_PROMPT_CONTROL = (
+    SYSTEM_PROMPT_CONTROL
+    .replace("/home/mauri", _HOME_REAL)
+    .replace("se llama mauri", "se llama " + _USUARIO_REAL)
+)
 
 
 def _es_verdadero(valor):

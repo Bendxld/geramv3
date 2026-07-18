@@ -24,7 +24,7 @@ _CARPETAS_BUSQUEDA_APROXIMADA = (
     os.path.expanduser("~/Documents"),
     os.path.expanduser("~/Downloads"),
     DESCARGAS_DIR,
-    "/home/mauri/geramv3/experimentos",
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "experimentos"),
 )
 
 _CATEGORIAS = {

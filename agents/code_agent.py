@@ -66,7 +66,11 @@ from agents import balancer, code_memoria, code_pipeline, plantillas_codigo
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("code_agent")
 
-CARPETA_EXPERIMENTOS = "/home/mauri/geramv3/experimentos"
+# Relativa a la raíz del repo (agents/ -> raíz), para que funcione sin
+# importar dónde se clone GERAM ni en qué usuario/OS.
+CARPETA_EXPERIMENTOS = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "experimentos"
+)
 
 _TIMEOUT_SEGUNDOS = 15
 _TIMEOUT_PIP_SEGUNDOS = 120

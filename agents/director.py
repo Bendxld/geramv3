@@ -2234,7 +2234,7 @@ def _parsear_indice(texto):
 
 def _extraer_ruta_archivo(texto):
     """Saca una ruta de archivo del mensaje (ej. "resume este pdf
-    /home/mauri/Descargas/algo.pdf"). Solo reconoce rutas explícitas
+    ~/Descargas/algo.pdf"). Solo reconoce rutas explícitas
     (empiezan con / o ~), no nombres sueltos, para no confundir
     palabras del mensaje con una ruta."""
     coincidencia = re.search(r"[~/][^\s]+", texto)
