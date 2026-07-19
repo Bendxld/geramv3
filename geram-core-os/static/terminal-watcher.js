@@ -5,6 +5,11 @@
   var list = documentObject.getElementById('terminalWatcherRuns');
   if (!panel || !toggle || !list) return;
   var timer = null;
+  function setOpen(open) {
+    panel.hidden = !open;
+    toggle.classList.toggle('activo', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
   function render(runs) {
     while (list.firstChild) list.removeChild(list.firstChild);
     runs.forEach(function (run) {
@@ -22,5 +27,16 @@
     });
   }
   function poll() { return fetch('/api/terminal-watcher/runs', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) { render(d.runs || []); if ((d.runs || []).some(function (r) { return r.status === 'running' || r.status === 'queued'; })) timer = windowObject.setTimeout(poll, 500); }); }
-  toggle.addEventListener('click', function () { panel.hidden = !panel.hidden; if (!panel.hidden) poll(); else if (timer) windowObject.clearTimeout(timer); });
+  toggle.addEventListener('click', function () {
+    setOpen(panel.hidden);
+    if (!panel.hidden) { poll(); }
+    else if (timer) { windowObject.clearTimeout(timer); timer = null; }
+  });
+  documentObject.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && !panel.hidden) {
+      setOpen(false);
+      if (timer) { windowObject.clearTimeout(timer); timer = null; }
+      toggle.focus();
+    }
+  });
 }(window, document));

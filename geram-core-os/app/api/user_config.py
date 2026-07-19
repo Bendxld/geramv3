@@ -1,7 +1,8 @@
 """
 User Config Router — GERAM CORE OS (v3, Paso 2)
 
-Local profile / identity / privacy settings persisted as `.geram-config.json`.
+Local profile / identity / privacy settings persisted in the per-user GERAM
+data directory. A legacy project-root `.geram-config.json` is migrated once.
 Separate from the /config router (which manages the .env provider secrets):
 
     GET  /api/config   -> current config (auto-created with defaults if absent)
@@ -26,6 +27,12 @@ from app.core.user_config import (
 
 
 class ManualSeenUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    version: int = Field(ge=1, le=10000)
+
+
+class SetupCompleteUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     version: int = Field(ge=1, le=10000)
@@ -91,4 +98,30 @@ async def marcar_manual_visto(payload: ManualSeenUpdate):
     return {
         "status": "ok",
         "manual_version_seen": saved.onboarding.manual_version_seen,
+    }
+
+
+@router.post("/setup-complete", dependencies=[Depends(require_local_origin)])
+async def completar_configuracion(payload: SetupCompleteUpdate):
+    """Persist first-run completion without overwriting later preferences."""
+    try:
+        config = load_config(CONFIG_PATH, create_if_missing=True)
+        config.onboarding.setup_version_seen = max(
+            config.onboarding.setup_version_seen,
+            payload.version,
+        )
+        saved = save_config(config, CONFIG_PATH)
+    except (ValueError, json.JSONDecodeError) as error:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "invalid_config_file", "message": str(error)},
+        ) from None
+    except OSError:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "config_write_failed", "message": "Setup state could not be saved"},
+        ) from None
+    return {
+        "status": "ok",
+        "setup_version_seen": saved.onboarding.setup_version_seen,
     }

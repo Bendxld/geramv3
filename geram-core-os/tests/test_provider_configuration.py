@@ -259,15 +259,22 @@ class ProviderConfigApiTests(unittest.TestCase):
             "default_model",
             "requires_api_key",
             "implementation_available",
+            "input_modalities",
         }
         self.assertEqual(
             {item["provider_id"] for item in catalog},
-            {"openai", "gemini", "groq", "ollama"},
+            {
+                "openai", "gemini", "groq", "ollama", "anthropic",
+                "mistral", "deepseek", "xai", "perplexity", "together",
+                "openrouter", "cerebras", "fireworks", "moonshot",
+            },
         )
         self.assertTrue(all(set(item) == allowed_fields for item in catalog))
         ollama = next(item for item in catalog if item["provider_id"] == "ollama")
         self.assertFalse(ollama["requires_api_key"])
         self.assertTrue(ollama["implementation_available"])
+        gemini = next(item for item in catalog if item["provider_id"] == "gemini")
+        self.assertEqual(gemini["input_modalities"], ["text", "image", "audio"])
 
 
 if __name__ == "__main__":

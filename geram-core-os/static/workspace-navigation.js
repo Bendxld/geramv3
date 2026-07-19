@@ -91,6 +91,14 @@
     var mode = 'files', files = [], recent = [], selected = 0, aborter = null, activeJob = '', pollTimer = null, symbolTimer = null, symbolSequence = 0, previewToken = '';
     var history = new NavigationHistory(100);
 
+    function markSearchActivity(active) {
+      var activity = documentObject.querySelector('[data-act="search"]');
+      if (activity) {
+        activity.classList.toggle('activo', active);
+        activity.setAttribute('aria-expanded', active ? 'true' : 'false');
+      }
+    }
+
     function setStatus(message) { status.textContent = message || ''; }
     function clearResults() { while (results.firstChild) { results.removeChild(results.firstChild); } selected = 0; }
     function buttons() { return Array.prototype.slice.call(results.querySelectorAll('button')); }
@@ -273,6 +281,7 @@
     }
     function open(nextMode) {
       mode = nextMode; dialog.hidden = false; dialog.setAttribute('aria-hidden', 'false'); previewToken = ''; applyButton.hidden = true;
+      markSearchActivity(mode === 'search');
       searchOptions.hidden = mode === 'files' || mode === 'symbols'; replacementRow.hidden = mode !== 'search';
       searchOptions.style.display = searchOptions.hidden ? 'none' : ''; replacementRow.style.display = replacementRow.hidden ? 'none' : '';
       runButton.hidden = mode !== 'search';
@@ -290,7 +299,7 @@
       }
       setStatus('Search cancelled');
     }
-    function close() { cancelSearch(); dialog.hidden = true; dialog.setAttribute('aria-hidden', 'true'); }
+    function close() { cancelSearch(); dialog.hidden = true; dialog.setAttribute('aria-hidden', 'true'); markSearchActivity(false); }
 
     input.addEventListener('input', function() {
       if (mode === 'files') { renderFiles(); }

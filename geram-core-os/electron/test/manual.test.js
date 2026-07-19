@@ -38,8 +38,8 @@ test('manual is local, accessible, and persists dismissal through user config', 
   assert.match(html, /data-manual-role="ares"/);
   assert.match(html, /data-manual-panel="iris"/);
   assert.match(html, /data-manual-panel="ares"/);
-  assert.match(html, /Computer control/);
-  assert.match(html, /Files and research/);
+  assert.match(html, /Voice, camera, and local state/);
+  assert.match(html, /Files, attachments, and agents/);
   assert.match(html, /Developer workspace/);
   assert.match(html, /Review, approve, and apply/);
   assert.match(html, /<script src="manual\.js"><\/script>/);

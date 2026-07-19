@@ -36,6 +36,7 @@
   var stdoutEl = $('inlineAiStdout');
   var stderrEl = $('inlineAiStderr');
   var cancelRunBtn = $('inlineAiCancelRun');
+  var fixBtn = $('inlineAiFix');
   if (!controller || !input || !sendBtn || !diffPanel) { return; }
 
   var proposal = null;        // respuesta de /proposals
@@ -43,6 +44,11 @@
   var busy = false;
   var lastAcceptedPath = '';  // para el botón de tests
   var currentRunId = '';
+  var lastRunner = '';        // runner de la última ejecución (para el loop de fix)
+  // Loop test->fix: cada iteración propone un arreglo desde el fallo capturado;
+  // el humano aprueba cada apply. Acotado para no correr indefinidamente.
+  var MAX_FIX_ROUNDS = 3;
+  var fixLoop = { round: 0, path: '', failure: '' };
   var runPollTimer = null;
   var diffEditor = null, originalModel = null, modifiedModel = null;
 
@@ -243,7 +249,22 @@
         currentRunId = '';
         setBusy(false);
         var cancelled = data.status === 'cancelled';
-        setStatus(data.status === 'succeeded' ? 'Safe run completed.' : (cancelled ? 'Run cancelled.' : 'The safe run ended with an error.'), data.status !== 'succeeded' && !cancelled);
+        if (data.status === 'succeeded') {
+          if (fixLoop.round > 0) {
+            var rounds = fixLoop.round;
+            fixLoop = { round: 0, path: '', failure: '' };
+            if (fixBtn) { fixBtn.hidden = true; }
+            setStatus('Tests pass ✓ — fixed in ' + rounds + ' round' + (rounds === 1 ? '' : 's') + '.', false);
+          } else {
+            setStatus('Safe run completed.', false);
+          }
+        } else if (cancelled) {
+          setStatus('Run cancelled.', false);
+        } else {
+          setStatus('The safe run ended with an error.', true);
+          // Only unittest failures drive the fix loop.
+          if (lastRunner === 'python_unittest') { offerFix(data); }
+        }
       }).catch(function () {
         currentRunId = '';
         setBusy(false);
@@ -310,6 +331,198 @@
     if (controller && controller.reloadTree) { controller.reloadTree(); setStatus('Explorer refreshed.', false); }
   }
 
+  // Shared final rendering for both the streaming and non-streaming paths.
+  function renderProposal(adapter, path, info, data) {
+    proposal = data;
+    approval = null;
+    var change = null;
+    for (var i = 0; i < (data.changes || []).length; i += 1) {
+      if (data.changes[i].path === path) { change = data.changes[i]; break; }
+    }
+    if (!change && data.changes && data.changes.length) { change = data.changes[0]; }
+    if (!change) { throw new Error('invalid_provider_response'); }
+    summaryEl.classList.remove('ares-streaming');
+    summaryEl.textContent = data.summary || '';
+    renderWarnings(data.warnings);
+    showDiff(adapter, path, info.content, change.content, data.diff);
+    setStatus('Review the diff. Accept (Ctrl+Enter) writes to disk; Reject (Esc) discards it.', false);
+  }
+
+  // Live view of A.R.E.S. writing the proposal. Display-only: the streamed text
+  // is never applied; the diff replaces it once the validated proposal arrives.
+  function showStreaming(text) {
+    summaryEl.classList.add('ares-streaming');
+    summaryEl.textContent = text.length > 600 ? text.slice(text.length - 600) : text;
+  }
+  function clearStreaming() {
+    summaryEl.classList.remove('ares-streaming');
+    summaryEl.textContent = '';
+  }
+
+  function postProposal(body, adapter, path, info) {
+    return root.fetch('/api/ares/proposals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (response) {
+      if (!response.ok) { return readError(response, 'proposal_failed').then(function (err) { throw err; }); }
+      return response.json();
+    }).then(function (data) { renderProposal(adapter, path, info, data); });
+  }
+
+  // ---- Shared SSE plumbing ----
+  function parseSseBlock(block) {
+    var evName = '', dataText = '';
+    var lines = block.split('\n');
+    for (var i = 0; i < lines.length; i += 1) {
+      var line = lines[i];
+      if (line.indexOf('event:') === 0) { evName = line.slice(6).trim(); }
+      else if (line.indexOf('data:') === 0) { dataText += line.slice(5).trim(); }
+    }
+    var data = null;
+    if (dataText) { try { data = JSON.parse(dataText); } catch (e) { data = null; } }
+    return { event: evName, data: data };
+  }
+
+  // Drives a fetch Response body as SSE. `onBlock(block)` returns null to keep
+  // reading, or a terminal outcome: {done:true} | {fallback:true} | {error}.
+  function pumpSse(response, onBlock) {
+    if (!response.ok || !response.body || !response.body.getReader) {
+      return Promise.reject({ __fallback: true });
+    }
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var settled = false;
+    function pump() {
+      return reader.read().then(function (chunk) {
+        if (chunk.done) {
+          if (!settled) { return Promise.reject({ __fallback: true }); }
+          return null;
+        }
+        buffer += decoder.decode(chunk.value, { stream: true });
+        var idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          var block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          var outcome = onBlock(block);
+          if (outcome) {
+            settled = true;
+            try { reader.cancel(); } catch (e) {}
+            if (outcome.done) { return null; }
+            if (outcome.fallback) { return Promise.reject({ __fallback: true }); }
+            throw new Error(outcome.error);
+          }
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  function shortArg(argStr) {
+    if (typeof argStr !== 'string' || !argStr) { return ''; }
+    try { var o = JSON.parse(argStr); return o.path || o.query || o.prefix || ''; }
+    catch (e) { return ''; }
+  }
+
+  function sseUnavailable() {
+    return !root.fetch || typeof TextDecoder === 'undefined';
+  }
+
+  // Token streaming of the proposal (no tools). Falls back with {__fallback:true}.
+  function streamProposal(body, adapter, path, info) {
+    if (sseUnavailable()) { return Promise.reject({ __fallback: true }); }
+    var streamed = '';
+    function onBlock(block) {
+      var p = parseSseBlock(block);
+      if (!p.event) { return null; }
+      if (p.event === 'delta') {
+        if (p.data && typeof p.data.text === 'string') { streamed += p.data.text; showStreaming(streamed); }
+        return null;
+      }
+      if (p.event === 'proposal') { renderProposal(adapter, path, info, p.data); return { done: true }; }
+      if (p.event === 'streaming_unsupported') { return { fallback: true }; }
+      if (p.event === 'error') { return { error: (p.data && p.data.code) || 'provider_unavailable' }; }
+      return null;
+    }
+    return root.fetch('/api/ares/proposals/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (response) { return pumpSse(response, onBlock); },
+      function () { return Promise.reject({ __fallback: true }); });
+  }
+
+  // Agentic path: A.R.E.S. calls read-only tools before proposing. Each tool
+  // call is shown live. Falls back with {__fallback:true} when tools are
+  // unsupported by the configured provider.
+  function agenticProposal(body, adapter, path, info) {
+    if (sseUnavailable()) { return Promise.reject({ __fallback: true }); }
+    var log = [];
+    function onBlock(block) {
+      var p = parseSseBlock(block);
+      if (!p.event) { return null; }
+      if (p.event === 'tool_call') {
+        var arg = shortArg(p.data && p.data.arguments);
+        log.push('\u{1F50D} ' + ((p.data && p.data.name) || 'tool') + (arg ? '  ' + arg : ''));
+        showStreaming(log.join('\n'));
+        return null;
+      }
+      if (p.event === 'tool_result') { return null; }
+      if (p.event === 'proposal') { renderProposal(adapter, path, info, p.data); return { done: true }; }
+      if (p.event === 'tools_unsupported') { return { fallback: true }; }
+      if (p.event === 'error') { return { error: (p.data && p.data.code) || 'provider_unavailable' }; }
+      return null;
+    }
+    return root.fetch('/api/ares/proposals/agentic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (response) {
+      setStatus('A.R.E.S. is inspecting the workspace…', false);
+      return pumpSse(response, onBlock);
+    }, function () { return Promise.reject({ __fallback: true }); });
+  }
+
+  // Shared proposal flow. `rawInstruction` is either the user's typed request
+  // or a machine-built fix instruction; both go through the agentic -> stream
+  // -> POST chain and land on renderProposal, i.e. the same approve/apply gate.
+  function runProposalFlow(rawInstruction, path, info) {
+    runFileBtn.hidden = true;
+    runTestsBtn.hidden = true;
+    setBusy(true);
+    setStatus('A.R.E.S. is generating the proposal…', false);
+
+    return controller.editorReady.catch(function () { return null; }).then(function (adapter) {
+      var ctx = selectionContext(adapter);
+      var instruction = buildInstruction(rawInstruction, ctx);
+      var body = { instruction: instruction, files: [{ path: path, base_version: info.version }] };
+      // Prefer the agentic tool loop; degrade to token streaming, then to the
+      // plain POST, whenever the configured provider does not support a step.
+      return agenticProposal(body, adapter, path, info).catch(function (error) {
+        if (error && error.__fallback) {
+          clearStreaming();
+          setStatus('A.R.E.S. is generating the proposal…', false);
+          return streamProposal(body, adapter, path, info);
+        }
+        throw error;
+      }).catch(function (error) {
+        if (error && error.__fallback) {
+          clearStreaming();
+          setStatus('A.R.E.S. is generating the proposal…', false);
+          return postProposal(body, adapter, path, info);
+        }
+        throw error;
+      });
+    }).catch(function (error) {
+      proposal = null; approval = null;
+      closeDiff();
+      clearStreaming();
+      setStatus(safeMessage(error), true);
+    }).then(function () { setBusy(false); });
+  }
+
   function submit() {
     if (busy) { return; }
     var text = input.value.trim();
@@ -319,41 +532,40 @@
     var info = path ? controller.documentInfo(path) : null;
     if (!info) { setStatus('Open a file from the explorer before requesting a change.', true); return; }
     if (info.modified) { setStatus('Save your local changes before requesting a proposal.', true); return; }
+    // A fresh typed instruction starts a new task: reset the fix loop.
+    fixLoop = { round: 0, path: '', failure: '' };
+    if (fixBtn) { fixBtn.hidden = true; }
+    runProposalFlow(text, path, info);
+  }
 
-    runFileBtn.hidden = true;
-    runTestsBtn.hidden = true;
-    setBusy(true);
-    setStatus('A.R.E.S. is generating the proposal…', false);
+  // ---- Loop test -> fix (human approves every apply) ----
+  function offerFix(runData) {
+    var out = ((runData && runData.stdout) || '') + '\n' + ((runData && runData.stderr) || (runData && runData.error) || '');
+    fixLoop.failure = out.slice(-4000);
+    fixLoop.path = lastAcceptedPath || controller.activePath() || '';
+    if (!fixBtn) { return; }
+    fixBtn.hidden = fixLoop.round >= MAX_FIX_ROUNDS || !fixLoop.path;
+    fixBtn.textContent = fixLoop.round > 0
+      ? ('↻ Fix with A.R.E.S. (round ' + (fixLoop.round + 1) + '/' + MAX_FIX_ROUNDS + ')')
+      : '↻ Fix with A.R.E.S.';
+  }
 
-    controller.editorReady.catch(function () { return null; }).then(function (adapter) {
-      var ctx = selectionContext(adapter);
-      var instruction = buildInstruction(text, ctx);
-      return root.fetch('/api/ares/proposals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction: instruction, files: [{ path: path, base_version: info.version }] })
-      }).then(function (response) {
-        if (!response.ok) { return readError(response, 'proposal_failed').then(function (err) { throw err; }); }
-        return response.json();
-      }).then(function (data) {
-        proposal = data;
-        approval = null;
-        var change = null;
-        for (var i = 0; i < (data.changes || []).length; i += 1) {
-          if (data.changes[i].path === path) { change = data.changes[i]; break; }
-        }
-        if (!change && data.changes && data.changes.length) { change = data.changes[0]; }
-        if (!change) { throw new Error('invalid_provider_response'); }
-        summaryEl.textContent = data.summary || '';
-        renderWarnings(data.warnings);
-        showDiff(adapter, path, info.content, change.content, data.diff);
-        setStatus('Review the diff. Accept (Ctrl+Enter) writes to disk; Reject (Esc) discards it.', false);
-      });
-    }).catch(function (error) {
-      proposal = null; approval = null;
-      closeDiff();
-      setStatus(safeMessage(error), true);
-    }).then(function () { setBusy(false); });
+  function startFix() {
+    if (busy) { return; }
+    if (fixLoop.round >= MAX_FIX_ROUNDS) {
+      setStatus('Reached the fix limit (' + MAX_FIX_ROUNDS + '); review the failure manually.', true);
+      return;
+    }
+    var path = fixLoop.path || controller.activePath();
+    var info = path ? controller.documentInfo(path) : null;
+    if (!info) { setStatus('Open the failing file before requesting a fix.', true); return; }
+    if (info.modified) { setStatus('Save your local changes before requesting a fix.', true); return; }
+    fixLoop.round += 1;
+    if (fixBtn) { fixBtn.hidden = true; }
+    var instruction = 'The unittest run failed. Fix the code so the tests pass. Do not change the '
+      + 'tests unless they are clearly wrong. Use the read-only tools to inspect the failing file and '
+      + 'its test if needed. Failure output:\n\n' + fixLoop.failure;
+    runProposalFlow(instruction, path, info);
   }
 
   // ---- 2) Aceptar: approve + apply (única escritura a disco) ----
@@ -401,7 +613,13 @@
       closeDiff();
       input.value = '';
       syncRunControls();
-      setStatus(/\.(?:py|js)$/i.test(lastAcceptedPath) ? 'Changes saved. You can now run the file in Bubblewrap.' : 'Changes saved; the secure runner supports Python and JavaScript files.', false);
+      if (fixLoop.round > 0 && /\.py$/i.test(lastAcceptedPath)) {
+        // In a fix loop: close it by re-running the tests once busy clears.
+        setStatus('Fix applied — re-running tests…', false);
+        root.setTimeout(runTests, 300);
+      } else {
+        setStatus(/\.(?:py|js)$/i.test(lastAcceptedPath) ? 'Changes saved. You can now run the file in Bubblewrap.' : 'Changes saved; the secure runner supports Python and JavaScript files.', false);
+      }
     }).catch(function (error) {
       if (terminalProposalError(error.message)) {
         proposal = null; approval = null; closeDiff();
@@ -464,6 +682,8 @@
     var activePath = controller.activePath();
     if (busy || !activePath) { return; }
     lastAcceptedPath = activePath;
+    lastRunner = runner;
+    if (fixBtn) { fixBtn.hidden = true; }
     setBusy(true);
     ensureSaved(activePath).then(function (ready) {
       if (!ready) { setBusy(false); return null; }
@@ -515,6 +735,7 @@
   runFileBtn.addEventListener('click', runFile);
   runTestsBtn.addEventListener('click', runTests);
   cancelRunBtn.addEventListener('click', cancelRun);
+  if (fixBtn) { fixBtn.addEventListener('click', startFix); }
   root.addEventListener('geram:workspace-state', syncRunControls);
   syncRunControls();
 

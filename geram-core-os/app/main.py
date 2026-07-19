@@ -2,11 +2,8 @@
 GERAM CORE OS — Backend Entry Point
 
 Local-first, agentic developer-workflow operating environment.
-This file wires together middleware, CORS, and the core route map.
-Business logic (AI providers, WebSocket telemetry stream,
-Terminal Watcher, Sandbox Guard) is intentionally left for follow-up
-implementation passes — this establishes clean, production-worthy
-infrastructure first.
+This file wires together lifecycle tasks, middleware, static assets, and the
+complete API/WebSocket route map used by the desktop clients.
 """
 
 import asyncio
@@ -22,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.telegram_poller import poll_telegram_updates
 from app.middleware.session_logging import SessionLoggingMiddleware
-from app.api import orchestrator, agents, telemetry, config, workspace, ares_edits, terminal_watcher, user_config, github, preview, share, gcs, python_lsp, workspace_navigation, workspace_operations, instance, iris_proxy, extensions
+from app.api import orchestrator, agents, telemetry, config, workspace, ares_edits, terminal_watcher, user_config, github, preview, share, gcs, python_lsp, workspace_navigation, workspace_operations, instance, iris_proxy, extensions, runtime, maintenance
 from app.api import source_control
 from app.api import testing
 from app.core.user_config import CONFIG_PATH, load_config
@@ -37,8 +34,8 @@ async def lifespan(app: FastAPI):
     # nada que limpiar explícitamente después del yield, mueren solas
     # con el proceso.
     #
-    # Genera .geram-config.json con valores por defecto (0600) si no existe
-    # todavía, para que el HUD siempre encuentre una configuración válida.
+    # Genera la configuración local por usuario con valores por defecto (0600)
+    # si no existe, para que el HUD siempre encuentre un documento válido.
     try:
         load_config(CONFIG_PATH, create_if_missing=True)
     except (OSError, ValueError):
@@ -139,9 +136,8 @@ app.include_router(agents.router)
 app.include_router(telemetry.router)
 
 # /ws/hud                   -> single bidirectional channel: telemetry
-#                              broadcast (every TELEMETRY_INTERVAL_SECONDS)
-#                              + inbound HUD messages (handler is a
-#                              placeholder for now, see hud_socket.py)
+#                              broadcast plus bounded ping, telemetry and
+#                              per-user runtime-state controls
 app.include_router(hud_socket.router)
 
 # /config/keys              -> compatible masked environment configuration
@@ -162,7 +158,7 @@ app.include_router(workspace_operations.router)
 app.include_router(source_control.router)
 app.include_router(testing.router)
 
-# /api/config -> local profile / identity / privacy settings (.geram-config.json)
+# /api/config -> local profile / identity / privacy settings (per-user data dir)
 app.include_router(user_config.router)
 
 # /api/github -> local, secure GitHub token store for Source Control sign-in
@@ -177,10 +173,13 @@ app.include_router(share.router)
 
 # /info -> roster de agentes (builtin + custom) para el HUD embebido de A.R.E.S.
 app.include_router(instance.router)
+app.include_router(runtime.router)
+app.include_router(runtime.media_router)
+app.include_router(maintenance.router)
 
 # /api/gcs/* -> AI Operating Environment core: Permission Registry, Skill
 # System, local Skill Retriever, Integration Hub, Agent Factory, Context
-# Builder. Fully offline; localhost-only; no real external calls.
+# Builder. Localhost-only; external adapters remain permission/approval gated.
 app.include_router(gcs.router)
 
 # Same-origin proxy to IRIS (:8010) so the agents dashboard works under the
@@ -192,7 +191,7 @@ app.include_router(iris_proxy.router)
 app.include_router(extensions.router)
 
 # ------------------------------------------------------------------
-# Planned routes (not yet implemented — placeholders for roadmap clarity)
+# Deferred remote surfaces
 # ------------------------------------------------------------------
 # TODO: POST /integrations/telegram/webhook -> remote command channel
 # (secret token auth). Requiere HTTPS público (Tailscale Funnel) que no

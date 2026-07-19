@@ -81,6 +81,20 @@ class UserConfigCoreTests(unittest.TestCase):
             uc.load_config(self.path)
         self.assertEqual(uc.load_config_safe(self.path), uc.default_config())
 
+    def test_legacy_repository_config_is_copied_to_per_user_path(self):
+        legacy = Path(self.temporary.name) / "legacy.json"
+        destination = Path(self.temporary.name) / "data" / "config" / "user-config.json"
+        config = uc.default_config()
+        config.user_profile.name = "Migrated user"
+        uc.save_config(config, legacy)
+        with patch.object(uc, "CONFIG_PATH", destination), patch.object(
+            uc, "LEGACY_CONFIG_PATH", legacy
+        ):
+            migrated = uc.load_config(destination, create_if_missing=True)
+        self.assertEqual(migrated.user_profile.name, "Migrated user")
+        self.assertTrue(destination.is_file())
+        self.assertTrue(legacy.is_file())
+
 
 class BlockedPathsTests(unittest.TestCase):
     def setUp(self):
@@ -238,6 +252,21 @@ class UserConfigEndpointTests(unittest.TestCase):
         self.assertEqual(second["manual_version_seen"], 2)
         self.assertEqual(saved.onboarding.manual_version_seen, 2)
         self.assertEqual(saved.user_profile.name, "Mauri")
+
+    def test_setup_completion_is_monotonic_and_preserves_preferences(self):
+        config = uc.default_config()
+        config.user_profile.name = "Windows user"
+        uc.save_config(config, self.path)
+        first = asyncio.run(user_config_api.completar_configuracion(
+            user_config_api.SetupCompleteUpdate(version=2)
+        ))
+        asyncio.run(user_config_api.completar_configuracion(
+            user_config_api.SetupCompleteUpdate(version=1)
+        ))
+        saved = uc.load_config(self.path)
+        self.assertEqual(first["setup_version_seen"], 2)
+        self.assertEqual(saved.onboarding.setup_version_seen, 2)
+        self.assertEqual(saved.user_profile.name, "Windows user")
 
 
 if __name__ == "__main__":

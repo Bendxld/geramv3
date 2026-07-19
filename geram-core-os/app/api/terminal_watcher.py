@@ -165,10 +165,14 @@ def _workspace() -> Path:
     return Path(settings.WORKSPACE_ROOT).resolve()
 
 async def _capture(run: Run, timeout: float) -> None:
-    run.started = time.monotonic(); run.status = "running"
+    capture_started = time.monotonic()
     stdout_buffer = bytearray()
     stderr_buffer = bytearray()
     try:
+        if run.status == "cancelled":
+            run.finished = time.monotonic()
+            run.cleanup_status = "clean"
+            return
         if (
             isinstance(timeout, bool)
             or not isinstance(timeout, (int, float))
@@ -190,6 +194,7 @@ async def _capture(run: Run, timeout: float) -> None:
             ),
             max(0.001, deadline - time.monotonic()),
         )
+        run.started = capture_started
         run.leader_pid = run.process.pid
         try:
             run.process_group_id = os.getpgid(run.process.pid)
@@ -198,6 +203,9 @@ async def _capture(run: Run, timeout: float) -> None:
             run.process_group_id = run.process.pid
             run.session_id = run.process.pid
         run.known_descendant_pids = _descendants(run.leader_pid)
+        if run.status == "cancelled":
+            raise asyncio.CancelledError
+        run.status = "running"
         async def read(stream: asyncio.StreamReader, which: str, buffer: bytearray):
             while True:
                 chunk = await stream.read(4096)
@@ -248,7 +256,7 @@ async def _capture(run: Run, timeout: float) -> None:
         run.truncated = run.truncated or stdout_truncated or stderr_truncated
         run.finished = time.monotonic()
         if run.leader_pid is None:
-            run.cleanup_status = "not_started"
+            run.cleanup_status = "clean" if run.status == "cancelled" else "not_started"
         else:
             run.cleanup_status = "clean" if not _known_alive(run) else "residual"
         if run.cleanup_status == "residual":
@@ -369,9 +377,12 @@ async def cancel_run(request: Request, run_id: str):
     task = _tasks.get(run_id)
     if task:
         run.status = "cancelled"
-        if run.process is None and run.started is None:
-            run.finished = time.monotonic()
-            run.cleanup_status = "clean"
-            run.termination_reason = "cancelled"
-        task.cancel()
+        run.termination_reason = "cancelled"
+        if run.process is None:
+            # Let an in-flight create_subprocess call finish so _capture owns
+            # the process handle and can terminate it deterministically.
+            # Cancelling that await can orphan the transport before assignment.
+            run.cleanup_status = "pending"
+        else:
+            task.cancel()
     return run.public()

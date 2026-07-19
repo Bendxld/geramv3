@@ -11,6 +11,7 @@ Wire format per the Claude Messages API: POST /v1/messages with the
 the text lives in blocks of `type == "text"`.
 """
 
+import base64
 import json
 
 import httpx
@@ -23,6 +24,7 @@ from app.core.providers.base import (
     ProviderResult,
     ProviderSpec,
     ProviderUnavailableError,
+    ensure_supported_inputs,
     require_credential,
     sanitized_http_error,
 )
@@ -40,6 +42,7 @@ class AnthropicProvider:
         provider_id="anthropic",
         display_label="Anthropic (Claude)",
         default_model=DEFAULT_ANTHROPIC_MODEL,
+        input_modalities=("text", "image"),
     )
 
     async def generate(
@@ -53,10 +56,23 @@ class AnthropicProvider:
             "anthropic-version": ANTHROPIC_VERSION,
             "Content-Type": "application/json",
         }
+        ensure_supported_inputs(self.spec, request)
+        content: object = request.prompt
+        if request.attachments:
+            blocks: list[dict[str, object]] = [{"type": "text", "text": request.prompt}]
+            blocks.extend({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": attachment.media_type,
+                    "data": base64.b64encode(attachment.data).decode("ascii"),
+                },
+            } for attachment in request.attachments)
+            content = blocks
         body = {
             "model": request.model,
             "max_tokens": ANTHROPIC_MAX_TOKENS,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": [{"role": "user", "content": content}],
         }
         if request.response_schema is not None:
             # Structured outputs: same json_schema shape the OpenAI client uses,

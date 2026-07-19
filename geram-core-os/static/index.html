@@ -59,14 +59,17 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M8.4 6h5.5a2 2 0 0 1 2 2v1"/></svg>
     <span class="act-badge" id="actBadgeScm" hidden></span>
   </button>
-  <button class="act-btn" data-act="run" type="button" title="Run and Debug (Ctrl+Shift+D)" aria-label="Run and Debug">
+  <button class="act-btn" data-act="run" type="button" title="Run active file (Ctrl+F5)" aria-label="Run active file">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="6 4 20 12 6 20 6 4"/><circle cx="17" cy="17" r="3.5"/></svg>
   </button>
-  <button class="act-btn" data-act="extensions" type="button" title="Extensions (Ctrl+Shift+X)" aria-label="Extensions">
+  <button class="act-btn" id="toggleExtensiones" data-act="extensions" type="button" title="Declarative extensions (Ctrl+Shift+X)" aria-label="Declarative extensions" aria-expanded="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
   </button>
-  <button class="act-btn" data-act="testing" type="button" title="Testing" aria-label="Testing">
+  <button class="act-btn" id="toggleTesting" data-act="testing" type="button" title="Testing (Ctrl+Shift+T)" aria-label="Testing" aria-expanded="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/></svg>
+  </button>
+  <button class="act-btn" id="toggleTerminalWatcher" data-act="terminal" type="button" title="Terminal Watcher (Ctrl+`)" aria-label="Terminal Watcher" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>
   </button>
   <div class="act-spacer"></div>
   <button class="act-btn act-account" id="actGithub" type="button" title="Sign in with GitHub" aria-label="GitHub account">
@@ -94,23 +97,10 @@
       <path d="M8 11l-2 2 2 2M12 15h4"/>
     </svg>
   </button>
-  <button id="toggleTerminalWatcher" type="button" aria-label="Open Terminal Watcher">Watcher</button>
-  <button class="testing-toggle" id="toggleTesting" type="button" title="Safe testing (Ctrl+Shift+T)" aria-label="Open Testing">Testing</button>
-  <button class="toggle-config" id="toggleConfig" title="Settings (API keys)">
+  <button class="toggle-config" id="toggleConfig" title="Settings (AI, integrations, profile and privacy)" aria-label="Settings" aria-expanded="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  </button>
-  <button class="toggle-config" id="toggleExtensiones" title="Extensions (import VS Code themes, snippets, grammars)" aria-label="Extensions">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4a2 2 0 0 0-2 2v3.8h1.5a2.2 2.2 0 1 1 0 4.4H2V19a2 2 0 0 0 2 2h3.8v-1.5a2.2 2.2 0 1 1 4.4 0V21H17a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z"/>
-    </svg>
-  </button>
-  <button class="toggle-config" id="toggleGeramSettings" title="GERAM settings (profile, identity, privacy)" aria-label="GERAM settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-      <circle cx="12" cy="7" r="4"/>
     </svg>
   </button>
   <button class="toggle-iris activo" id="toggleIris" title="Switch IRIS/A.R.E.S. profile" aria-label="Active profile: A.R.E.S." data-profile="ares">
@@ -137,7 +127,7 @@
   <header class="hud-header">
     <h1>GERAM<span>OS</span></h1>
     <p class="subtitulo">I.R.I.S &middot; HOLOGRAPHIC SYSTEM v2.1</p>
-    <div class="estado-pill"><span class="dot"></span>SYSTEM ONLINE</div>
+    <div class="estado-pill"><span class="dot"></span>SYSTEM CHECKING</div>
   </header>
 
   <!-- Cinta de datos -->
@@ -154,7 +144,7 @@
         <circle class="anillo a-borde"     cx="250" cy="250" r="242"/>
         <g class="gira-texto">
           <text class="txt-anillo">
-            <textPath id="anilloAgentes" href="#rutaTexto">GERAM OS V2 &#183; IRIS NODE &#183; NEURAL LINK ACTIVE &#183; MTY MX 25.68N 100.31W &#183; SUPABASE SYNC &#183; AGENTS &#183; GREEN PROTOCOL &#183;</textPath>
+            <textPath id="anilloAgentes" href="#rutaTexto">GERAM OS v3 &#183; LOCAL PROFILE &#183; STATUS CHECKING &#183; AGENTS &#183; INTEGRATIONS &#183;</textPath>
           </text>
         </g>
         <circle class="anillo a-ticks"     cx="250" cy="250" r="222"/>
@@ -264,8 +254,8 @@
       <div class="reloj" id="reloj">00:00:00</div>
       <div class="fecha" id="fecha">&mdash;</div>
       <div class="mini-datos">
-        <span>MONTERREY, N.L. &middot; 25.6866° N &middot; 100.3161° W</span>
-        <span>USER: <b>MAURICIO</b> &middot; ACCESS: <b>FULL</b></span>
+        <span>LOCAL DEVICE &middot; PRIVATE USER SESSION</span>
+        <span id="runtimeUserSummary">USER: LOCAL USER &middot; DATA: PRIVATE LOCAL PROFILE</span>
       </div>
     </section>
 
@@ -294,18 +284,6 @@
       <button class="chat-adjuntar" id="chatAdjuntar" title="Attach image or PDF">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-        </svg>
-      </button>
-      <!-- DESACTIVADO: /subir-pdf no implementado en GERAM CORE OS todavía.
-           Oculto con display:none, no borrado. Listener comentado en script.js.
-           TODO: rehabilitar si se necesita post-hackathon. -->
-      <input type="file" id="examenPdfInput" accept="application/pdf" style="display:none;">
-      <button class="chat-adjuntar" id="examenPdfBoton" title="Upload a PDF to generate a quiz" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="9" y1="15" x2="15" y2="15"/>
-          <line x1="9" y1="11" x2="12" y2="11"/>
         </svg>
       </button>
       <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off" spellcheck="false">
@@ -344,7 +322,7 @@
 
     <!-- Panel AGENTES -->
     <div class="dashboard-tabpane activo" id="paneAgentes" role="tabpanel">
-      <p class="dashboard-hint">IRIS and A.R.E.S. mini-agents that work for you in the background.</p>
+      <p class="dashboard-hint">Every bundled and user-defined agent discovered for this local profile. “Available” means installed; “loaded” means active in this process.</p>
       <div class="dashboard-grid" id="dashboardGrid"></div>
 
       <div class="agentes-mios">
@@ -372,6 +350,16 @@
           <label class="skills-campo">Description
             <input id="agenteDesc" maxlength="500" placeholder="What this mini-agent does">
           </label>
+          <label class="skills-campo">Skills (comma-separated IDs)
+            <input id="agenteSkills" maxlength="1000" placeholder="html-boilerplate, fastapi-endpoint">
+          </label>
+          <label class="skills-campo">Integrations (comma-separated IDs)
+            <input id="agenteIntegraciones" maxlength="1000" placeholder="notion, spotify, google-calendar">
+          </label>
+          <label class="skills-campo">Permissions (comma-separated)
+            <input id="agentePermisos" maxlength="1000" placeholder="read, notion, spotify, calendar">
+          </label>
+          <small>Integrations require their matching permission. Network or mutating actions still require explicit approval.</small>
           <p class="skills-form-estado" id="agentesFormEstado" role="status" aria-live="polite"></p>
           <div class="skills-form-actions">
             <button type="button" id="agentesCancelar">Cancel</button>
@@ -415,6 +403,15 @@
           <button type="submit" id="skillsGuardar">Save skill</button>
         </div>
       </form>
+    </div>
+
+    <!-- Trust readout: lifetime tally of the local A.R.E.S. proposal pipeline.
+         "writes without approval" is a structural zero, not a measurement. -->
+    <div class="dashboard-trust" id="dashboardTrust" title="Local A.R.E.S. proposal pipeline — lifetime tally">
+      <span class="dashboard-trust-item"><b id="trustProposals">0</b> proposals</span>
+      <span class="dashboard-trust-item"><b id="trustApplied">0</b> applied</span>
+      <span class="dashboard-trust-item"><b id="trustConflicts">0</b> conflicts caught</span>
+      <span class="dashboard-trust-item guard"><b id="trustNoApproval">0</b> writes without approval</span>
     </div>
   </div>
 </div>
@@ -516,6 +513,7 @@
           <div class="inline-ai-execution-header">
             <strong id="inlineAiExecutionTitle">Safe execution</strong>
             <span id="inlineAiExecutionState" role="status" aria-live="polite"></span>
+            <button id="inlineAiFix" class="inline-ai-fix" type="button" hidden title="Let A.R.E.S. read the failure and propose a fix (you still approve every change)">⟳ Fix with A.R.E.S.</button>
             <button id="inlineAiCancelRun" type="button" hidden>Cancel</button>
           </div>
           <p id="inlineAiExecutionMeta"></p>
@@ -563,7 +561,7 @@
 
 <!-- Settings modal. Role controls, credential pools, and integration fields
      are rendered by script.js from the local configuration API. -->
-<div class="config-panel" id="configPanel">
+<div class="config-panel" id="configPanel" aria-hidden="true">
   <div class="config-fondo" id="configFondo"></div>
   <div class="config-caja" role="dialog" aria-modal="true" aria-labelledby="configTitulo">
     <div class="config-header">
@@ -582,52 +580,68 @@
           <h3 id="configViewTitle">AI APIs</h3>
           <p id="configViewDescription">Choose at least one AI provider for GERAM.</p>
         </div>
-        <div class="config-cuerpo" id="configCuerpo" aria-busy="false"></div>
+      <div class="config-cuerpo" id="configCuerpo" aria-busy="false">
+        <section class="config-seccion config-geram-settings" id="configGeramSettings" data-config-view="geram" hidden>
+          <fieldset class="gs-grupo">
+            <legend>Profile</legend>
+            <label for="gsName">Name</label>
+            <input id="gsName" type="text" maxlength="120" autocomplete="off" spellcheck="false">
+            <label for="gsAge">Age</label>
+            <input id="gsAge" type="number" min="0" max="150" inputmode="numeric">
+            <label for="gsPrompt">Global personalization prompt</label>
+            <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a developer; adapt explanations to my preferences..."></textarea>
+            <div class="gs-fila">
+              <input id="gsTts" type="checkbox">
+              <label for="gsTts">Voice notifications (TTS)</label>
+            </div>
+          </fieldset>
+          <fieldset class="gs-grupo">
+            <legend>Core identity</legend>
+            <label for="gsIdentity">Core view</label>
+            <select id="gsIdentity">
+              <option value="core">Animated core</option>
+              <option value="pet">Pet</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </fieldset>
+          <fieldset class="gs-grupo">
+            <legend>Color palette</legend>
+            <div class="gs-fila"><label for="gsPrimary">Primary color</label><input id="gsPrimary" type="color"></div>
+            <div class="gs-fila"><label for="gsBackground">Background color</label><input id="gsBackground" type="color"></div>
+            <div class="gs-fila"><label for="gsAccent">Accent color</label><input id="gsAccent" type="color"></div>
+          </fieldset>
+          <fieldset class="gs-grupo">
+            <legend>Privacy · blocked paths</legend>
+            <label for="gsBlockedInput">Add a path or name (e.g. .env)</label>
+            <div class="gs-fila">
+              <input id="gsBlockedInput" type="text" placeholder=".env" autocomplete="off" spellcheck="false">
+              <button id="gsBlockedAdd" type="button">Add</button>
+            </div>
+            <ul id="gsBlockedList" class="gs-blocked-list"></ul>
+          </fieldset>
+          <fieldset class="gs-grupo">
+            <legend>Backup, recovery, and diagnostics</legend>
+            <p>Portable state includes profile, runtime switches, agent state, custom skills/agents, and declarative extensions. Credentials, tokens, pending media, and workspace files are excluded.</p>
+            <div class="gs-fila">
+              <button id="gsDiagnostic" type="button">Run local diagnostic</button>
+              <button id="gsBackup" type="button">Create backup</button>
+              <button id="gsBackupRefresh" type="button">Refresh backups</button>
+            </div>
+            <select id="gsBackupList" aria-label="Available local backups"></select>
+            <button id="gsRestore" type="button">Restore selected backup</button>
+            <pre id="gsMaintenanceStatus" class="gs-maintenance-status" aria-live="polite"></pre>
+          </fieldset>
+          <div class="geram-settings-footer">
+            <span class="geram-settings-estado" id="gsEstado" role="status" aria-live="polite"></span>
+            <button class="geram-settings-guardar" id="gsGuardar" type="button">Save personal settings</button>
+          </div>
+        </section>
+      </div>
       </div>
     </div>
-    <div class="config-footer">
+    <div class="config-footer" id="configFooter">
       <span class="config-estado" id="configEstado" role="status" aria-live="polite"></span>
       <button class="config-guardar" id="configGuardar">Save and restart</button>
-    </div>
-  </div>
-</div>
-
-<!-- Examen interactivo (NUEVO): "hazme un examen de X" arranca esto,
-     ver script.js sección 21 y /examen/actual, /examen/responder,
-     /examen/cancelar en server.py.
-     DESACTIVADO: la sección 21 de script.js está comentada (backend
-     /examen/* no implementado en GERAM CORE OS), así que window.abrirExamen
-     no existe y esta clase 'activo' nunca se aplica — el modal ya no puede
-     mostrarse. No se borra el markup. TODO: rehabilitar si se necesita
-     post-hackathon. -->
-<div class="examen-modal" id="examenModal">
-  <div class="examen-fondo" id="examenFondo"></div>
-  <div class="examen-panel">
-    <div class="examen-header">
-      <h2 class="panel-titulo"><span class="dot"></span>QUIZ <b id="examenTemaLabel"></b></h2>
-      <button class="examen-cerrar" id="examenCerrar" title="Exit quiz">&times;</button>
-    </div>
-
-    <div class="examen-progreso">
-      <div class="examen-progreso-barra"><i id="examenProgresoBarra"></i></div>
-      <span class="examen-progreso-texto" id="examenProgresoTexto">Question 1 of 10</span>
-    </div>
-
-    <div class="examen-cuerpo" id="examenCuerpo">
-      <p class="examen-pregunta" id="examenPregunta"></p>
-      <div class="examen-opciones" id="examenOpciones"></div>
-    </div>
-
-    <div class="examen-feedback" id="examenFeedback" style="display:none;">
-      <p class="examen-feedback-texto" id="examenFeedbackTexto"></p>
-      <p class="examen-feedback-explicacion" id="examenFeedbackExplicacion"></p>
-      <button class="examen-siguiente" id="examenSiguiente">Next &rarr;</button>
-    </div>
-
-    <div class="examen-final" id="examenFinal" style="display:none;">
-      <p class="examen-final-nota" id="examenFinalNota"></p>
-      <div class="examen-final-fallos" id="examenFinalFallos"></div>
-      <button class="examen-cerrar-final" id="examenCerrarFinal">Close</button>
     </div>
   </div>
 </div>
@@ -650,65 +664,6 @@
 <div id="boot">
   <div class="boot-aro"></div>
   <pre id="bootLog"></pre>
-</div>
-
-<!-- Configuración de GERAM (v3, Paso 2): perfil, identidad del núcleo,
-     paleta de colores, rutas bloqueadas y notificaciones por voz. Se
-     lee/escribe con GET/POST /api/config (ver geram-settings.js). -->
-<div class="geram-settings-panel" id="geramSettingsPanel" aria-hidden="true">
-  <div class="geram-settings-fondo" id="geramSettingsFondo"></div>
-  <div class="geram-settings-caja" role="dialog" aria-modal="true" aria-labelledby="geramSettingsTitulo">
-    <div class="geram-settings-header">
-      <h2 class="panel-titulo" id="geramSettingsTitulo"><span class="dot"></span>GERAM SETTINGS</h2>
-      <button class="geram-settings-cerrar" id="geramSettingsCerrar" title="Close" aria-label="Close GERAM settings">&times;</button>
-    </div>
-    <div class="geram-settings-cuerpo">
-      <fieldset class="gs-grupo">
-        <legend>Profile</legend>
-        <label for="gsName">Name</label>
-        <input id="gsName" type="text" maxlength="120" autocomplete="off" spellcheck="false">
-        <label for="gsAge">Age</label>
-        <input id="gsAge" type="number" min="0" max="150" inputmode="numeric">
-        <label for="gsPrompt">Global personalization prompt</label>
-        <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a 17-year-old developer; call me young Mauri..."></textarea>
-        <div class="gs-fila">
-          <input id="gsTts" type="checkbox">
-          <label for="gsTts">Voice notifications (TTS)</label>
-        </div>
-      </fieldset>
-
-      <fieldset class="gs-grupo">
-        <legend>Core Identity</legend>
-        <label for="gsIdentity">Core view</label>
-        <select id="gsIdentity">
-          <option value="core">Animated core</option>
-          <option value="pet">Pet</option>
-          <option value="minimal">Minimal</option>
-        </select>
-      </fieldset>
-
-      <fieldset class="gs-grupo">
-        <legend>Color palette</legend>
-        <div class="gs-fila"><label for="gsPrimary">Primary color</label><input id="gsPrimary" type="color"></div>
-        <div class="gs-fila"><label for="gsBackground">Background color</label><input id="gsBackground" type="color"></div>
-        <div class="gs-fila"><label for="gsAccent">Accent color</label><input id="gsAccent" type="color"></div>
-      </fieldset>
-
-      <fieldset class="gs-grupo">
-        <legend>Privacy · blocked paths</legend>
-        <label for="gsBlockedInput">Add a path or name (e.g. .env)</label>
-        <div class="gs-fila">
-          <input id="gsBlockedInput" type="text" placeholder=".env" autocomplete="off" spellcheck="false">
-          <button id="gsBlockedAdd" type="button">Add</button>
-        </div>
-        <ul id="gsBlockedList" class="gs-blocked-list"></ul>
-      </fieldset>
-    </div>
-    <div class="geram-settings-footer">
-      <span class="geram-settings-estado" id="gsEstado" role="status" aria-live="polite"></span>
-      <button class="geram-settings-guardar" id="gsGuardar" type="button">Save</button>
-    </div>
-  </div>
 </div>
 
 <!-- Modal de NUEVO PROYECTO (v3, Paso 3): reemplaza a window.prompt (que
@@ -850,8 +805,57 @@
   </div>
 </div>
 
+<!-- Portable first-run setup. Completion is stored in the OS user's data dir. -->
+<div class="setup-modal" id="setupModal" role="dialog" aria-modal="true" aria-labelledby="setupTitle" aria-hidden="true">
+  <div class="setup-backdrop"></div>
+  <div class="setup-shell">
+    <header class="setup-header">
+      <span>GERAM CORE OS · FIRST RUN</span>
+      <h2 id="setupTitle">Prepare this installation</h2>
+      <p>Checks are local. Credentials remain in Settings and are never shown here.</p>
+    </header>
+    <div class="setup-grid">
+      <section>
+        <span class="manual-step">01</span><h3>Your local profile</h3>
+        <label for="setupName">Display name</label>
+        <input id="setupName" maxlength="120" autocomplete="name" placeholder="Local user">
+        <p>This profile and the runtime switches belong only to the current operating-system user.</p>
+      </section>
+      <section>
+        <span class="manual-step">02</span><h3>System readiness</h3>
+        <dl class="setup-status-list">
+          <div><dt>Platform</dt><dd id="setupPlatform">Checking…</dd></div>
+          <div><dt>Secure runner</dt><dd id="setupSandbox">Checking…</dd></div>
+          <div><dt>I.R.I.S.</dt><dd id="setupIris">Checking…</dd></div>
+          <div><dt>A.R.E.S.</dt><dd id="setupAres">Checking…</dd></div>
+          <div><dt>Ollama</dt><dd id="setupOllama">Checking…</dd></div>
+          <div><dt>PDF reader</dt><dd id="setupPdf">Checking…</dd></div>
+        </dl>
+        <div class="setup-actions">
+          <button id="setupRefresh" type="button">Check again</button>
+          <button id="setupSettings" type="button">Open provider settings</button>
+        </div>
+      </section>
+      <section>
+        <span class="manual-step">03</span><h3>Optional local permissions</h3>
+        <p>Permission is requested only when you press a test button. The stream is stopped immediately.</p>
+        <div class="setup-actions">
+          <button id="setupTestMic" type="button">Test microphone</button>
+          <button id="setupTestCamera" type="button">Test camera</button>
+        </div>
+        <p id="setupMediaStatus" role="status" aria-live="polite">Not tested.</p>
+      </section>
+    </div>
+    <footer class="setup-footer">
+      <button id="setupLater" type="button">Later</button>
+      <span id="setupSaveStatus" role="status" aria-live="polite"></span>
+      <button id="setupFinish" type="button">Save and start</button>
+    </footer>
+  </div>
+</div>
+
 <!-- Versioned in-app manual. It opens automatically until the user dismisses
-     the current version; progress is stored in .geram-config.json. -->
+     the current version; progress is stored in the per-user config. -->
 <div class="manual-modal" id="manualModal" role="dialog" aria-modal="true" aria-labelledby="manualTitle" aria-hidden="true">
   <div class="manual-backdrop" id="manualBackdrop"></div>
   <div class="manual-shell">
@@ -871,8 +875,8 @@
       <nav class="manual-nav" aria-label="Manual chapters">
         <button type="button" data-manual-target="manualStart">Meet I.R.I.S.</button>
         <button type="button" data-manual-target="manualChat">Chat and help</button>
-        <button type="button" data-manual-target="manualControl">Computer control</button>
-        <button type="button" data-manual-target="manualFiles">Files and research</button>
+        <button type="button" data-manual-target="manualControl">Voice and camera</button>
+        <button type="button" data-manual-target="manualFiles">Files and agents</button>
         <button type="button" data-manual-target="manualEditor">Developer workspace</button>
         <button type="button" data-manual-target="manualConnections">Plans and connections</button>
         <button type="button" data-manual-target="manualSafety">Security and offline</button>
@@ -881,22 +885,22 @@
         <section id="manualStart">
           <span class="manual-step">01</span><h3>Meet I.R.I.S.</h3>
           <p>I.R.I.S. is GERAM's conversational assistant: direct, witty, and built for everyday help. A.R.E.S. is the professional coding role. Both now live inside GERAM CORE OS and can use the AI provider you choose in Settings.</p>
-          <div class="manual-callout"><strong>Talk naturally</strong><span>Ask a question, request a daily briefing, or say “system status.” I.R.I.S. answers in the language you use.</span></div>
+          <div class="manual-callout"><strong>Talk naturally</strong><span>Ask a question or say “system status.” I.R.I.S. answers in the language you use and receives real CPU/RAM data for hardware-status questions.</span></div>
         </section>
         <section id="manualChat">
           <span class="manual-step">02</span><h3>Chat, help, and daily status</h3>
-          <p>Say “help,” “manual,” “commands,” or “what can you do?” for the complete guide. Ask “help with files,” “calendar commands,” or another topic to get only that section. “Good morning,” “briefing,” and “what did I miss?” request a daily summary.</p>
-          <p>You can also use I.R.I.S. through the configured Telegram bot. Telegram access is restricted to the chat IDs you explicitly allow.</p>
+          <p>Chat uses the provider assigned to I.R.I.S. in Settings and replies in the language of your message. Attach a supported image or PDF to ask about it; the file remains local until you explicitly send the message.</p>
+          <p>The microphone sends one bounded recording to a provider that supports audio input. Voice output uses the browser speech engine. Offline mode sends chat directly to the local Ollama service.</p>
         </section>
         <section id="manualControl">
-          <span class="manual-step">03</span><h3>Computer, windows, and media</h3>
-          <p>Ask I.R.I.S. to open apps or websites, switch tabs or windows, control playback and volume, type at the cursor, use the clipboard, click, scroll, adjust brightness, take a screenshot, or record the screen. Actions that can close, delete, send, or power off require explicit confirmation.</p>
-          <div class="manual-code"><code>Open YouTube</code><span>·</span><code>Next tab</code><span>·</span><code>Turn volume down</code><span>·</span><code>Take a screenshot</code></div>
+          <span class="manual-step">03</span><h3>Voice, camera, and local state</h3>
+          <p>VOICE, VISION, and OFFLINE preferences are saved separately for the current operating-system user. VISION requests camera permission, captures one frame, closes the camera, and attaches that image to chat.</p>
+          <div class="manual-code"><code>MIC</code><span>→</span><code>transcribe</code><span>·</span><code>VISION</code><span>→</span><code>attach one frame</code></div>
         </section>
         <section id="manualFiles">
-          <span class="manual-step">04</span><h3>Files, research, and creation</h3>
-          <p>I.R.I.S. can search for files and folders, organize Downloads, read supported documents, remember the last result for “open it,” research PDFs or videos, and prepare summaries. Connected Notion pages can receive notes, documents, pending items, and project progress.</p>
-          <p>For generated diagrams or programs, GERAM applies bounded execution and review controls. Multi-file code changes belong in the Developer workspace and must be reviewed before A.R.E.S. applies them.</p>
+          <span class="manual-step">04</span><h3>Files, attachments, and agents</h3>
+          <p>Workspace files remain confined to the selected local workspace. PDF text is extracted locally with <code>pdftotext</code>; images are sent only with the chat request that consumes them.</p>
+          <p>Agents shows every bundled module discovered in the installed agent directory plus portable user definitions. “Available” means installed, “loaded” means imported in the running process, and enable/disable state is saved per user.</p>
         </section>
         <section id="manualEditor">
           <span class="manual-step">05</span><h3>Developer workspace</h3>
@@ -906,13 +910,14 @@
         </section>
         <section id="manualConnections">
           <span class="manual-step">06</span><h3>Plans, reminders, and connections</h3>
-          <p>With the corresponding account configured, I.R.I.S. can work with pending items and projects in Notion, calendar events, Telegram, Supabase, Spotify, and an Obsidian vault. Settings → Integrations shows exactly which account or resource is connected.</p>
-          <p>Settings → AI APIs configures I.R.I.S. and A.R.E.S. OpenAI, Gemini, and Groq are online providers. Ollama is being prepared as the local provider and never requires an API key.</p>
+          <p>The Integration Hub has bounded real adapters for Notion, Google Calendar, Telegram, Supabase, Spotify, and an Obsidian vault. Settings reports “connected” only when the required local configuration exists.</p>
+          <p>Integration actions require an agent with the matching permission. Mutating actions also require explicit approval; the presence of a credential never grants an agent access by itself.</p>
+          <p>Settings → AI APIs configures I.R.I.S. and A.R.E.S. OpenAI, Gemini, and Groq are online providers. Ollama is available locally when its service and selected model are installed, and it never requires an API key.</p>
         </section>
         <section id="manualSafety">
           <span class="manual-step">07</span><h3>Security, privacy, and offline work</h3>
           <p>Workspace paths are validated, sensitive paths are blocked, credentials stay masked, AI edits require review, and code runs through closed sandbox profiles. Preview remains local unless you deliberately start Online sharing.</p>
-          <p>Ollama support is under active preparation for local chat when its service and model are installed. Until its readiness checks are complete, do not assume every cloud-backed integration works offline.</p>
+          <p>Ollama can provide local chat when its loopback service and selected model are installed. Cloud-backed integrations still require their corresponding connection.</p>
           <div class="manual-callout"><strong>Open this manual later</strong><span>Choose Help → I.R.I.S. Manual at any time. Once dismissed, it will not open automatically again.</span></div>
         </section>
       </main>
@@ -996,5 +1001,7 @@
 <script src="manual.js"></script>
 <script src="vscode-chrome.js"></script>
 <script src="script.js"></script>
+<script src="runtime-status.js"></script>
+<script src="onboarding.js"></script>
 </body>
 </html>

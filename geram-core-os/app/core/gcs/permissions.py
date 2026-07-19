@@ -33,6 +33,10 @@ class Permission(str, Enum):
     INTERNET = "internet"               # any outbound network access
     SPOTIFY = "spotify"                 # Spotify integration actions
     NOTION = "notion"                   # Notion integration actions
+    TELEGRAM = "telegram"               # Telegram messages
+    SUPABASE = "supabase"               # Supabase table access
+    CALENDAR = "calendar"               # Google Calendar events
+    OBSIDIAN = "obsidian"               # Local Obsidian vault notes
     SESSION_MEMORY = "session_memory"   # ephemeral, per-session memory
     PERMANENT_MEMORY = "permanent_memory"  # durable memory across sessions
 
@@ -72,6 +76,18 @@ _REGISTRY: dict[Permission, PermissionSpec] = {
     ),
     Permission.NOTION: PermissionSpec(
         Permission.NOTION, "Notion", "Create Notion pages via the hub.", True
+    ),
+    Permission.TELEGRAM: PermissionSpec(
+        Permission.TELEGRAM, "Telegram", "Send messages to an allowed Telegram chat.", True
+    ),
+    Permission.SUPABASE: PermissionSpec(
+        Permission.SUPABASE, "Supabase", "Read or insert bounded Supabase rows.", True
+    ),
+    Permission.CALENDAR: PermissionSpec(
+        Permission.CALENDAR, "Calendar", "Read or create Google Calendar events.", True
+    ),
+    Permission.OBSIDIAN: PermissionSpec(
+        Permission.OBSIDIAN, "Obsidian", "Read or write Markdown notes in the configured vault.", True
     ),
     Permission.SESSION_MEMORY: PermissionSpec(
         Permission.SESSION_MEMORY, "Session memory", "Use ephemeral session memory.", False

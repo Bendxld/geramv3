@@ -4,6 +4,7 @@ The endpoint is intentionally fixed to Ollama's default loopback listener.
 Keeping it non-configurable prevents this provider from becoming an SSRF path.
 """
 
+import base64
 import json
 
 import httpx
@@ -17,6 +18,7 @@ from app.core.providers.base import (
     ProviderResult,
     ProviderSpec,
     ProviderUnavailableError,
+    ensure_supported_inputs,
     sanitized_http_error,
 )
 
@@ -30,6 +32,7 @@ class OllamaProvider:
         default_model=DEFAULT_OLLAMA_MODEL,
         requires_api_key=False,
         implementation_available=True,
+        input_modalities=("text", "image"),
     )
 
     async def generate(
@@ -37,9 +40,16 @@ class OllamaProvider:
         request: ProviderRequest,
         credential: ProviderCredential | None,
     ) -> ProviderResult:
+        ensure_supported_inputs(self.spec, request)
+        message: dict[str, object] = {"role": "user", "content": request.prompt}
+        if request.attachments:
+            message["images"] = [
+                base64.b64encode(attachment.data).decode("ascii")
+                for attachment in request.attachments
+            ]
         body: dict[str, object] = {
             "model": request.model,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": [message],
             "stream": False,
         }
         if request.response_schema is not None:

@@ -7,13 +7,69 @@
   "scripts": {
     "postinstall": "npm run prepare:monaco",
     "prepare:monaco": "node scripts/prepare-monaco-assets.js",
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:windows": "electron-builder --win nsis"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "electron": "^43.1.0",
+    "electron-builder": "26.15.3",
     "monaco-editor": "0.52.2",
     "pyright": "1.1.411"
+  },
+  "build": {
+    "appId": "mx.geram.coreos",
+    "productName": "GERAM CORE OS",
+    "artifactName": "GERAM-CORE-OS-${version}-${os}-${arch}.${ext}",
+    "asar": true,
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "main.js",
+      "backend-manager.js",
+      "network-policy.js",
+      "security-controls.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../build/backend-payload",
+        "to": "backend-payload"
+      },
+      {
+        "from": "../windows",
+        "to": "windows"
+      },
+      {
+        "from": "../linux",
+        "to": "linux"
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "../static/favicon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "executableName": "geram-core-os"
+    },
+    "deb": {
+      "depends": ["python3", "python3-venv", "bubblewrap", "poppler-utils", "git", "nodejs"]
+    }
   }
 }

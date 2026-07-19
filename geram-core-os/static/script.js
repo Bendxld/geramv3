@@ -22,7 +22,7 @@
    18. Núcleo + chat expandido al hablar (NUEVO)
    19. Control por gestos (Fase H, NUEVO)
    20. Dashboard de agentes (NUEVO)
-   21. Examen interactivo (NUEVO)
+   21. Settings unificados
    ============================================================ */
 
 // ===================== 0. KIOSK: BLOQUEA CLIC DERECHO =====================
@@ -49,14 +49,13 @@ function tic() {
 setInterval(tic, 1000);
 tic();
 
-var t0 = Date.now();
-setInterval(function() {
-  var s = Math.floor((Date.now() - t0) / 1000);
+function formatUptime(totalSeconds) {
+  var s = Math.max(0, Math.floor(Number(totalSeconds || 0)));
   var h = String(Math.floor(s / 3600)).padStart(2, '0');
   var m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
   var x = String(s % 60).padStart(2, '0');
-  $('#vUp').textContent = h + ':' + m + ':' + x;
-}, 1000);
+  return h + ':' + m + ':' + x;
+}
 
 // ===================== 3. ESTADÍSTICAS Y MEDIDORES =====================
 var LARGO_ARCO = 150.8;
@@ -93,18 +92,16 @@ function pintarTelemetria(d) {
   $('#vCpu').textContent = d.cpu_percent.toFixed(0) + '%';
   $('#bRam').style.width = d.ram_percent + '%';
   $('#vRam').textContent = d.ram_percent.toFixed(0) + '%';
+  $('#vUp').textContent = formatUptime(d.system_uptime_seconds);
 
-  // red_kbs/temp/pwr/disco NO existen en el backend nuevo todavía
-  // (no hay endpoint que los mida). En vez de inventar datos, se
-  // deja el indicador explícito en "N/D".
-  // TODO: rehabilitar con datos reales si telemetry.py llega a
-  // exponer red/temperatura/energía/disco.
-  $('#bRed').style.width = '0%';
-  $('#vRed').textContent = 'N/D';
-  $('#vTemp').textContent = 'N/D';
-  $('#pwr').textContent = 'PWR N/D';
-  gauge('#gEner', '#aEner', '#nEner', 0);
-  gauge('#gApi',  '#aApi',  '#nApi',  0);
+  var network = Number(d.network_kbs || 0);
+  $('#bRed').style.width = Math.min(100, network / 10) + '%';
+  $('#vRed').textContent = network.toFixed(1) + ' KB/s';
+  $('#vTemp').textContent = d.temperature_c == null ? 'N/D' : Number(d.temperature_c).toFixed(1) + '°C';
+  var power = Math.max(0, Math.min(100, Number(d.power_percent || 0)));
+  $('#pwr').textContent = 'PWR ' + power.toFixed(0) + '%';
+  gauge('#gEner', '#aEner', '#nEner', power / 100);
+  gauge('#gApi', '#aApi', '#nApi', Math.max(0, Math.min(100, Number(d.disk_percent || 0))) / 100);
 }
 
 // ===================== 3b. WEBSOCKET DE TELEMETRÍA (/ws/hud) =====================
@@ -177,14 +174,9 @@ function actualizarNombreEnHUD(nombre) {
   var subtituloEl = $('.subtitulo');
   if (subtituloEl) { subtituloEl.textContent = punteado + ' · SISTEMA HOLOGRÁFICO v2.1'; }
 
-  var anilloTextoEl = document.querySelector('textPath');
-  if (anilloTextoEl) {
-    anilloTextoEl.textContent = anilloTextoEl.textContent.replace(/NODO \S+/, 'NODO ' + nombre);
-  }
-
   var firmaEl = $('.firma');
   if (firmaEl && firmaEl.firstChild) {
-    firmaEl.firstChild.textContent = 'GERAM OS v2 · NODO: ' + nombre + ' · SUPABASE SYNC ';
+    firmaEl.firstChild.textContent = 'GERAM CORE OS v3 · NODE: ' + nombre + ' · LOCAL CORE ';
   }
 
   var chatQuienEl = document.querySelector('.chat-historial .chat-quien');
@@ -197,23 +189,11 @@ function cargarInfo() {
     .then(function(d) {
       NOMBRE_INSTANCIA = d.instancia;
       actualizarNombreEnHUD(NOMBRE_INSTANCIA);
-      // Ver sección 20 (DASHBOARD DE AGENTES): renderDashboardAgentes
-      // está definida más abajo en este mismo archivo (function
-      // declaration, hoisted), así que ya existe para cuando esta
-      // respuesta llegue.
-      renderDashboardAgentes(d.agentes_activos || []);
     })
     .catch(function(err) {
       esc('ERROR AL LEER /info: ' + err.message);
     });
 }
-// DESACTIVADO: /info no implementado en GERAM CORE OS todavía.
-// Función intacta, solo se deja de invocar. NOMBRE_INSTANCIA se queda
-// en su valor de relleno ('IRIS') y el dashboard de agentes se queda
-// vacío hasta que se rehabilite.
-// TODO: rehabilitar si se necesita post-hackathon.
-// cargarInfo();
-
 // ===================== 4. CONSOLA DE LOG =====================
 var log = $('#log');
 function esc(linea) {
@@ -222,40 +202,11 @@ function esc(linea) {
   log.appendChild(p);
   while (log.children.length > 9) { log.removeChild(log.firstChild); }
 }
-
-var frases = [
-  'SUPABASE \u00B7 SINCRONIZACIÓN OK',
-  'MEMORIA CLOUD ACTUALIZADA',
-  'WHISPER: SIN ENTRADA DE VOZ',
-  'BALANCEADOR: 5/5 NODOS ACTIVOS',
-  'RESPALDO LOCAL COMPLETADO',
-  'ESCANEO DE RED: SIN AMENAZAS',
-  'AGENTE ESCUELA EN ESPERA',
-  'RENDER HOLOGRÁFICO ESTABLE',
-  // Referencia a la OTRA instancia (si corre IRIS, dice ARES y
-  // viceversa — ver INSTANCIA_HERMANA), evaluada al momento de
-  // mostrarse para que ya tenga el valor real de /info.
-  function() { return 'ENLACE ' + INSTANCIA_HERMANA() + ': DISPONIBLE'; },
-  'TTS PIPER: EN REPOSO',
-  'OLLAMA: MODELO LOCAL CARGADO',
-  'CONTEXT ENGINE: MODO ACTIVO'
-];
+window.geramLog = esc;
 
 function INSTANCIA_HERMANA() {
   return NOMBRE_INSTANCIA === 'ARES' ? 'IRIS' : 'ARES';
 }
-
-setInterval(function() {
-  var r = Math.random();
-  if (r < 0.18) {
-    esc('PING API: ' + (60 + Math.floor(Math.random() * 90)) + 'ms');
-  } else if (r < 0.34) {
-    esc('GEMINI NODO ' + (1 + Math.floor(Math.random() * 5)) + ' \u2192 ROTACIÓN');
-  } else {
-    var frase = frases[Math.floor(Math.random() * frases.length)];
-    esc(typeof frase === 'function' ? frase() : frase);
-  }
-}, 4300);
 
 // ===================== 5. CINTA DE DATOS HEX =====================
 var tk = '';
@@ -397,7 +348,7 @@ var vozActiva = btnVozEl ? btnVozEl.classList.contains('activo') : false;
 var btnMicEl = $('#btn-mic');
 if (btnMicEl) { btnMicEl.classList.remove('activo'); }
 
-var URL_AUDIO = '/audio';
+var URL_AUDIO = '/api/media/audio';
 var grabadora = null;
 var trozosAudio = [];
 
@@ -435,11 +386,13 @@ function detenerGrabacion() {
 }
 
 function enviarAudioParaTranscribir(blob) {
-  var datos = new FormData();
-  datos.append('archivo', blob, 'grabacion.webm');
   esc('MIC: TRANSCRIBIENDO…');
 
-  fetch(URL_AUDIO, { method: 'POST', body: datos })
+  fetch(URL_AUDIO, {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type || 'audio/webm' },
+    body: blob
+  })
     .then(function(res) {
       if (!res.ok) { throw new Error('HTTP ' + res.status); }
       return res.json();
@@ -455,6 +408,47 @@ function enviarAudioParaTranscribir(blob) {
     .catch(function(err) {
       esc('ERROR AL TRANSCRIBIR AUDIO: ' + err.message);
     });
+}
+
+function guardarEstadoRuntime(cambios) {
+  return fetch('/api/runtime/state', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cambios)
+  }).then(function(res) {
+    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+    return res.json();
+  });
+}
+
+function capturarImagenCamara() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return Promise.reject(new Error('Camera capture is not supported'));
+  }
+  return navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+    return new Promise(function(resolve, reject) {
+      var video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      function cerrar() { stream.getTracks().forEach(function(track) { track.stop(); }); }
+      video.addEventListener('loadedmetadata', function() {
+        video.play().then(function() {
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.min(video.videoWidth || 1280, 1920);
+          canvas.height = Math.round(canvas.width * ((video.videoHeight || 720) / (video.videoWidth || 1280)));
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function(blob) {
+            cerrar();
+            if (!blob) { reject(new Error('Camera frame could not be encoded')); return; }
+            subirAdjunto(blob, 'camera-capture.jpg');
+            resolve();
+          }, 'image/jpeg', 0.9);
+        }).catch(function(error) { cerrar(); reject(error); });
+      }, { once: true });
+      video.addEventListener('error', function() { cerrar(); reject(new Error('Camera capture failed')); }, { once: true });
+    });
+  });
 }
 
 botonesSentido.forEach(function(btn) {
@@ -475,40 +469,32 @@ botonesSentido.forEach(function(btn) {
 
     if (sentido === 'voz') {
       vozActiva = estaActivo;
-      // Igual que VISTA: sincroniza con control_agent.py para que
-      // "cállate"/"activa tu voz" por texto/Telegram (ver
-      // sincronizarEstadoUI más abajo) y el click de este botón
-      // siempre cuenten la misma historia, sin importar el canal.
-      //
-      // DESACTIVADO: /voz no implementado en GERAM CORE OS todavía.
-      // Fetch comentado (no borrado) para no generar 404 en consola;
-      // el toggle sigue funcionando localmente en el HUD.
-      // TODO: rehabilitar si se necesita post-hackathon.
-      // fetch('/voz', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ activo: estaActivo })
-      // }).catch(function(err) { esc('ERROR AL SINCRONIZAR VOZ: ' + err.message); });
+      guardarEstadoRuntime({ voice_enabled: estaActivo }).catch(function(err) {
+        btn.classList.toggle('activo', !estaActivo);
+        vozActiva = !estaActivo;
+        esc('ERROR AL GUARDAR VOZ: ' + err.message);
+      });
       esc(vozActiva ? 'VOZ ACTIVADA: ' + NOMBRE_INSTANCIA + ' HABLARÁ SUS RESPUESTAS' : 'VOZ DESACTIVADA');
       return;
     }
 
     if (sentido === 'vista') {
-      // El backend (observador.py, Fase F) necesita saber si la
-      // cámara está "prendida" para responder "activa mi vista
-      // primero, jefe" en vez de intentar usarla apagada — el toggle
-      // en sí es puramente visual aquí, por eso se sincroniza aparte.
-      //
-      // DESACTIVADO: /vista no implementado en GERAM CORE OS todavía.
-      // Fetch comentado (no borrado) para no generar 404 en consola;
-      // el toggle sigue funcionando localmente en el HUD.
-      // TODO: rehabilitar si se necesita post-hackathon.
-      // fetch('/vista', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ activo: estaActivo })
-      // }).catch(function(err) { esc('ERROR AL SINCRONIZAR VISTA: ' + err.message); });
-      esc(estaActivo ? 'VISTA ACTIVADA' : 'VISTA DESACTIVADA');
+      guardarEstadoRuntime({ vision_enabled: estaActivo }).catch(function(err) {
+        btn.classList.toggle('activo', !estaActivo);
+        esc('ERROR AL GUARDAR VISIÓN: ' + err.message);
+      });
+      if (estaActivo) {
+        esc('VISIÓN: CAPTURANDO UNA IMAGEN…');
+        capturarImagenCamara().then(function() {
+          esc('VISIÓN: IMAGEN ADJUNTA, LISTA PARA ENVIAR');
+        }).catch(function(err) {
+          btn.classList.remove('activo');
+          guardarEstadoRuntime({ vision_enabled: false }).catch(function() {});
+          esc('ERROR DE CÁMARA: ' + err.message);
+        });
+      } else {
+        esc('VISIÓN DESACTIVADA');
+      }
       return;
     }
 
@@ -539,8 +525,7 @@ var URL_CHAT = '/orchestrator/route'; // antes '/chat' (server.py viejo) — rep
 // El backend guarda el archivo como "pendiente" (agents/adjuntos_agent.py)
 // y NO gasta tokens hasta que el usuario le da enviar en el chat — acá
 // solo se sube el archivo y se muestra el chip, nada más.
-var URL_ADJUNTAR = '/adjuntar';
-var URL_ADJUNTAR_CANCELAR = '/adjuntar/cancelar';
+var URL_ADJUNTAR = '/api/media/attachments';
 var chatArchivoInput = $('#chatArchivoInput');
 var chatAdjuntar = $('#chatAdjuntar');
 var chatAdjuntoChip = $('#chatAdjuntoChip');
@@ -558,15 +543,18 @@ function ocultarChipAdjunto() {
   adjuntoPendiente = null;
 }
 
-function subirAdjunto(archivo) {
+function subirAdjunto(archivo, nombreForzado) {
   if (!archivo) return;
-  var formData = new FormData();
-  formData.append('archivo', archivo, archivo.name || 'adjunto');
+  var nombre = nombreForzado || archivo.name || 'attachment';
 
-  esc('SUBIENDO ADJUNTO: ' + (archivo.name || 'sin nombre'));
-  fetch(URL_ADJUNTAR, { method: 'POST', body: formData })
+  esc('SUBIENDO ADJUNTO: ' + nombre);
+  fetch(URL_ADJUNTAR + '?filename=' + encodeURIComponent(nombre), {
+    method: 'POST',
+    headers: { 'Content-Type': archivo.type || 'application/octet-stream' },
+    body: archivo
+  })
     .then(function(res) {
-      if (!res.ok) { return res.json().then(function(d) { throw new Error(d.detail || ('HTTP ' + res.status)); }); }
+      if (!res.ok) { return res.json().then(function(d) { throw new Error((d.detail && d.detail.message) || ('HTTP ' + res.status)); }); }
       return res.json();
     })
     .then(function(d) {
@@ -588,7 +576,7 @@ chatArchivoInput.addEventListener('change', function() {
 });
 
 chatAdjuntoQuitar.addEventListener('click', function() {
-  fetch(URL_ADJUNTAR_CANCELAR, { method: 'POST' }).catch(function() {});
+  fetch(URL_ADJUNTAR, { method: 'DELETE' }).catch(function() {});
   ocultarChipAdjunto();
   chatInput.placeholder = placeholderNormal;
 });
@@ -615,46 +603,6 @@ chatZona.addEventListener('drop', function(e) {
   if (e.dataTransfer.files && e.dataTransfer.files[0]) { subirAdjunto(e.dataTransfer.files[0]); }
 });
 
-// --- Subir PDF para examen (botón aparte del de adjuntar normal) ---
-// A diferencia de subirAdjunto(), esto NO gasta tokens ni queda como
-// "pendiente" esperando una pregunta — solo se guarda en el server
-// (examen_agent.RUTA_PDF_SUBIDO) para que "examen de este pdf" lo lea
-// después (ver /subir-pdf en server.py).
-//
-// DESACTIVADO: GERAM CORE OS todavía no implementa /subir-pdf.
-// Listener comentado (no borrado) para que el botón no dispare un
-// fetch a una ruta inexistente. El input/botón en el HTML también
-// se ocultan con display:none (ver index.html).
-// TODO: rehabilitar si se necesita post-hackathon.
-var examenPdfInput = $('#examenPdfInput');
-var examenPdfBoton = $('#examenPdfBoton');
-
-/*
-examenPdfBoton.addEventListener('click', function() { examenPdfInput.click(); });
-examenPdfInput.addEventListener('change', function() {
-  var archivo = this.files && this.files[0];
-  this.value = '';
-  if (!archivo) return;
-
-  var formData = new FormData();
-  formData.append('archivo', archivo, archivo.name || 'documento.pdf');
-
-  esc('SUBIENDO PDF PARA EXAMEN: ' + (archivo.name || 'sin nombre'));
-  fetch('/subir-pdf', { method: 'POST', body: formData })
-    .then(function(res) {
-      if (!res.ok) { return res.json().then(function(d) { throw new Error(d.detail || ('HTTP ' + res.status)); }); }
-      return res.json();
-    })
-    .then(function(d) {
-      agregarMensaje('PDF "' + d.nombre + '" listo — dime "hazme un examen de este pdf" cuando quieras.', 'iris');
-    })
-    .catch(function(err) {
-      esc('ERROR AL SUBIR PDF: ' + err.message);
-      agregarMensaje('No pude subir ese PDF: ' + err.message, 'iris');
-    });
-});
-*/
-
 // Marcador GENÉRICO que director.marcador_imagen() deja al final de la
 // respuesta cuando trae una imagen que mostrar — "[IMAGEN:/figura]"
 // ("dibújame X", ver figura_agent.py), "[IMAGEN:/foto]" ("toma foto",
@@ -662,11 +610,6 @@ examenPdfInput.addEventListener('change', function() {
 // esMensajeDeConfirmacion con "CONFIRMAR": un token reconocible dentro
 // del texto en vez de un canal aparte.
 var PATRON_MARCADOR_IMAGEN = /\[IMAGEN:([^\]]+)\]/;
-
-// Marcador de examen (ver director._procesar_examen/RUTA_PDF_SUBIDO):
-// "[EXAMEN]" al final de la respuesta le dice al HUD que abra la vista
-// de examen interactiva (sección 21) en vez de solo mostrar texto.
-var PATRON_MARCADOR_EXAMEN = /\[EXAMEN\]/;
 
 function extraerRutaImagen(texto) {
   var coincidencia = texto.match(PATRON_MARCADOR_IMAGEN);
@@ -733,16 +676,6 @@ function agregarMensaje(texto, quien, esConfirmacion) {
   }
 }
 
-var URL_HABLAR = '/hablar';
-
-// Respaldo de último recurso si /hablar falla (503: sin internet para
-// edge-tts Y sin modelo de Piper instalado, ver habla.py). No compite
-// con edge-tts/Piper (esos ya son mejores: voces neuronales reales
-// contra la síntesis nativa del navegador, típicamente robótica en
-// Linux); esto solo evita quedarse en silencio total en ese caso raro.
-// No hay <audio> real de por medio, así que el osciloscopio (sección
-// 6, iniciarAnalisisAudio) no puede engancharse a esta voz — se queda
-// plano mientras habla, es el único costo del respaldo.
 function hablarConVozDelNavegador(texto) {
   if (!window.speechSynthesis) {
     esc('ERROR: tampoco hay síntesis de voz nativa en este navegador.');
@@ -774,24 +707,7 @@ function hablarConVozDelNavegador(texto) {
 }
 
 function reproducirRespuesta(texto) {
-  fetch(URL_HABLAR, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ texto: texto })
-  })
-    .then(function(res) {
-      if (!res.ok) { throw new Error('HTTP ' + res.status); }
-      return res.blob();
-    })
-    .then(function(blob) {
-      var audio = new Audio(URL.createObjectURL(blob));
-      iniciarAnalisisAudio(audio);
-      audio.play();
-    })
-    .catch(function(err) {
-      esc('ERROR AL GENERAR VOZ: ' + err.message + ' — uso la voz del navegador de respaldo');
-      hablarConVozDelNavegador(texto);
-    });
+  hablarConVozDelNavegador(texto);
 }
 
 // Los mensajes de confirmación que arma director.py siempre incluyen
@@ -813,7 +729,8 @@ function enviarMensaje() {
 
   // Mostrar mensaje del usuario (si venía con adjunto, se ve el chip
   // como parte del mensaje para que quede claro sobre qué preguntó)
-  agregarMensaje((adjuntoPendiente ? '📎 ' + adjuntoPendiente.nombre + '\n' : '') + texto, 'usuario');
+  var usarAdjunto = Boolean(adjuntoPendiente);
+  agregarMensaje((usarAdjunto ? '📎 ' + adjuntoPendiente.nombre + '\n' : '') + texto, 'usuario');
   chatInput.value = '';
   chatInput.placeholder = placeholderNormal;
   ocultarChipAdjunto(); // el backend ya lo limpia al procesar; esto solo sincroniza la UI
@@ -825,7 +742,7 @@ function enviarMensaje() {
   fetch(URL_CHAT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: texto, source: 'hud_local' })
+    body: JSON.stringify({ prompt: texto, source: 'hud_local', use_pending_attachment: usarAdjunto })
   })
     .then(function(res) {
       if (!res.ok) { throw new Error('HTTP ' + res.status); }
@@ -839,8 +756,7 @@ function enviarMensaje() {
       var respuestaOrquestador = (d.result && (d.result.text || d.result.message))
         || 'ERROR: el orquestador no regresó una respuesta utilizable.';
 
-      var abreExamen = PATRON_MARCADOR_EXAMEN.test(respuestaOrquestador);
-      var textoRespuesta = abreExamen ? respuestaOrquestador.replace(PATRON_MARCADOR_EXAMEN, '').trim() : respuestaOrquestador;
+      var textoRespuesta = respuestaOrquestador;
 
       var esperandoConfirmacion = esMensajeDeConfirmacion(textoRespuesta);
       agregarMensaje(textoRespuesta, 'iris', esperandoConfirmacion);
@@ -864,11 +780,6 @@ function enviarMensaje() {
       } else if (window.setEstadoNucleo) {
         window.setEstadoNucleo('idle');
       }
-
-      // Ver sección 21: abre la vista de examen interactiva y arranca
-      // en la primera pregunta (ya generada server-side, ver
-      // examen_agent.iniciar_examen/director._procesar_examen).
-      if (abreExamen && window.abrirExamen) { window.abrirExamen(); }
     })
     .catch(function(err) {
       agregarMensaje('OFFLINE', 'iris');
@@ -991,45 +902,7 @@ function bucle(ahora) {
 requestAnimationFrame(bucle);
 
 // ===================== 11. SECUENCIA DE ARRANQUE =====================
-var lineasBoot = [
-  'INICIANDO GERAM OS v2.1 ...',
-  'CARGANDO NÚCLEO .............. OK',
-  'RENDER HOLOGRÁFICO .......... OK',
-  'CALIBRANDO GIROSCOPIO ....... OK',
-  'CONECTANDO SUPABASE ......... OK',
-  'BALANCEADOR API ...... 5/5 NODOS',
-  'AGENTES ............. 27/27 ACTIVOS',
-  'STT · FASTER-WHISPER ...... LISTO',
-  'TTS · PIPER ............... LISTO',
-  'OLLAMA · MODELO LOCAL ..... LISTO',
-  'SENTIDOS: MIC ✓  VOZ ✓  VISTA ○',
-  // Estas dos usan la instancia real (NOMBRE_INSTANCIA, sección 3) en
-  // vez de un string fijo, evaluadas hasta que les toca turno en el
-  // setInterval de abajo — para entonces /info ya casi siempre
-  // respondió, así que muestran IRIS o ARES según corresponda.
-  function() { return 'ENLAZANDO NODO: ' + NOMBRE_INSTANCIA + ' ...... OK'; },
-  '',
-  function() { return formatoPuntos(NOMBRE_INSTANCIA) + ' EN LÍNEA'; },
-  'A SUS ÓRDENES, JEFE.'
-];
-
-var bl = $('#bootLog'), li = 0;
-var timerBoot = setInterval(function() {
-  var linea = lineasBoot[li];
-  if (typeof linea === 'function') { linea = linea(); }
-  bl.textContent += '> ' + linea + '\n';
-  li++;
-  if (li >= lineasBoot.length) {
-    clearInterval(timerBoot);
-    setTimeout(function() {
-      $('#boot').classList.add('fuera');
-      document.body.classList.add('listo');
-      esc('SISTEMA OPERATIVO · A SUS ÓRDENES, JEFE');
-      intentarFullscreenTV();
-    }, 650);
-  }
-}, 160);
-
+// runtime-status.js builds this sequence from the real local status API.
 // Pantallas grandes (TV, ver @media min-width:1920px en style.css):
 // fullscreen automático. Los navegadores exigen un gesto de usuario
 // real para conceder fullscreen — un timer del boot NO cuenta, así que
@@ -1161,7 +1034,7 @@ function verificarLock() {
 // El botón no existe en el HTML original, así que se crea por JS y se
 // inserta junto a MIC/VOZ/VISTA, reusando la clase .sentido para que
 // se vea igual.
-var URL_MODO_OFFLINE = '/modo-offline';
+var URL_MODO_OFFLINE = '/api/runtime/state';
 
 function crearBotonOffline() {
   var contenedor = $('#sentidos');
@@ -1180,17 +1053,17 @@ function crearBotonOffline() {
   btn.addEventListener('click', function() {
     var forzarNuevo = !btn.classList.contains('activo');
     fetch(URL_MODO_OFFLINE, {
-      method: 'POST',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ forzar: forzarNuevo })
+      body: JSON.stringify({ offline_forced: forzarNuevo })
     })
       .then(function(res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.json();
       })
       .then(function(d) {
-        btn.classList.toggle('activo', d.forzado_manual);
-        esc(d.forzado_manual ? 'MODO OFFLINE FORZADO: USANDO OLLAMA' : 'MODO OFFLINE DESACTIVADO: USANDO GEMINI');
+        btn.classList.toggle('activo', d.offline_forced);
+        esc(d.offline_forced ? 'MODO OFFLINE FORZADO: USANDO OLLAMA' : 'MODO OFFLINE DESACTIVADO: USANDO EL PROVEEDOR CONFIGURADO');
       })
       .catch(function(err) {
         esc('ERROR AL CAMBIAR MODO OFFLINE: ' + err.message);
@@ -1208,18 +1081,13 @@ function sincronizarBotonOffline() {
   fetch(URL_MODO_OFFLINE)
     .then(function(res) { return res.json(); })
     .then(function(d) {
-      btn.classList.toggle('activo', d.forzado_manual);
+      btn.classList.toggle('activo', d.offline_forced);
     })
     .catch(function(err) {
       esc('ERROR AL LEER /modo-offline: ' + err.message);
     });
 }
-// DESACTIVADO: /modo-offline no implementado en GERAM CORE OS
-// todavía. Sin esta llamada, crearBotonOffline() nunca corre, así que
-// el botón OFFLINE no se inserta en el HUD y no hay fetch a rutas
-// inexistentes. Funciones intactas.
-// TODO: rehabilitar si se necesita post-hackathon.
-// sincronizarBotonOffline();
+sincronizarBotonOffline();
 
 // ===================== 14. MODO DÍA / NOCHE =====================
 // El HUD entero ya lee sus colores de variables CSS; body.modo-dia
@@ -1761,17 +1629,10 @@ function toggleGestos(activar) {
 }
 
 // ===================== 20. DASHBOARD DE AGENTES =====================
-// El dashboard vive en el HUD de GERAM CORE OS (8000), pero los agentes
-// REALES son de IRIS (server.py, 8010). IRIS expone:
-//   GET  /agentes           -> lista [{nombre,etiqueta,nucleo,suspendido}]
-//   POST /agentes/{nombre}   -> {suspendido:bool}  (suspender/reactivar)
-// core-os proxea IRIS en el MISMO origen (/api/iris/*, ver app/api/iris_proxy.py)
-// porque la CSP de Electron restringe connect-src a 'self': un fetch directo a
-// :8010 queda bloqueado. "Suspender" apaga lo AUTOMÁTICO del agente
-// (proactividad/schedulers/monitores); las peticiones explícitas por chat
-// siguen funcionando. Los agentes de núcleo (director, memory, …) no se pueden
-// suspender: se marcan como "core".
-var IRIS_BASE = '/api/iris';
+// The Core scans the trusted bundled directory without importing modules and
+// merges portable Agent Factory definitions. Enable/disable state is stored in
+// the current OS user's GERAM data directory.
+var AGENT_ROSTER_URL = '/api/agents/roster';
 
 function prettificarNombreAgente(nombre) {
   var limpio = nombre.replace(/_agent$/, '').replace(/_/g, ' ');
@@ -1783,12 +1644,11 @@ var dashboardConteo = $('#dashboardConteo');
 
 function _tarjetaAgente(agente) {
   var card = document.createElement('div');
-  card.className = 'dashboard-card' + (agente.suspendido ? ' suspendido' : '');
-  if (agente.suspendido) { card.style.opacity = '0.5'; }
+  card.className = 'dashboard-card' + (!agente.enabled ? ' suspendido' : '');
 
   var dot = document.createElement('span');
   dot.className = 'dot';
-  if (agente.suspendido) { dot.style.background = '#888'; dot.style.boxShadow = 'none'; }
+  if (!agente.enabled) { dot.style.background = '#888'; dot.style.boxShadow = 'none'; }
 
   var texto = document.createElement('span');
   texto.className = 'dashboard-card-nombre';
@@ -1798,25 +1658,28 @@ function _tarjetaAgente(agente) {
   card.appendChild(dot);
   card.appendChild(texto);
 
+  var statusBadge = document.createElement('span');
+  statusBadge.className = 'dashboard-card-badge';
+  statusBadge.textContent = agente.loaded ? 'loaded' : (agente.origin || agente.status || 'available');
+  statusBadge.title = agente.loaded ? 'Module loaded in this process' : 'Available for this user';
+  card.appendChild(statusBadge);
+
   if (agente.nucleo) {
     var badge = document.createElement('span');
-    badge.className = 'dashboard-card-badge';
+    badge.className = 'dashboard-card-badge core';
     badge.textContent = 'core';
     badge.title = 'Core agent — always on';
-    badge.style.cssText = 'font-size:10px;opacity:0.6;text-transform:uppercase;letter-spacing:1px;';
     card.appendChild(badge);
   } else {
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'dashboard-card-toggle';
-    btn.textContent = agente.suspendido ? 'Reactivate' : 'Suspend';
-    btn.style.cssText = 'cursor:pointer;font-size:11px;padding:2px 8px;border-radius:4px;' +
-      'border:1px solid currentColor;background:transparent;color:inherit;white-space:nowrap;';
+    btn.className = 'dashboard-card-toggle ' + (agente.enabled ? 'is-on' : 'is-off');
+    btn.textContent = agente.enabled ? 'Disable' : 'Enable';
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       btn.disabled = true;
       btn.textContent = '…';
-      toggleAgente(agente.nombre, !agente.suspendido);
+      toggleAgente(agente.id, agente.enabled);
     });
     card.appendChild(btn);
   }
@@ -1828,7 +1691,7 @@ function renderDashboardAgentes(agentes) {
   dashboardGrid.innerHTML = '';
   var activos = 0;
   agentes.forEach(function(agente) {
-    if (!agente.suspendido) { activos++; }
+    if (agente.enabled) { activos++; }
     dashboardGrid.appendChild(_tarjetaAgente(agente));
   });
   if (dashboardConteo) { dashboardConteo.textContent = activos + '/' + agentes.length; }
@@ -1846,21 +1709,39 @@ function _mensajeDashboard(texto) {
 function cargarAgentes() {
   if (!dashboardGrid) { return; }
   dashboardGrid.setAttribute('aria-busy', 'true');
-  fetch(IRIS_BASE + '/agentes', { cache: 'no-store' })
+  fetch(AGENT_ROSTER_URL, { cache: 'no-store' })
     .then(function(res) { if (!res.ok) { throw new Error('HTTP ' + res.status); } return res.json(); })
-    .then(function(d) { renderDashboardAgentes(d.agentes || []); })
+    .then(function(d) { renderDashboardAgentes(d.agents || []); })
     .catch(function() {
-      _mensajeDashboard('IRIS is offline — agents can’t be loaded right now.');
+      _mensajeDashboard('The local agent roster could not be loaded.');
       if (dashboardConteo) { dashboardConteo.textContent = '0/0'; }
     })
     .then(function() { dashboardGrid.setAttribute('aria-busy', 'false'); });
 }
 
-function toggleAgente(nombre, suspender) {
-  fetch(IRIS_BASE + '/agentes/' + encodeURIComponent(nombre), {
-    method: 'POST',
+var TRUST_METRICS_URL = '/api/ares/proposals/metrics';
+function cargarConfianza() {
+  fetch(TRUST_METRICS_URL, { cache: 'no-store' })
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(d) {
+      if (!d) { return; }
+      var set = function(id, val) {
+        var el = document.getElementById(id);
+        if (el) { el.textContent = (val === null || val === undefined) ? '0' : val; }
+      };
+      set('trustProposals', d.proposals_total);
+      set('trustApplied', d.applied);
+      set('trustConflicts', d.conflicts);
+      set('trustNoApproval', d.writes_without_approval);
+    })
+    .catch(function() {});
+}
+
+function toggleAgente(agentId, estabaHabilitado) {
+  fetch(AGENT_ROSTER_URL + '/' + encodeURIComponent(agentId), {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ suspendido: suspender })
+    body: JSON.stringify({ enabled: !estabaHabilitado })
   })
     .then(function(res) { if (!res.ok) { throw new Error('HTTP ' + res.status); } return res.json(); })
     .then(function() { cargarAgentes(); })
@@ -1878,6 +1759,7 @@ function toggleAgente(nombre, suspender) {
     overlay.classList.add('activo');
     btnAbrir.classList.add('activo');
     cargarAgentes();
+    cargarConfianza();
   }
   function cerrarDashboard() {
     overlay.classList.remove('activo');
@@ -1893,170 +1775,6 @@ function toggleAgente(nombre, suspender) {
     if (e.key === 'Escape' && overlay.classList.contains('activo')) { cerrarDashboard(); }
   });
 })();
-
-// ===================== 21. EXAMEN INTERACTIVO =====================
-// "hazme un examen de X" (ver director._procesar_examen) deja el
-// marcador "[EXAMEN]" en la respuesta de /chat (ver PATRON_MARCADOR_
-// EXAMEN, sección 9) — window.abrirExamen() abre esta vista y consume
-// /examen/actual, /examen/responder, /examen/cancelar (server.py).
-// Un examen a la vez, mismo criterio que el resto del proyecto
-// (adjuntos_agent._pendiente, observador._vista_activa).
-//
-// DESACTIVADO: GERAM CORE OS todavía no implementa /examen/actual,
-// /examen/responder ni /examen/cancelar. Bloque entero comentado
-// (no borrado) para no disparar fetches a rutas inexistentes.
-// window.abrirExamen queda undefined; el call site en enviarMensaje()
-// ya lo llama detrás de un guard `window.abrirExamen &&`, así que no
-// truena.
-// TODO: rehabilitar si se necesita post-hackathon.
-/*
-(function() {
-  var modal = $('#examenModal');
-  var fondo = $('#examenFondo');
-  var btnCerrar = $('#examenCerrar');
-  var temaLabel = $('#examenTemaLabel');
-  var progresoBarra = $('#examenProgresoBarra');
-  var progresoTexto = $('#examenProgresoTexto');
-  var cuerpo = $('#examenCuerpo');
-  var preguntaEl = $('#examenPregunta');
-  var opcionesEl = $('#examenOpciones');
-  var feedbackEl = $('#examenFeedback');
-  var feedbackTextoEl = $('#examenFeedbackTexto');
-  var feedbackExplicacionEl = $('#examenFeedbackExplicacion');
-  var btnSiguiente = $('#examenSiguiente');
-  var finalEl = $('#examenFinal');
-  var finalNotaEl = $('#examenFinalNota');
-  var finalFallosEl = $('#examenFinalFallos');
-  var btnCerrarFinal = $('#examenCerrarFinal');
-  if (!modal) { return; }
-
-  var examenTerminado = false;
-
-  function mostrarPregunta() {
-    finalEl.style.display = 'none';
-    feedbackEl.style.display = 'none';
-    cuerpo.style.display = 'block';
-  }
-
-  function renderPregunta(data) {
-    examenTerminado = false;
-    temaLabel.textContent = data.tema || '';
-    preguntaEl.textContent = data.pregunta;
-    progresoTexto.textContent = 'Pregunta ' + (data.indice + 1) + ' de ' + data.total;
-    progresoBarra.style.width = Math.round((data.indice / data.total) * 100) + '%';
-
-    opcionesEl.innerHTML = '';
-    data.opciones.forEach(function(texto) {
-      var letra = (texto.trim().charAt(0) || '').toUpperCase();
-      var btn = document.createElement('button');
-      btn.className = 'examen-opcion';
-      btn.textContent = texto;
-      btn.dataset.letra = letra;
-      btn.addEventListener('click', function() { responderPregunta(letra, btn); });
-      opcionesEl.appendChild(btn);
-    });
-
-    mostrarPregunta();
-  }
-
-  function cargarPreguntaActual() {
-    fetch('/examen/actual')
-      .then(function(res) { return res.json(); })
-      .then(function(d) {
-        if (!d.activo) { cerrarExamen(false); return; }
-        renderPregunta(d);
-      })
-      .catch(function(err) { esc('ERROR AL CARGAR EL EXAMEN: ' + err.message); });
-  }
-
-  function responderPregunta(letra, btnClickeado) {
-    var botones = opcionesEl.querySelectorAll('.examen-opcion');
-    botones.forEach(function(b) { b.disabled = true; });
-
-    fetch('/examen/responder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ respuesta: letra })
-    })
-      .then(function(res) {
-        if (!res.ok) { return res.json().then(function(d) { throw new Error(d.detail || ('HTTP ' + res.status)); }); }
-        return res.json();
-      })
-      .then(function(d) {
-        botones.forEach(function(b) {
-          if (b.dataset.letra === d.respuesta_correcta) { b.classList.add('correcta'); }
-          else if (b === btnClickeado) { b.classList.add('incorrecta'); }
-        });
-        progresoBarra.style.width = '100%';
-
-        feedbackTextoEl.textContent = d.correcto ? '✅ ¡Correcto!' : '❌ Incorrecto, la respuesta correcta era ' + d.respuesta_correcta + '.';
-        feedbackTextoEl.className = 'examen-feedback-texto ' + (d.correcto ? 'ok' : 'mal');
-        feedbackExplicacionEl.textContent = d.explicacion || '';
-        btnSiguiente.textContent = d.terminado ? 'Ver resultado →' : 'Siguiente →';
-        feedbackEl.style.display = 'block';
-
-        examenTerminado = d.terminado;
-        if (examenTerminado) { window._examenResultadoFinal = d; }
-      })
-      .catch(function(err) {
-        esc('ERROR AL RESPONDER EXAMEN: ' + err.message);
-        botones.forEach(function(b) { b.disabled = false; });
-      });
-  }
-
-  function renderFinal(d) {
-    cuerpo.style.display = 'none';
-    feedbackEl.style.display = 'none';
-    finalNotaEl.textContent = d.aciertos + '/' + d.total + ' aciertos';
-
-    finalFallosEl.innerHTML = '';
-    if (d.fallos && d.fallos.length) {
-      var titulo = document.createElement('p');
-      titulo.textContent = 'Repasa esto:';
-      titulo.style.color = 'var(--texto)';
-      finalFallosEl.appendChild(titulo);
-      d.fallos.forEach(function(texto) {
-        var p = document.createElement('p');
-        p.textContent = '– ' + texto;
-        finalFallosEl.appendChild(p);
-      });
-    } else {
-      var p = document.createElement('p');
-      p.textContent = '¡Las acertaste todas!';
-      finalFallosEl.appendChild(p);
-    }
-
-    finalEl.style.display = 'block';
-  }
-
-  btnSiguiente.addEventListener('click', function() {
-    if (examenTerminado) {
-      renderFinal(window._examenResultadoFinal || { aciertos: 0, total: 0, fallos: [] });
-    } else {
-      cargarPreguntaActual();
-    }
-  });
-
-  function cerrarExamen(avisarBackend) {
-    modal.classList.remove('activo');
-    if (avisarBackend !== false) {
-      fetch('/examen/cancelar', { method: 'POST' }).catch(function() {});
-    }
-  }
-
-  window.abrirExamen = function() {
-    modal.classList.add('activo');
-    cargarPreguntaActual();
-  };
-
-  btnCerrar.addEventListener('click', function() { cerrarExamen(true); });
-  fondo.addEventListener('click', function() { cerrarExamen(true); });
-  btnCerrarFinal.addEventListener('click', function() { cerrarExamen(false); });
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && modal.classList.contains('activo')) { cerrarExamen(true); }
-  });
-})();
-*/
 
 // ===================== 22. SETTINGS PANEL =====================
 // The provider catalog is authoritative. Saved sensitive values arrive masked
@@ -2105,8 +1823,17 @@ function toggleAgente(nombre, suspender) {
       { field: 'SUPABASE_URL', label: 'Supabase URL' },
       { field: 'SUPABASE_KEY', label: 'Supabase key' }
     ] },
-    { id: 'google-calendar', label: 'Google Calendar', info:
-      'Google Calendar connects through an OAuth credentials file (credenciales/), managed outside this panel — no API key is entered here.' }
+    { id: 'google-calendar', label: 'Google Calendar', campos: [
+      { field: 'GOOGLE_CALENDAR_ACCESS_TOKEN', label: 'OAuth access token' },
+      { field: 'GOOGLE_CALENDAR_ID', label: 'Calendar ID' },
+      { field: 'GOOGLE_ACCOUNT_EMAIL', label: 'Google account email' }
+    ] },
+    { id: 'spotify', label: 'Spotify', campos: [
+      { field: 'SPOTIFY_ACCESS_TOKEN', label: 'Spotify access token' }
+    ] },
+    { id: 'obsidian', label: 'Obsidian', campos: [
+      { field: 'OBSIDIAN_VAULT_PATH', label: 'Obsidian vault path' }
+    ] }
   ];
 
   // Lista plana derivada, para cargar/guardar valores por campo sin cambios.
@@ -2292,6 +2019,13 @@ function toggleAgente(nombre, suspender) {
   }
 
   function construirPanel() {
+    // Personal settings are authored in index.html for accessible labels.
+    // Preserve that live section (and its listeners) while rebuilding the
+    // provider-driven pages around it.
+    var geramSettingsSection = $('#configGeramSettings');
+    if (geramSettingsSection && geramSettingsSection.parentNode) {
+      geramSettingsSection.parentNode.removeChild(geramSettingsSection);
+    }
     cuerpo.innerHTML = '';
     catalogo = [];
     catalogoPorId = {};
@@ -2299,6 +2033,25 @@ function toggleAgente(nombre, suspender) {
     catalogoListo = false;
     configuracionLista = false;
     credencialesPool = [];
+
+    var seccionOverview = crearSeccion(
+      'configAiOverview',
+      'AI provider directory',
+      'Choose a provider, then assign it to I.R.I.S. or A.R.E.S. Local providers do not require an API key.'
+    );
+    var requiredCard = crearElemento('div', 'config-required-card');
+    requiredCard.id = 'configAiRequired';
+    var requiredCopy = crearElemento('div');
+    requiredCopy.appendChild(crearElemento('strong', '', 'At least one AI provider is required'));
+    requiredCopy.appendChild(crearElemento('p', '', 'Configure a role with an available provider before using chat or code proposals.'));
+    requiredCard.appendChild(requiredCopy);
+    var requiredStatus = crearElemento('span', 'config-required-status', 'Review roles');
+    requiredStatus.id = 'configAiRequiredStatus';
+    requiredCard.appendChild(requiredStatus);
+    seccionOverview.contenido.appendChild(requiredCard);
+    var directory = crearElemento('div', 'config-provider-directory');
+    directory.id = 'configProviderDirectory';
+    seccionOverview.contenido.appendChild(directory);
 
     var seccionRoles = crearSeccion(
       'configAiRoles',
@@ -2331,6 +2084,10 @@ function toggleAgente(nombre, suspender) {
     GRUPOS_INTEGRACIONES.forEach(function(grupo) {
       var bloque = crearElemento('div', 'config-integracion');
       bloque.dataset.integration = grupo.id;
+      var estadoIntegracion = crearElemento('p', 'config-seccion-ayuda', 'Connection state: checking…');
+      estadoIntegracion.id = 'configIntegrationStatus-' + grupo.id;
+      estadoIntegracion.setAttribute('role', 'status');
+      bloque.appendChild(estadoIntegracion);
       if (grupo.info) {
         bloque.appendChild(crearElemento('p', 'config-seccion-ayuda', grupo.info));
       } else {
@@ -2342,6 +2099,8 @@ function toggleAgente(nombre, suspender) {
       }
       seccionIntegraciones.contenido.appendChild(bloque);
     });
+
+    if (geramSettingsSection) { cuerpo.appendChild(geramSettingsSection); }
 
     conectarEventosRoles();
   }
@@ -2414,6 +2173,7 @@ function toggleAgente(nombre, suspender) {
       mostrarAdvertenciaRol(role.id, '');
     }
     actualizarOpcionesFallback(role);
+    actualizarResumenAi();
   }
 
   function conectarEventosRoles() {
@@ -2450,7 +2210,7 @@ function toggleAgente(nombre, suspender) {
         return;
       }
       var providerId = item.provider_id.trim().toLowerCase();
-      if (!providerId || providerId === 'ollama' || vistos[providerId]) { return; }
+      if (!providerId || vistos[providerId]) { return; }
       vistos[providerId] = true;
       resultado.push({
         provider_id: providerId,
@@ -2470,6 +2230,7 @@ function toggleAgente(nombre, suspender) {
     catalogoPorId = {};
     catalogo.forEach(function(spec) { catalogoPorId[spec.provider_id] = spec; });
     catalogoListo = true;
+    renderizarDirectorioProveedores();
 
     ROLES.forEach(function(role) {
       var primary = obtenerControl(role.providerField);
@@ -2499,6 +2260,64 @@ function toggleAgente(nombre, suspender) {
       primary.disabled = false;
       fallback.disabled = false;
       obtenerControl(role.modelField).disabled = false;
+    });
+  }
+
+  function providerHint(spec) {
+    if (spec.provider_id === 'ollama') { return 'Local · no API key'; }
+    if (spec.provider_id === 'gemini' || spec.provider_id === 'groq') {
+      return 'Recommended · free tier';
+    }
+    return spec.requires_api_key ? 'Cloud · API key required' : 'No API key required';
+  }
+
+  function renderizarDirectorioProveedores() {
+    var directory = $('#configProviderDirectory');
+    if (!directory) { return; }
+    directory.textContent = '';
+    catalogo.forEach(function(spec) {
+      var card = crearElemento('button', 'config-provider-card');
+      card.type = 'button';
+      card.dataset.providerId = spec.provider_id;
+      card.disabled = !spec.implementation_available;
+      if (!spec.implementation_available) { card.classList.add('no-disponible'); }
+      card.appendChild(crearElemento('span', 'config-provider-logo', spec.display_label.slice(0, 2).toUpperCase()));
+      var copy = crearElemento('span', 'config-provider-copy');
+      copy.appendChild(crearElemento('strong', '', spec.display_label));
+      copy.appendChild(crearElemento('small', '', spec.default_model));
+      card.appendChild(copy);
+      var hint = providerHint(spec);
+      var badge = crearElemento(
+        'span',
+        'config-provider-badge' + (hint.indexOf('Recommended') === 0 ? ' recomendado' : ''),
+        hint
+      );
+      card.appendChild(badge);
+      card.addEventListener('click', function() {
+        if (!spec.implementation_available) { return; }
+        navConfig.vista = 'ai';
+        navConfig.proveedor = spec.requires_api_key ? spec.provider_id : '__roles__';
+        aplicarVistaConfig();
+      });
+      directory.appendChild(card);
+    });
+  }
+
+  function actualizarResumenAi() {
+    var iris = obtenerControl('IRIS_PROVIDER');
+    var ares = obtenerControl('ARES_PROVIDER');
+    var configured = Boolean((iris && iris.value) || (ares && ares.value));
+    var card = $('#configAiRequired');
+    var status = $('#configAiRequiredStatus');
+    if (card) { card.classList.toggle('completo', configured); }
+    if (status) { status.textContent = configured ? 'Configured' : 'Review roles'; }
+    var providers = cuerpo.querySelectorAll('#configProviderDirectory [data-provider-id]');
+    Array.prototype.forEach.call(providers, function(providerCard) {
+      providerCard.classList.toggle(
+        'seleccionado',
+        Boolean((iris && iris.value === providerCard.dataset.providerId) ||
+          (ares && ares.value === providerCard.dataset.providerId))
+      );
     });
   }
 
@@ -3003,6 +2822,7 @@ function toggleAgente(nombre, suspender) {
     CAMPOS_INTEGRACIONES.forEach(function(definicion) {
       aplicarValorSeguro(definicion.field, data[definicion.field]);
     });
+    actualizarResumenAi();
     configuracionLista = true;
   }
 
@@ -3022,6 +2842,7 @@ function toggleAgente(nombre, suspender) {
   function cargarConfiguracion() {
     if (cargando || guardando || poolGuardando) { return; }
     construirPanel();
+    aplicarVistaConfig();
     cargando = true;
     cuerpo.setAttribute('aria-busy', 'true');
     estadoEl.textContent = 'Cargando configuración...';
@@ -3241,7 +3062,7 @@ function toggleAgente(nombre, suspender) {
   // ---- Navegación: sidebar externo (API IA + integraciones) + sub-sidebar
   //      de proveedores de IA. Solo muestra/oculta secciones ya construidas;
   //      no toca la lógica de pools, guardado ni validación. ----
-  var navConfig = { vista: 'ai', proveedor: '__roles__', integracion: null };
+  var navConfig = { vista: 'ai', proveedor: '__overview__', integracion: null };
 
   function porId(elId) { return document.getElementById(elId); }
 
@@ -3265,10 +3086,11 @@ function toggleAgente(nombre, suspender) {
     barra.appendChild(crearElemento('p', 'config-nav-grupo', 'AI'));
     var itemAi = crearItemNav('config-nav-item', 'API IA', function() {
       navConfig.vista = 'ai';
-      if (!navConfig.proveedor) { navConfig.proveedor = '__roles__'; }
+      if (!navConfig.proveedor) { navConfig.proveedor = '__overview__'; }
       aplicarVistaConfig();
     });
     itemAi.dataset.nav = 'ai';
+    itemAi.dataset.configView = 'ai';
     barra.appendChild(itemAi);
 
     barra.appendChild(crearElemento('p', 'config-nav-grupo', 'Integrations'));
@@ -3279,8 +3101,18 @@ function toggleAgente(nombre, suspender) {
         aplicarVistaConfig();
       });
       item.dataset.nav = 'int:' + grupo.id;
+      item.dataset.configView = 'integrations';
       barra.appendChild(item);
     });
+
+    barra.appendChild(crearElemento('p', 'config-nav-grupo', 'GERAM'));
+    var itemGeram = crearItemNav('config-nav-item', 'Profile & privacy', function() {
+      navConfig.vista = 'geram';
+      aplicarVistaConfig();
+    });
+    itemGeram.dataset.nav = 'geram';
+    itemGeram.dataset.configView = 'geram';
+    barra.appendChild(itemGeram);
 
     barra.appendChild(crearElemento(
       'p', 'config-sidebar-note',
@@ -3293,6 +3125,12 @@ function toggleAgente(nombre, suspender) {
     if (!sub) { return; }
     sub.innerHTML = '';
     sub.appendChild(crearElemento('p', 'config-nav-grupo', 'AI providers'));
+    var itemOverview = crearItemNav('config-subnav-item', 'Provider directory', function() {
+      navConfig.proveedor = '__overview__';
+      aplicarVistaConfig();
+    });
+    itemOverview.dataset.sub = '__overview__';
+    sub.appendChild(itemOverview);
     var itemRoles = crearItemNav('config-subnav-item', 'Roles (IRIS / A.R.E.S.)', function() {
       navConfig.proveedor = '__roles__';
       aplicarVistaConfig();
@@ -3315,7 +3153,8 @@ function toggleAgente(nombre, suspender) {
     var externos = document.querySelectorAll('#configSidebar .config-nav-item');
     Array.prototype.forEach.call(externos, function(boton) {
       var activo = (navConfig.vista === 'ai' && boton.dataset.nav === 'ai') ||
-        (navConfig.vista === 'int' && boton.dataset.nav === 'int:' + navConfig.integracion);
+        (navConfig.vista === 'int' && boton.dataset.nav === 'int:' + navConfig.integracion) ||
+        (navConfig.vista === 'geram' && boton.dataset.nav === 'geram');
       boton.classList.toggle('activo', activo);
       if (activo) { boton.setAttribute('aria-current', 'page'); }
       else { boton.removeAttribute('aria-current'); }
@@ -3342,6 +3181,16 @@ function toggleAgente(nombre, suspender) {
       descripcion.textContent = 'Connect this service. Credentials stay on this device.';
       return;
     }
+    if (navConfig.vista === 'geram') {
+      titulo.textContent = 'Profile, appearance & privacy';
+      descripcion.textContent = 'Personalize GERAM and control which local paths remain blocked.';
+      return;
+    }
+    if (navConfig.proveedor === '__overview__') {
+      titulo.textContent = 'AI provider directory';
+      descripcion.textContent = 'Online and local providers available to I.R.I.S. and A.R.E.S.';
+      return;
+    }
     if (navConfig.proveedor === '__roles__') {
       titulo.textContent = 'AI roles';
       descripcion.textContent =
@@ -3356,15 +3205,22 @@ function toggleAgente(nombre, suspender) {
 
   function aplicarVistaConfig() {
     var esAi = navConfig.vista === 'ai';
+    var esGeram = navConfig.vista === 'geram';
     var sub = porId('configSubsidebar');
     if (sub) { sub.hidden = !esAi; }
 
     var enRoles = esAi && navConfig.proveedor === '__roles__';
-    var enProveedor = esAi && navConfig.proveedor && navConfig.proveedor !== '__roles__';
+    var enOverview = esAi && navConfig.proveedor === '__overview__';
+    var enProveedor = esAi && navConfig.proveedor &&
+      navConfig.proveedor !== '__roles__' && navConfig.proveedor !== '__overview__';
 
+    mostrarSeccionConfig('configAiOverview', enOverview);
     mostrarSeccionConfig('configAiRoles', enRoles);
     mostrarSeccionConfig('configProviderCredentials', enProveedor);
-    mostrarSeccionConfig('configIntegrations', !esAi);
+    mostrarSeccionConfig('configIntegrations', navConfig.vista === 'int');
+    mostrarSeccionConfig('configGeramSettings', esGeram);
+    var footer = porId('configFooter');
+    if (footer) { footer.hidden = esGeram; }
 
     if (enProveedor) {
       var cards = document.querySelectorAll('#configCredentialPools .config-pool-provider');
@@ -3378,6 +3234,9 @@ function toggleAgente(nombre, suspender) {
         g.hidden = g.dataset.integration !== navConfig.integracion;
       });
     }
+    if (esGeram && window.GeramSettings && typeof window.GeramSettings.load === 'function') {
+      window.GeramSettings.load();
+    }
     actualizarActivosNav();
     actualizarEncabezadoNav();
   }
@@ -3390,14 +3249,32 @@ function toggleAgente(nombre, suspender) {
 
   function abrirConfig() {
     overlay.classList.add('activo');
+    overlay.setAttribute('aria-hidden', 'false');
     btnAbrir.classList.add('activo');
+    btnAbrir.setAttribute('aria-expanded', 'true');
     cargarConfiguracion();
+    fetch('/api/gcs/integrations', { cache: 'no-store' })
+      .then(function(response) { return response.ok ? response.json() : Promise.reject(new Error('status')); })
+      .then(function(payload) {
+        (payload.integrations || []).forEach(function(item) {
+          var status = document.getElementById('configIntegrationStatus-' + item.id);
+          if (status) { status.textContent = 'Connection state: ' + String(item.state || 'available'); }
+        });
+      })
+      .catch(function() {
+        GRUPOS_INTEGRACIONES.forEach(function(group) {
+          var status = document.getElementById('configIntegrationStatus-' + group.id);
+          if (status) { status.textContent = 'Connection state: unavailable'; }
+        });
+      });
     if (btnCerrar) { btnCerrar.focus(); }
   }
 
   function cerrarConfig() {
     overlay.classList.remove('activo');
+    overlay.setAttribute('aria-hidden', 'true');
     btnAbrir.classList.remove('activo');
+    btnAbrir.setAttribute('aria-expanded', 'false');
     btnAbrir.focus();
   }
 
@@ -3419,10 +3296,9 @@ function toggleAgente(nombre, suspender) {
 })();
 
 // ===================== MODO DESARROLLADOR AL FRENTE (GERAM v3) =====================
-// El workspace (árbol de archivos + Monaco + A.R.E.S.) y el Terminal
-// Watcher (Test Runner con sandbox) son la vista principal. Al terminar
-// el boot se abren automáticamente reutilizando sus propios toggles, así
-// no se duplica su lógica de carga (árbol, Monaco, polling). El HUD del
+// El workspace (árbol de archivos + Monaco + A.R.E.S.) es la vista principal.
+// Al terminar el boot se abre reutilizando su propio toggle, así no se duplica
+// su lógica de carga (árbol y Monaco). El HUD del
 // asistente IRIS queda como panel secundario. El botón conserva el workspace y
 // cambia únicamente el perfil visible entre IRIS y A.R.E.S.
 (function() {
@@ -3467,17 +3343,13 @@ function toggleAgente(nombre, suspender) {
   }
   activarPerfil('ares');
 
-  // Abre workspace + Terminal Watcher disparando el MISMO click que usan
-  // sus botones, para reutilizar su lógica ya probada (carga de árbol,
-  // layout de Monaco, polling del watcher) sin reimplementar nada.
+  // Abre el workspace disparando el MISMO click que usa su botón interno para
+  // reutilizar la carga del árbol y el layout de Monaco. Terminal Watcher se
+  // abre solo cuando la persona lo solicita desde la Activity Bar.
   function abrirVistaDev() {
     var wsPanel = document.getElementById('workspacePanel');
     var wsToggle = document.getElementById('toggleWorkspace');
     if (wsToggle && wsPanel && !wsPanel.classList.contains('activo')) { wsToggle.click(); }
-
-    var twPanel = document.getElementById('terminalWatcherPanel');
-    var twToggle = document.getElementById('toggleTerminalWatcher');
-    if (twToggle && twPanel && twPanel.hidden) { twToggle.click(); }
   }
 
   if (document.body.classList.contains('listo')) {

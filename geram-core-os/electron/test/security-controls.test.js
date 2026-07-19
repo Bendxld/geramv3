@@ -163,7 +163,8 @@ test('la CSP permite únicamente workers locales sin recursos remotos', () => {
   const csp = createContentSecurityPolicy(8000);
   assert.match(csp, /worker-src 'self'/);
   assert.doesNotMatch(csp, /worker-src[^;]*(?:https?:|blob:|\*)/);
-  assert.doesNotMatch(csp, /unsafe-eval/);
+  assert.doesNotMatch(csp, /(?:^|\s)'unsafe-eval'(?:\s|;|$)/);
+  assert.match(csp, /'wasm-unsafe-eval'/);
   assert.match(csp, /script-src 'self'/);
   assert.match(csp, /font-src 'self'/);
   assert.equal(csp.includes('ws://[::1]'), false);
@@ -185,11 +186,11 @@ test('la CSP se añade sólo a la respuesta principal local', async () => {
   assert.match(response.responseHeaders['Content-Security-Policy'][0], /worker-src 'self'/);
 });
 
-test('todos los permisos y dispositivos sensibles se deniegan', async () => {
+test('sólo micrófono y cámara locales se permiten; lo demás se deniega', async () => {
   const appSession = new FakeSession();
   await configureSession(appSession, policy);
   for (const permission of [
-    'geolocation', 'media', 'midi', 'notifications', 'openExternal',
+    'geolocation', 'midi', 'notifications', 'openExternal',
     'serial', 'usb', 'clipboard-read', 'fileSystem',
   ]) {
     assert.equal(appSession.permissionCheckHandler(null, permission, '', {}), false);
@@ -197,6 +198,26 @@ test('todos los permisos y dispositivos sensibles se deniegan', async () => {
       appSession.permissionRequestHandler(null, permission, resolve, {});
     });
     assert.equal(granted, false);
+  }
+  const localMedia = {
+    requestingUrl: 'http://127.0.0.1:8000/',
+    mediaTypes: ['audio', 'video'],
+  };
+  assert.equal(
+    appSession.permissionCheckHandler(null, 'media', localMedia.requestingUrl, localMedia),
+    true,
+  );
+  assert.equal(await new Promise((resolve) => {
+    appSession.permissionRequestHandler(null, 'media', resolve, localMedia);
+  }), true);
+  for (const details of [
+    { requestingUrl: 'https://example.invalid/', mediaTypes: ['audio'] },
+    { requestingUrl: 'http://127.0.0.1:8000/', mediaTypes: ['display-capture'] },
+    { requestingUrl: 'http://127.0.0.1:8000/', mediaTypes: [] },
+  ]) {
+    assert.equal(await new Promise((resolve) => {
+      appSession.permissionRequestHandler(null, 'media', resolve, details);
+    }), false);
   }
   assert.equal(appSession.devicePermissionHandler({ deviceType: 'usb' }), false);
   const streams = await new Promise((resolve) => {

@@ -141,7 +141,17 @@ class PythonLspManagerTests(unittest.IsolatedAsyncioTestCase):
 
         self.manager.subscribe(subscriber)
         await self._open()
-        await asyncio.sleep(1)
+        for _ in range(160):
+            if any(
+                event.get("path") == "main.py" and event.get("diagnostics")
+                for event in events
+            ):
+                break
+            await asyncio.sleep(0.05)
+        self.assertTrue(any(
+            event.get("path") == "main.py" and event.get("diagnostics")
+            for event in events
+        ))
         corrected = self.main_text.replace("'bad'", "1")
         await self.manager.notify("textDocument/didChange", {
             "textDocument": {"uri": _workspace_uri("main.py"), "version": 2},

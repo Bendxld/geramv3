@@ -29,6 +29,15 @@ MAX_TREE_SCANNED_ENTRIES = 5000
 TREE_SAMPLE_BYTES = 8192
 TEMPORARY_PREFIX = ".geram-workspace-"
 
+# Windows carece de la familia openat (dir_fd) que usa la ruta endurecida de
+# abajo (read_file/tree/save_file). Detectamos el soporte real; si falta, el
+# workspace usa una capa de acceso por RUTA (métodos *_fallback), que reusa
+# toda la validación de resolve_path pero sin dir_fd. GERAM_FORCE_PATH_WORKSPACE=1
+# fuerza esa capa aun en Linux, para poder probarla en desarrollo.
+_DIR_FD_OK = (os.open in os.supports_dir_fd) and (
+    os.environ.get("GERAM_FORCE_PATH_WORKSPACE") != "1"
+)
+
 EXCLUDED_DIRECTORY_NAMES = frozenset(
     {
         ".claude",
@@ -451,6 +460,8 @@ class WorkspaceService:
             )
 
     def read_file(self, raw_path: str) -> dict[str, str]:
+        if not _DIR_FD_OK:
+            return self._read_file_fallback(raw_path)
         resolved = self.resolve_path(raw_path)
         if _excluded_name(resolved.parts[-1], directory=False):
             raise _public_error("protected_path", "The requested path is not available", 403)
@@ -506,6 +517,8 @@ class WorkspaceService:
         )
 
     def tree(self) -> dict[str, object]:
+        if not _DIR_FD_OK:
+            return self._tree_fallback()
         entries: list[dict[str, object]] = []
         output_truncated = False
         scan_truncated = False
@@ -632,6 +645,8 @@ class WorkspaceService:
     def save_file(self, raw_path: str, content: str, base_version: str) -> dict[str, str]:
         if not isinstance(content, str) or not isinstance(base_version, str):
             raise _public_error("invalid_request", "The save request is invalid", 422)
+        if not _DIR_FD_OK:
+            return self._save_file_fallback(raw_path, content, base_version)
         resolved = self.resolve_path(raw_path)
         if Path(resolved.parts[-1]).suffix.casefold() in BINARY_FILE_SUFFIXES:
             raise _public_error("binary_file", "Binary files cannot be edited", 415)
@@ -741,15 +756,24 @@ class WorkspaceService:
         """
         if not isinstance(edits, Sequence) or isinstance(edits, (str, bytes)) or not edits:
             raise _public_error("invalid_request", "The save request is invalid", 422)
+        required = {"path", "content", "base_version"}
+        allowed = required | {"operation"}
         normalized: list[dict[str, str]] = []
         originals: dict[str, dict[str, str]] = {}
         seen: set[str] = set()
         for edit in edits:
-            if not isinstance(edit, dict) or set(edit) != {"path", "content", "base_version"}:
+            if (
+                not isinstance(edit, dict)
+                or not required.issubset(edit)
+                or (set(edit) - allowed)
+            ):
                 raise _public_error("invalid_request", "The save request is invalid", 422)
             path = edit.get("path")
             content = edit.get("content")
             base_version = edit.get("base_version")
+            operation = edit.get("operation", "replace_existing_file")
+            if operation not in ("replace_existing_file", "create_new_file"):
+                raise _public_error("invalid_request", "The save request is invalid", 422)
             if not all(isinstance(value, str) for value in (path, content, base_version)):
                 raise _public_error("invalid_request", "The save request is invalid", 422)
             try:
@@ -758,42 +782,68 @@ class WorkspaceService:
                 raise _public_error("invalid_request", "The save request is invalid", 422) from None
             if len(encoded_content) > self.max_file_bytes:
                 raise _public_error("file_too_large", "The file exceeds the editing limit", 413)
-            current = self.read_file(path)
-            if current["path"] in seen:
-                raise _public_error("invalid_request", "The save request is invalid", 422)
-            seen.add(current["path"])
-            if current["version"] != base_version:
-                raise _public_error(
-                    "version_conflict",
-                    "A file changed before the operation could be applied",
-                    409,
-                )
-            normalized.append({
-                "path": current["path"],
-                "content": content,
-                "base_version": base_version,
-            })
-            originals[current["path"]] = current
+            if operation == "create_new_file":
+                # A new file has no base to compare; it must not already exist.
+                if base_version != "":
+                    raise _public_error("invalid_request", "The save request is invalid", 422)
+                resolved = self.resolve_path(path)
+                canonical = resolved.relative
+                if canonical in seen:
+                    raise _public_error("invalid_request", "The save request is invalid", 422)
+                seen.add(canonical)
+                if self._abs_path(resolved).exists():
+                    raise _public_error("file_exists", "A file already exists at that path", 409)
+                normalized.append({
+                    "path": canonical,
+                    "content": content,
+                    "base_version": "",
+                    "operation": "create_new_file",
+                })
+            else:
+                current = self.read_file(path)
+                if current["path"] in seen:
+                    raise _public_error("invalid_request", "The save request is invalid", 422)
+                seen.add(current["path"])
+                if current["version"] != base_version:
+                    raise _public_error(
+                        "version_conflict",
+                        "A file changed before the operation could be applied",
+                        409,
+                    )
+                normalized.append({
+                    "path": current["path"],
+                    "content": content,
+                    "base_version": base_version,
+                    "operation": "replace_existing_file",
+                })
+                originals[current["path"]] = current
 
         applied: list[dict[str, str]] = []
         try:
             for edit in normalized:
-                result = self.save_file(
-                    edit["path"],
-                    edit["content"],
-                    edit["base_version"],
-                )
-                applied.append(result)
+                if edit["operation"] == "create_new_file":
+                    result = self.create_file(edit["path"], edit["content"])
+                else:
+                    result = self.save_file(
+                        edit["path"],
+                        edit["content"],
+                        edit["base_version"],
+                    )
+                applied.append({**result, "operation": edit["operation"]})
         except Exception as error:
             rollback_failed = False
             for result in reversed(applied):
-                original = originals[result["path"]]
                 try:
-                    self.save_file(
-                        original["path"],
-                        original["content"],
-                        result["version"],
-                    )
+                    if result.get("operation") == "create_new_file":
+                        # Undo a create by removing the file we just wrote.
+                        os.unlink(self._abs_path(self.resolve_path(result["path"])))
+                    else:
+                        original = originals[result["path"]]
+                        self.save_file(
+                            original["path"],
+                            original["content"],
+                            result["version"],
+                        )
                 except Exception:
                     rollback_failed = True
             if rollback_failed:
@@ -809,4 +859,307 @@ class WorkspaceService:
                 "The multi-file operation could not be applied",
                 500,
             ) from None
-        return applied
+        return [{"path": result["path"], "version": result["version"]} for result in applied]
+
+    def create_file(self, raw_path: str, content: str) -> dict[str, str]:
+        """Create a NEW text file, failing if it already exists.
+
+        Shares resolve_path validation (rejects symlinks per component,
+        out-of-root, excluded and protected paths) with every other write.
+        Uses O_CREAT|O_EXCL|O_NOFOLLOW so the create is atomic, never follows a
+        symlink, and never overwrites existing content. Missing parent
+        directories are created within the workspace root.
+        """
+        if not isinstance(content, str):
+            raise _public_error("invalid_request", "The save request is invalid", 422)
+        try:
+            encoded = content.encode("utf-8")
+        except UnicodeEncodeError:
+            raise _public_error("invalid_request", "The save request is invalid", 422) from None
+        if len(encoded) > self.max_file_bytes:
+            raise _public_error("file_too_large", "The file exceeds the editing limit", 413)
+        resolved = self.resolve_path(raw_path)
+        abs_path = self._abs_path(resolved)
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise _public_error("save_failed", "The file could not be created", 500) from None
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        for optional in ("O_CLOEXEC", "O_NOFOLLOW", "O_BINARY"):
+            if hasattr(os, optional):
+                flags |= getattr(os, optional)
+        try:
+            descriptor = os.open(str(abs_path), flags, 0o600)
+        except FileExistsError:
+            raise _public_error("file_exists", "A file already exists at that path", 409) from None
+        except OSError:
+            raise _public_error("save_failed", "The file could not be created", 500) from None
+        try:
+            self._write_all(descriptor, encoded)
+            os.fsync(descriptor)
+        except OSError:
+            try:
+                os.unlink(str(abs_path))
+            except OSError:
+                pass
+            raise _public_error("save_failed", "The file could not be created", 500) from None
+        finally:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        return {"path": resolved.relative, "version": self._version(encoded)}
+
+    # ------------------------------------------------------------------ #
+    # Capa de acceso por RUTA — Windows / plataformas sin openat/dir_fd.
+    #
+    # Reusa TODA la validación de resolve_path (rechaza symlinks por componente
+    # y rutas fuera de root) y los mismos checks de versión/tamaño/binario; solo
+    # cambia el acceso a disco de "relativo a un fd de directorio" a "por ruta
+    # absoluta". Pierde el endurecimiento anti-TOCTOU de openat (aceptable en un
+    # equipo local mono-usuario; Linux conserva la ruta endurecida). En Windows
+    # O_BINARY es obligatorio para no traducir CRLF ni cortar en Ctrl-Z (0x1A).
+    # save_files_atomically no necesita variante: orquesta read_file/save_file.
+    # ------------------------------------------------------------------ #
+    def _abs_path(self, resolved: ResolvedWorkspacePath) -> Path:
+        return self.root.joinpath(*resolved.parts)
+
+    def _read_path(self, abs_path: Path) -> tuple[bytes, os.stat_result]:
+        try:
+            link_status = os.lstat(abs_path)
+        except FileNotFoundError:
+            raise _public_error("not_found", "The requested file does not exist", 404) from None
+        except OSError:
+            raise _public_error("workspace_unavailable", "The local file is unavailable", 403) from None
+        if stat.S_ISLNK(link_status.st_mode):
+            raise _public_error("symlink_not_allowed", "Symbolic links are not editable", 403)
+        flags = os.O_RDONLY
+        if hasattr(os, "O_BINARY"):
+            flags |= os.O_BINARY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        if hasattr(os, "O_NONBLOCK"):  # no bloquear abriendo un FIFO/pipe sin escritor
+            flags |= os.O_NONBLOCK
+        try:
+            descriptor = os.open(str(abs_path), flags)
+        except FileNotFoundError:
+            raise _public_error("not_found", "The requested file does not exist", 404) from None
+        except OSError:
+            raise _public_error("workspace_unavailable", "The local file is unavailable", 403) from None
+        try:
+            self._reject_hardlink(os.fstat(descriptor))
+            data, file_status = self._read_descriptor(descriptor)
+        finally:
+            os.close(descriptor)
+        return data, file_status
+
+    def _read_file_fallback(self, raw_path: str) -> dict[str, str]:
+        resolved = self.resolve_path(raw_path)
+        if _excluded_name(resolved.parts[-1], directory=False):
+            raise _public_error("protected_path", "The requested path is not available", 403)
+        if is_path_blocked(resolved.relative, resolved.parts[-1]):
+            raise _public_error("protected_path", "The requested path is not available", 403)
+        if Path(resolved.parts[-1]).suffix.casefold() in BINARY_FILE_SUFFIXES:
+            raise _public_error("binary_file", "Binary files cannot be edited", 415)
+        data, _status = self._read_path(self._abs_path(resolved))
+        return {
+            "path": resolved.relative,
+            "content": self._decode_text(data),
+            "version": self._version(data),
+        }
+
+    def _save_file_fallback(self, raw_path: str, content: str, base_version: str) -> dict[str, str]:
+        resolved = self.resolve_path(raw_path)
+        if Path(resolved.parts[-1]).suffix.casefold() in BINARY_FILE_SUFFIXES:
+            raise _public_error("binary_file", "Binary files cannot be edited", 415)
+        try:
+            encoded_content = content.encode("utf-8")
+        except UnicodeEncodeError:
+            raise _public_error("invalid_request", "The save request is invalid", 422) from None
+        if len(encoded_content) > self.max_file_bytes:
+            raise _public_error("file_too_large", "The file exceeds the editing limit", 413)
+
+        abs_path = self._abs_path(resolved)
+        original_data, original_status = self._read_path(abs_path)
+        self._decode_text(original_data)
+        if self._version(original_data) != base_version:
+            raise _public_error("version_conflict", "The file changed after it was opened", 409)
+
+        output = (
+            codecs.BOM_UTF8 + encoded_content
+            if original_data.startswith(codecs.BOM_UTF8)
+            else encoded_content
+        )
+        temporary_path = abs_path.parent / f"{TEMPORARY_PREFIX}{secrets.token_hex(12)}.tmp"
+        temporary_fd = -1
+        created = False
+        try:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if hasattr(os, "O_BINARY"):
+                flags |= os.O_BINARY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            temporary_fd = os.open(str(temporary_path), flags, 0o600)
+            created = True
+            self._write_all(temporary_fd, output)
+            os.fsync(temporary_fd)
+            os.close(temporary_fd)
+            temporary_fd = -1
+
+            # Detecta cambios del destino entre abrir y reemplazar (sin dir_fd:
+            # re-stat + re-hash del contenido, que es el detector más fuerte).
+            current_status = os.stat(abs_path, follow_symlinks=False)
+            if not stat.S_ISREG(current_status.st_mode) or current_status.st_nlink != 1:
+                raise _public_error("version_conflict", "The file changed after it was opened", 409)
+            current_data, _current = self._read_path(abs_path)
+            if self._version(current_data) != base_version:
+                raise _public_error("version_conflict", "The file changed after it was opened", 409)
+
+            os.replace(str(temporary_path), str(abs_path))  # atómico en Windows y POSIX
+            created = False
+            # El temp se mantuvo 0600 durante toda la ventana; recién ahora, ya
+            # en su sitio, fija el modo original (en Windows: el bit solo-lectura).
+            try:
+                os.chmod(str(abs_path), stat.S_IMODE(original_status.st_mode))
+            except OSError:
+                pass
+        except WorkspaceError:
+            raise
+        except OSError:
+            raise _public_error("save_failed", "The file could not be saved", 500) from None
+        finally:
+            if temporary_fd >= 0:
+                os.close(temporary_fd)
+            if created:
+                try:
+                    os.unlink(str(temporary_path))
+                except OSError:
+                    pass
+        return {"path": resolved.relative, "version": self._version(output)}
+
+    def _tree_file_editable_path(self, abs_path: Path) -> bool:
+        if abs_path.suffix.casefold() in BINARY_FILE_SUFFIXES:
+            return False
+        flags = os.O_RDONLY
+        if hasattr(os, "O_BINARY"):
+            flags |= os.O_BINARY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        if hasattr(os, "O_NONBLOCK"):  # no bloquear abriendo un FIFO/pipe sin escritor
+            flags |= os.O_NONBLOCK
+        descriptor = -1
+        try:
+            descriptor = os.open(str(abs_path), flags)
+            file_status = os.fstat(descriptor)
+            if (
+                not stat.S_ISREG(file_status.st_mode)
+                or file_status.st_nlink != 1
+                or file_status.st_size > self.max_file_bytes
+            ):
+                return False
+            sample = os.read(descriptor, TREE_SAMPLE_BYTES)
+        except (OSError, ValueError, WorkspaceError):
+            return False
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+        if b"\x00" in sample:
+            return False
+        try:
+            decoder = codecs.getincrementaldecoder("utf-8")()
+            decoded_sample = decoder.decode(sample, final=False)
+        except UnicodeDecodeError:
+            return False
+        return not any(
+            unicodedata.category(character) == "Cc"
+            and character not in {"\t", "\n", "\r", "\f"}
+            for character in decoded_sample
+        )
+
+    def _tree_fallback(self) -> dict[str, object]:
+        entries: list[dict[str, object]] = []
+        output_truncated = False
+        scan_truncated = False
+        scanned_entries = 0
+        depth_limited = False
+
+        def add_directory(directory_abs: Path, relative_parts: tuple[str, ...], depth: int) -> None:
+            nonlocal output_truncated, scan_truncated, scanned_entries, depth_limited
+            try:
+                with os.scandir(directory_abs) as scanner:
+                    scanned = []
+                    for entry in scanner:
+                        if scanned_entries >= self.max_tree_scanned_entries:
+                            scan_truncated = True
+                            break
+                        scanned_entries += 1
+                        scanned.append(entry)
+            except (OSError, PermissionError):
+                return
+            directories: list[os.DirEntry[str]] = []
+            files: list[os.DirEntry[str]] = []
+            for entry in scanned:
+                if entry.is_symlink():
+                    continue
+                try:
+                    is_directory = entry.is_dir(follow_symlinks=False)
+                    is_file = entry.is_file(follow_symlinks=False)
+                except OSError:
+                    continue
+                if not is_directory and not is_file:
+                    continue
+                if _excluded_name(entry.name, directory=True) or (
+                    is_file and _excluded_name(entry.name, directory=False)
+                ):
+                    continue
+                candidate = self.root.joinpath(*relative_parts, entry.name)
+                if self._is_protected(candidate):
+                    continue
+                (directories if is_directory else files).append(entry)
+
+            directories.sort(key=lambda item: item.name.casefold())
+            files.sort(key=lambda item: item.name.casefold())
+            for entry in directories:
+                if len(entries) >= self.max_tree_entries:
+                    output_truncated = True
+                    return
+                child_parts = relative_parts + (entry.name,)
+                entries.append({
+                    "path": PurePosixPath(*child_parts).as_posix(),
+                    "name": entry.name,
+                    "type": "directory",
+                    "depth": depth,
+                })
+                if depth < self.max_tree_depth and not scan_truncated:
+                    add_directory(Path(entry.path), child_parts, depth + 1)
+                else:
+                    depth_limited = True
+                if output_truncated:
+                    return
+            for entry in files:
+                if len(entries) >= self.max_tree_entries:
+                    output_truncated = True
+                    return
+                child_parts = relative_parts + (entry.name,)
+                entries.append({
+                    "path": PurePosixPath(*child_parts).as_posix(),
+                    "name": entry.name,
+                    "type": "file",
+                    "depth": depth,
+                    "editable": self._tree_file_editable_path(Path(entry.path)),
+                })
+
+        try:
+            add_directory(self.root, (), 1)
+        except OSError:
+            raise _public_error("workspace_unavailable", "The local workspace is unavailable", 503) from None
+        return {
+            "entries": entries,
+            "truncated": output_truncated or scan_truncated,
+            "depth_limited": depth_limited,
+            "limits": {
+                "max_depth": self.max_tree_depth,
+                "max_entries": self.max_tree_entries,
+                "max_file_bytes": self.max_file_bytes,
+            },
+        }

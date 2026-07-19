@@ -73,6 +73,17 @@ function appendResponseHeader(responseHeaders, name, value) {
   return headers;
 }
 
+function isAllowedMediaPermission(policy, permission, requestingOrigin, details, contents) {
+  if (permission !== 'media') return false;
+  const mediaTypes = details && Array.isArray(details.mediaTypes) ? details.mediaTypes : [];
+  if (!mediaTypes.length || mediaTypes.some((value) => !['audio', 'video'].includes(value))) {
+    return false;
+  }
+  const requestingUrl = (details && details.requestingUrl) || requestingOrigin ||
+    (contents && typeof contents.getURL === 'function' ? contents.getURL() : '');
+  return policy.isAllowed(requestingUrl);
+}
+
 function configureSession(appSession, policy, onBlocked = () => {}) {
   const existingConfiguration = configuredSessions.get(appSession);
   if (existingConfiguration) {
@@ -124,9 +135,15 @@ function configureSession(appSession, policy, onBlocked = () => {}) {
     });
   });
 
-  appSession.setPermissionCheckHandler(() => false);
-  appSession.setPermissionRequestHandler((_contents, _permission, callback) => {
-    callback(false);
+  appSession.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
+    return isAllowedMediaPermission(
+      policy, permission, requestingOrigin, details || {}, contents,
+    );
+  });
+  appSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+    callback(isAllowedMediaPermission(
+      policy, permission, '', details || {}, contents,
+    ));
   });
   appSession.setDevicePermissionHandler(() => false);
   appSession.setDisplayMediaRequestHandler((_request, callback) => {
@@ -245,6 +262,7 @@ module.exports = {
   createContentSecurityPolicy,
   createWindowOptions,
   formatBlockedAttempt,
+  isAllowedMediaPermission,
   registerWebContentsPolicy,
   secureWebContents,
 };

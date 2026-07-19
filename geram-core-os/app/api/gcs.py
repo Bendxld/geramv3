@@ -18,8 +18,9 @@ One cohesive, localhost-only router exposing the six pillars:
     POST   /api/gcs/context                   -> Context Builder bundle
 
 All reads and writes are localhost-only; writes additionally require a local
-browser origin, matching the existing settings/config endpoints. Everything
-here works fully offline and never performs a real external network call.
+browser origin, matching the existing settings/config endpoints. Local skills,
+agents, memory, and Obsidian work offline. Network integrations make a real
+request only after connection, permission, and approval checks succeed.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from app.core.gcs.permissions import permission_registry
 from app.core.gcs.skill_retriever import skill_retriever
 from app.core.gcs.skills import Skill, skill_store
 from app.core.gcs.storage import StorageError
+from app.core.agent_roster import agent_roster_store
 from app.core.security import require_local_origin, require_localhost
 
 router = APIRouter(
@@ -155,6 +157,10 @@ async def invoke_integration(integration_id: str, payload: InvokeIntegrationRequ
         agent = agent_factory.get(payload.agent_id)
         if agent is None:
             raise HTTPException(status_code=404, detail={"code": "agent_not_found"})
+        if agent.status != "enabled" or not agent_roster_store.is_enabled(
+            f"definition:{agent.id}"
+        ):
+            raise HTTPException(status_code=409, detail={"code": "agent_disabled"})
         granted = list(agent.permissions)
     result = integration_hub.invoke(
         integration_id, payload.action, payload.params, granted=granted, approved=payload.approved

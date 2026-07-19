@@ -12,12 +12,17 @@ Skills. Esto los mantiene fuera del árbol de código y sin ejecutar .py de
 terceros.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.agent_loader import agent_registry
+from app.core.security import require_local_origin, require_localhost
 
-router = APIRouter(prefix="/agents", tags=["agents"])
+router = APIRouter(
+    prefix="/agents",
+    tags=["agents"],
+    dependencies=[Depends(require_localhost)],
+)
 
 
 class AgentActionRequest(BaseModel):
@@ -33,15 +38,20 @@ async def list_agents():
     }
 
 
-@router.post("/load")
+@router.post("/load", dependencies=[Depends(require_local_origin)])
 async def load_agent(payload: AgentActionRequest):
     try:
         return agent_registry.load(payload.agent_name)
+    except PermissionError:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "agent_disabled", "message": "Enable this agent before loading it"},
+        ) from None
     except ModuleNotFoundError:
         raise HTTPException(status_code=404, detail=f"Agent '{payload.agent_name}' not found in /agents")
 
 
-@router.delete("/{agent_name}")
+@router.delete("/{agent_name}", dependencies=[Depends(require_local_origin)])
 async def unload_agent(agent_name: str):
     try:
         return agent_registry.unload(agent_name)

@@ -2,7 +2,7 @@
 User configuration — GERAM CORE OS (v3, Paso 2)
 
 Local, per-user profile / identity / privacy settings persisted as a single
-JSON file (`.geram-config.json`) in the project root. This is deliberately
+JSON file under the operating-system user's application-data directory. This is
 SEPARATE from `.env` (provider credentials, handled by app/api/config.py):
 this file holds non-secret personalization plus a `blocked_paths` privacy
 list that the workspace reader consults before serving file contents.
@@ -24,9 +24,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.config import ROOT_DIR
+from app.core.config import ROOT_DIR, settings
 
-CONFIG_PATH = ROOT_DIR / ".geram-config.json"
+CONFIG_PATH = settings.LOCAL_DATA_DIR / "config" / "user-config.json"
+LEGACY_CONFIG_PATH = ROOT_DIR / ".geram-config.json"
 
 # Vistas admitidas para la identidad del núcleo en el HUD.
 CORE_IDENTITY_VIEWS = ("core", "pet", "minimal")
@@ -100,6 +101,7 @@ class OnboardingState(BaseModel):
     # Version of the in-app manual the user has explicitly dismissed.
     # Increment the frontend manual version when materially updating it.
     manual_version_seen: int = Field(default=0, ge=0, le=10000)
+    setup_version_seen: int = Field(default=0, ge=0, le=10000)
 
 
 class GeramConfig(BaseModel):
@@ -119,6 +121,12 @@ def default_config() -> GeramConfig:
 def _write_atomic_0600(path: Path, text: str) -> None:
     """Write `text` to `path` atomically with 0600 perms (owner-only)."""
     directory = path.parent
+    directory.mkdir(parents=True, exist_ok=True)
+    if hasattr(os, "chmod"):
+        try:
+            os.chmod(directory, 0o700)
+        except OSError:
+            pass
     handle, temporary = tempfile.mkstemp(dir=str(directory), prefix=".geram-config-", suffix=".tmp")
     try:
         if hasattr(os, "fchmod"):  # Unix-only; en Windows lo maneja el perfil de usuario
@@ -155,6 +163,14 @@ def load_config(path: Path = CONFIG_PATH, *, create_if_missing: bool = False) ->
     """
     path = Path(path)
     if not path.exists():
+        if path == CONFIG_PATH and LEGACY_CONFIG_PATH.is_file():
+            try:
+                migrated = GeramConfig.model_validate_json(
+                    LEGACY_CONFIG_PATH.read_text(encoding="utf-8")
+                )
+                return save_config(migrated, path)
+            except (OSError, ValueError, json.JSONDecodeError):
+                pass
         config = default_config()
         if create_if_missing:
             save_config(config, path)

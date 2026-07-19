@@ -26,6 +26,7 @@ from app.core.config import (
 )
 from app.core.security import require_local_origin, require_localhost
 from app.core.workspace import (
+    _DIR_FD_OK,
     TEMPORARY_PREFIX,
     WorkspaceError,
     WorkspaceService,
@@ -179,6 +180,11 @@ class WorkspacePathSecurityTests(WorkspaceServiceTestCase):
             lambda: self.service.save_file("allowed.py", "replacement", "0" * 64),
         )
 
+    @unittest.skipUnless(
+        _DIR_FD_OK,
+        "parent-directory identity (openat/dir_fd) hardening is Unix-only; "
+        "the Windows path-based save layer can't hold a parent fd",
+    )
     def test_parent_directory_identity_change_is_rejected(self):
         self.write_text("nested/file.txt", "text")
         with patch.object(

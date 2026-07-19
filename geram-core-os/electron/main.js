@@ -7,8 +7,9 @@
 // (uvicorn) confirma estar arriba. El HUD en sí no se toca.
 // ============================================================
 
-const { app, BrowserWindow, Menu, globalShortcut, session } = require('electron');
+const { app, BrowserWindow, Menu, dialog, globalShortcut, session } = require('electron');
 const http = require('http');
+const { createBackendManager } = require('./backend-manager');
 const { createLoopbackPolicy, normalizePort } = require('./network-policy');
 const {
   applyChromiumNetworkReductionSwitches,
@@ -21,7 +22,7 @@ const {
 const HUD_PORT = normalizePort(process.env.GERAM_ELECTRON_PORT || 8000);
 const HUD_URL = `http://127.0.0.1:${HUD_PORT}/`;
 const HEALTH_URL = `http://127.0.0.1:${HUD_PORT}/health`;
-const HEALTH_TIMEOUT_MS = 20000;
+const HEALTH_TIMEOUT_MS = app.isPackaged ? 180000 : 20000;
 const HEALTH_POLL_INTERVAL_MS = 500;
 const NETWORK_POLICY = createLoopbackPolicy({
   port: HUD_PORT,
@@ -30,6 +31,7 @@ const NETWORK_POLICY = createLoopbackPolicy({
 });
 
 let ventanaPrincipal = null;
+let backendManager = null;
 
 app.setName('GERAM CORE OS');
 app.commandLine.appendSwitch('class', 'geram-core-os');
@@ -126,9 +128,39 @@ function crearVentana(appSession) {
   });
 }
 
+// El backend puede fallar de dos formas: síncrona (WSL2 sin preparar) o
+// asíncrona (spawn con ENOENT). Ambas terminan aquí, y sólo una vez.
+let arranqueYaFallo = false;
+function fallarArranqueDelBackend() {
+  if (arranqueYaFallo) return;
+  arranqueYaFallo = true;
+  dialog.showErrorBox(
+    'GERAM CORE OS could not start',
+    process.platform === 'win32'
+      ? 'WSL2 is not prepared. Run GERAM Windows Setup from the installation resources and try again.'
+      : 'The packaged backend could not start. Verify that Python 3 is installed.',
+  );
+  app.quit();
+}
+
 if (tieneBloqueoDeInstancia) app.whenReady().then(async () => {
   // Sin menú de aplicación — nada de barra "File/Edit/View" nativa.
   Menu.setApplicationMenu(null);
+
+  backendManager = createBackendManager({
+    platform: process.platform,
+    isPackaged: app.isPackaged,
+    resourcesPath: process.resourcesPath,
+    userData: app.getPath('userData'),
+    environment: process.env,
+    onError: () => fallarArranqueDelBackend(),
+  });
+  try {
+    backendManager.start(HUD_PORT);
+  } catch (_error) {
+    fallarArranqueDelBackend();
+    return;
+  }
 
   // Sin prefijo persist: esta partición existe sólo en memoria. Su política se
   // instala y su proxy se fija antes de que BrowserWindow cargue un solo recurso.
@@ -169,4 +201,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  if (backendManager) backendManager.stop();
 });

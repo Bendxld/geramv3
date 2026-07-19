@@ -1,5 +1,7 @@
 """Provider registry and role-aware primary/fallback dispatch."""
 
+import asyncio
+import json
 import sqlite3
 
 from dataclasses import dataclass
@@ -17,6 +19,7 @@ from app.core.providers.base import (
     ProviderCredential,
     ProviderError,
     ProviderRequest,
+    ProviderAttachment,
     ProviderResponseError,
     ProviderUnavailableError,
     UnsupportedProviderError,
@@ -77,6 +80,43 @@ class ProviderRegistry:
             provider.spec.catalog_entry()
             for provider in self._providers.values()
         ]
+
+    async def generate_with_provider(
+        self,
+        provider_id: str,
+        model: str,
+        role: str,
+        prompt: str,
+        configuration: Settings | None = None,
+        *,
+        attachments: tuple[ProviderAttachment, ...] = (),
+    ) -> ProviderDispatchResult:
+        """Dispatch to one explicit provider without an online fallback."""
+        active_settings = configuration or settings
+        try:
+            provider = self.get(provider_id)
+            request = ProviderRequest(
+                prompt=prompt,
+                model=model,
+                timeout_seconds=active_settings.provider_timeout(provider_id),
+                role=role,
+                attachments=attachments,
+            )
+            result = await self._invoke(provider, request, active_settings)
+        except ProviderError as error:
+            return ProviderDispatchResult(
+                result=self._error_result(error),
+                metadata={"provider": provider_id, "model": model, "fallback_used": False},
+            )
+        metadata: dict[str, object] = {
+            "provider": provider_id, "model": model, "fallback_used": False
+        }
+        metadata.update({
+            key: result.metadata[key]
+            for key in ("response_type", "finish_reason", "reasoning_effort")
+            if key in result.metadata
+        })
+        return ProviderDispatchResult(result=result.response_payload(), metadata=metadata)
 
     @staticmethod
     def _legacy_credential_for(
@@ -188,6 +228,7 @@ class ProviderRegistry:
         *,
         response_schema: dict[str, object] | None = None,
         response_schema_name: str = "structured_response",
+        attachments: tuple[ProviderAttachment, ...] = (),
     ) -> ProviderDispatchResult:
         """Generate through a role's provider and one explicit fallback at most."""
         active_settings = configuration or settings
@@ -233,6 +274,8 @@ class ProviderRegistry:
             role=role,
             response_schema=response_schema,
             response_schema_name=response_schema_name,
+            attachments=attachments,
+            reasoning_effort=role_settings.reasoning_effort,
         )
         primary_metadata: dict[str, object] = {
             "provider": primary.spec.provider_id,
@@ -244,7 +287,7 @@ class ProviderRegistry:
             result = await self._invoke(primary, primary_request, active_settings)
             primary_metadata.update({
                 key: result.metadata[key]
-                for key in ("response_type", "finish_reason")
+                for key in ("response_type", "finish_reason", "reasoning_effort")
                 if key in result.metadata
             })
             return ProviderDispatchResult(
@@ -295,6 +338,7 @@ class ProviderRegistry:
             role=role,
             response_schema=response_schema,
             response_schema_name=response_schema_name,
+            attachments=attachments,
         )
         fallback_metadata: dict[str, object] = {
             "provider": fallback.spec.provider_id,
@@ -310,7 +354,7 @@ class ProviderRegistry:
             )
             fallback_metadata.update({
                 key: result.metadata[key]
-                for key in ("response_type", "finish_reason")
+                for key in ("response_type", "finish_reason", "reasoning_effort")
                 if key in result.metadata
             })
             return ProviderDispatchResult(
@@ -327,6 +371,249 @@ class ProviderRegistry:
                 result=self._error_result(error),
                 metadata=fallback_metadata,
             )
+
+
+    async def stream_for_role(
+        self,
+        role: str,
+        prompt: str,
+        configuration: Settings | None = None,
+        *,
+        response_schema: dict[str, object] | None = None,
+        response_schema_name: str = "structured_response",
+    ):
+        """Stream a role's primary provider token-by-token.
+
+        Yields the provider's streaming events ({"type": "delta"|"final", ...}).
+        Streaming has no online fallback: if the primary provider does not
+        implement it, a ProviderConfigurationError with code
+        `streaming_unsupported` is raised so the caller can fall back to the
+        non-streaming path. Credentials are resolved through the same pool /
+        legacy path as `_invoke`, but without cross-lease retries.
+        """
+        active_settings = configuration or settings
+        role_settings = active_settings.role_provider_settings(role)
+        primary = self.get(role_settings.provider)
+        stream_fn = getattr(primary, "generate_stream", None)
+        if stream_fn is None:
+            raise ProviderConfigurationError(
+                primary.spec.provider_id, "streaming_unsupported"
+            )
+        request = ProviderRequest(
+            prompt=prompt,
+            model=role_settings.model,
+            timeout_seconds=active_settings.provider_timeout(primary.spec.provider_id),
+            role=role,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+            reasoning_effort=role_settings.reasoning_effort,
+        )
+
+        credential: ProviderCredential | None = None
+        lease = None
+        pool = self._credential_pool
+        if primary.spec.requires_api_key:
+            try:
+                use_pool = pool is not None and pool.has_credentials(
+                    primary.spec.provider_id
+                )
+            except (CredentialPoolError, sqlite3.Error, OSError):
+                raise ProviderUnavailableError(
+                    primary.spec.provider_id,
+                    "Provider credential pool is unavailable",
+                    reason="pool_unavailable",
+                ) from None
+            if use_pool:
+                try:
+                    lease = await pool.acquire(primary.spec.provider_id)
+                except (CredentialPoolError, sqlite3.Error, OSError):
+                    raise ProviderUnavailableError(
+                        primary.spec.provider_id,
+                        "Provider credential pool is unavailable",
+                        reason="pool_unavailable",
+                    ) from None
+                if lease is None:
+                    raise ProviderUnavailableError(
+                        primary.spec.provider_id,
+                        "Provider credential pool is unavailable",
+                        reason="pool_exhausted",
+                    )
+                credential = lease.credential
+            else:
+                credential = self._legacy_credential_for(active_settings, primary)
+
+        try:
+            async for event in stream_fn(request, credential):
+                yield event
+        except ProviderUnavailableError as error:
+            if lease is not None:
+                try:
+                    pool.record_failure(
+                        lease.credential_id,
+                        error.reason,
+                        retry_after_seconds=error.retry_after_seconds,
+                    )
+                except (CredentialPoolError, sqlite3.Error, OSError):
+                    pass
+            raise
+        else:
+            if lease is not None:
+                try:
+                    pool.record_success(lease.credential_id)
+                except (CredentialPoolError, sqlite3.Error, OSError):
+                    pass
+
+
+    async def _acquire_single_credential(self, provider, configuration):
+        """Acquire one credential (pool lease or legacy) for a single dispatch.
+
+        Returns (credential, lease). Raises ProviderUnavailableError on pool
+        issues. Used by the streaming and agentic paths, which do not retry
+        across leases the way `_invoke` does.
+        """
+        if not provider.spec.requires_api_key:
+            return None, None
+        pool = self._credential_pool
+        try:
+            use_pool = pool is not None and pool.has_credentials(
+                provider.spec.provider_id
+            )
+        except (CredentialPoolError, sqlite3.Error, OSError):
+            raise ProviderUnavailableError(
+                provider.spec.provider_id,
+                "Provider credential pool is unavailable",
+                reason="pool_unavailable",
+            ) from None
+        if use_pool:
+            try:
+                lease = await pool.acquire(provider.spec.provider_id)
+            except (CredentialPoolError, sqlite3.Error, OSError):
+                raise ProviderUnavailableError(
+                    provider.spec.provider_id,
+                    "Provider credential pool is unavailable",
+                    reason="pool_unavailable",
+                ) from None
+            if lease is None:
+                raise ProviderUnavailableError(
+                    provider.spec.provider_id,
+                    "Provider credential pool is unavailable",
+                    reason="pool_exhausted",
+                )
+            return lease.credential, lease
+        return self._legacy_credential_for(configuration, provider), None
+
+    async def agentic_for_role(
+        self,
+        role: str,
+        prompt: str,
+        tool_executor,
+        configuration: Settings | None = None,
+        *,
+        tools: list,
+        response_schema: dict[str, object] | None = None,
+        response_schema_name: str = "structured_response",
+        max_rounds: int = 6,
+    ):
+        """Run a bounded tool-calling loop for a role's primary provider.
+
+        The model may call the read-only tools passed in `tools`, executed by
+        the sync `tool_executor(name, arguments_dict) -> str` callback (which
+        must never raise and never mutate). Yields `tool_call` / `tool_result`
+        events as they happen and a terminal `final` event carrying the model's
+        structured text. If the primary provider cannot tool-call, raises a
+        ProviderConfigurationError with code `tools_unsupported` so the caller
+        can fall back to the non-agentic path.
+        """
+        active_settings = configuration or settings
+        role_settings = active_settings.role_provider_settings(role)
+        primary = self.get(role_settings.provider)
+        respond = getattr(primary, "respond_with_tools", None)
+        if respond is None:
+            raise ProviderConfigurationError(
+                primary.spec.provider_id, "tools_unsupported"
+            )
+        request = ProviderRequest(
+            prompt=prompt,
+            model=role_settings.model,
+            timeout_seconds=active_settings.provider_timeout(primary.spec.provider_id),
+            role=role,
+            response_schema=response_schema,
+            response_schema_name=response_schema_name,
+            reasoning_effort=role_settings.reasoning_effort,
+        )
+        credential, lease = await self._acquire_single_credential(
+            primary, active_settings
+        )
+        success = False
+        try:
+            input_items: list = [{"role": "user", "content": prompt}]
+            for _ in range(max_rounds):
+                result = await respond(
+                    request, credential, input_items=input_items, tools=tools
+                )
+                calls = result.get("function_calls") or []
+                if calls:
+                    for call in calls:
+                        name = call.get("name") or ""
+                        call_id = call.get("call_id")
+                        raw_args = call.get("arguments")
+                        args_text = raw_args if isinstance(raw_args, str) else "{}"
+                        yield {"type": "tool_call", "name": name, "arguments": args_text}
+                        try:
+                            parsed = json.loads(args_text) if args_text.strip() else {}
+                            if not isinstance(parsed, dict):
+                                parsed = {}
+                        except json.JSONDecodeError:
+                            parsed = {}
+                        output = await asyncio.to_thread(tool_executor, name, parsed)
+                        yield {"type": "tool_result", "name": name}
+                        input_items.append({
+                            "type": "function_call",
+                            "call_id": call_id,
+                            "name": name,
+                            "arguments": args_text,
+                        })
+                        input_items.append({
+                            "type": "function_call_output",
+                            "call_id": call_id,
+                            "output": output,
+                        })
+                    continue
+                text = result.get("output_text")
+                if text:
+                    success = True
+                    yield {
+                        "type": "final",
+                        "text": text,
+                        "metadata": {
+                            "finish_reason": result.get("status"),
+                            "reasoning_effort": role_settings.reasoning_effort,
+                        },
+                    }
+                    return
+                raise ProviderResponseError(
+                    primary.spec.provider_id, "Provider returned no output"
+                )
+            raise ProviderResponseError(
+                primary.spec.provider_id, "Tool loop did not converge"
+            )
+        except ProviderUnavailableError as error:
+            if lease is not None:
+                try:
+                    self._credential_pool.record_failure(
+                        lease.credential_id,
+                        error.reason,
+                        retry_after_seconds=error.retry_after_seconds,
+                    )
+                except (CredentialPoolError, sqlite3.Error, OSError):
+                    pass
+            raise
+        finally:
+            if lease is not None and success:
+                try:
+                    self._credential_pool.record_success(lease.credential_id)
+                except (CredentialPoolError, sqlite3.Error, OSError):
+                    pass
 
 
 provider_registry = ProviderRegistry()

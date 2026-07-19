@@ -215,15 +215,26 @@
       results.clear(); next.forEach(function(value, key) { results.set(key, value); }); discover();
     }
 
-    close.addEventListener('click', function() { panel.hidden = true; panel.setAttribute('aria-hidden', 'true'); });
+    function setPanelOpen(open) {
+      panel.hidden = !open;
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+      var activity = documentObject.querySelector('[data-act="testing"]');
+      if (activity) {
+        activity.classList.toggle('activo', open);
+        activity.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      if (open) { discover(); }
+    }
+
+    close.addEventListener('click', function() { setPanelOpen(false); });
     refresh.addEventListener('click', discover); detailClose.addEventListener('click', function() { detail.hidden = true; });
     windowObject.addEventListener('geram:workspace-paths-changed', handlePaths);
-    documentObject.addEventListener('keydown', function(event) { if ((event.ctrlKey || event.metaKey) && event.shiftKey && String(event.key).toLowerCase() === 't') { event.preventDefault(); panel.hidden = false; panel.setAttribute('aria-hidden', 'false'); discover(); } }, true);
-    Array.from(documentObject.querySelectorAll('[data-act="testing"], #toggleTesting')).forEach(function(activity) {
-      activity.addEventListener('click', function(event) { event.preventDefault(); event.stopImmediatePropagation(); panel.hidden = false; panel.setAttribute('aria-hidden', 'false'); discover(); }, true);
+    documentObject.addEventListener('keydown', function(event) { if ((event.ctrlKey || event.metaKey) && event.shiftKey && String(event.key).toLowerCase() === 't') { event.preventDefault(); setPanelOpen(true); } }, true);
+    Array.from(documentObject.querySelectorAll('[data-act="testing"]')).forEach(function(activity) {
+      activity.addEventListener('click', function(event) { event.preventDefault(); event.stopImmediatePropagation(); setPanelOpen(true); }, true);
     });
     discover(); render();
-    var publicApi = { discover: discover, run: function(item) { enqueue([item]); }, cancel: cancel, results: results };
+    var publicApi = { discover: discover, open: function() { setPanelOpen(true); }, close: function() { setPanelOpen(false); }, run: function(item) { enqueue([item]); }, cancel: cancel, results: results };
     windowObject.GeramTesting = publicApi; return publicApi;
   }
 

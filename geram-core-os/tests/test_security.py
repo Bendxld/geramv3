@@ -5,6 +5,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi import HTTPException
@@ -108,6 +109,74 @@ class LocalhostGuardTests(unittest.TestCase):
                 dependency.call for dependency in route.dependant.dependencies
             }
             self.assertIn(require_local_origin, dependency_calls)
+
+    def test_hud_websocket_rejects_remote_peers_and_unexpected_origins(self):
+        from app.websocket.hud_socket import _local_websocket
+
+        def socket(host, origin=None):
+            headers = {} if origin is None else {"origin": origin}
+            return SimpleNamespace(client=SimpleNamespace(host=host), headers=headers)
+
+        self.assertTrue(_local_websocket(socket("127.0.0.1")))
+        self.assertTrue(
+            _local_websocket(
+                socket("127.0.0.1", f"http://localhost:{core_config.settings.APP_PORT}")
+            )
+        )
+        self.assertFalse(_local_websocket(socket("192.0.2.10")))
+        self.assertFalse(
+            _local_websocket(socket("127.0.0.1", "https://example.invalid"))
+        )
+
+    def test_agents_orchestrator_runtime_and_media_are_locally_guarded(self):
+        from app.api import agents, instance, maintenance, orchestrator, runtime
+
+        for router in (
+            agents.router, instance.router, orchestrator.router,
+            runtime.router, runtime.media_router, maintenance.router,
+        ):
+            for route in router.routes:
+                dependencies = {
+                    dependency.call for dependency in route.dependant.dependencies
+                }
+                self.assertIn(require_localhost, dependencies, route.path)
+
+        mutable = {
+            "/agents/load", "/agents/{agent_name}", "/orchestrator/route",
+            "/api/runtime/state", "/api/media/attachments", "/api/media/audio",
+            "/api/agents/roster/{agent_id}", "/roster/visibility",
+            "/api/maintenance/backups", "/api/maintenance/restore",
+        }
+        routes = (
+            agents.router.routes + instance.router.routes + orchestrator.router.routes
+            + runtime.router.routes + runtime.media_router.routes
+            + maintenance.router.routes
+        )
+        for route in routes:
+            if route.path not in mutable or not (
+                set(route.methods or ()) & {"POST", "PUT", "PATCH", "DELETE"}
+            ):
+                continue
+            dependencies = {
+                dependency.call for dependency in route.dependant.dependencies
+            }
+            self.assertIn(require_local_origin, dependencies, route.path)
+
+    def test_orchestrator_prompt_and_rate_are_bounded(self):
+        from pydantic import ValidationError
+        from app.api.orchestrator import OrchestratorRequest
+        from app.core.rate_limit import SlidingWindowLimiter
+
+        with self.assertRaises(ValidationError):
+            OrchestratorRequest(prompt="x" * 20_001, source="hud_local")
+        with self.assertRaises(ValidationError):
+            OrchestratorRequest(prompt="", source="hud_local")
+        limiter = SlidingWindowLimiter(limit=2, window_seconds=60)
+        limiter.check("local")
+        limiter.check("local")
+        with self.assertRaises(HTTPException) as raised:
+            limiter.check("local")
+        self.assertEqual(raised.exception.status_code, 429)
 
 
 class ConfigurationSecurityTests(unittest.TestCase):

@@ -9,12 +9,14 @@ import httpx
 from starlette.requests import Request
 
 from app.core.providers.base import (
+    ProviderAttachment,
     ProviderConfigurationError,
     ProviderCredential,
     ProviderRequest,
     ProviderResult,
     ProviderSpec,
     ProviderUnavailableError,
+    ProviderUnsupportedInputError,
 )
 
 
@@ -125,6 +127,33 @@ def _credential(provider_id: str) -> ProviderCredential:
 
 
 class ProviderAdapterTests(unittest.TestCase):
+    def test_multimodal_payloads_are_encoded_only_at_provider_boundary(self):
+        attachment = ProviderAttachment(
+            media_type="image/png", data=b"\x89PNG\r\n\x1a\nimage", filename="image.png"
+        )
+        request = ProviderRequest(
+            prompt="describe",
+            model="vision-model",
+            timeout_seconds=30,
+            role="iris",
+            attachments=(attachment,),
+        )
+        gemini = StubAsyncClient(_response(200, {
+            "candidates": [{"content": {"parts": [{"text": "ok"}]}, "finishReason": "STOP"}]
+        }))
+        with patch.object(gemini_client.httpx, "AsyncClient", return_value=gemini):
+            asyncio.run(gemini_client.GeminiProvider().generate(request, _credential("gemini")))
+        parts = gemini.last_post[1]["json"]["contents"][0]["parts"]
+        self.assertEqual(parts[1]["inlineData"]["mimeType"], "image/png")
+        self.assertNotIn(repr(attachment.data), str(gemini.last_post))
+
+        groq_request = ProviderRequest(
+            prompt="describe", model="text-model", timeout_seconds=30,
+            role="iris", attachments=(attachment,),
+        )
+        with self.assertRaises(ProviderUnsupportedInputError):
+            asyncio.run(groq_client.GroqProvider().generate(groq_request, _credential("groq")))
+
     def test_provider_specific_structured_output_options_are_normalized(self):
         cases = (
             (

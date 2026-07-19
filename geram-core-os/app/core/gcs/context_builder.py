@@ -24,6 +24,7 @@ from app.core.gcs.integrations import integration_hub
 from app.core.gcs.memory import memory_manager
 from app.core.gcs.permissions import permission_registry
 from app.core.gcs.skills import Skill, skill_store
+from app.core.agent_roster import agent_roster_store
 
 # Only these two permanent profiles exist. This is enforced, not assumed.
 PROFILES = ("iris", "ares")
@@ -115,7 +116,9 @@ class ContextBuilder:
                     "profile_mismatch",
                     f"agent '{agent.id}' belongs to profile '{agent.profile}', not '{target}'",
                 )
-            if agent.status != "enabled":
+            if agent.status != "enabled" or not agent_roster_store.is_enabled(
+                f"definition:{agent.id}"
+            ):
                 raise ContextBuilderError("agent_disabled", f"agent '{agent.id}' is disabled")
 
         # Effective permissions come solely from the agent. A bare profile with

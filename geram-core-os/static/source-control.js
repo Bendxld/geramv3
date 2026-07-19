@@ -237,27 +237,36 @@
       }).catch(fail);
     }
 
-    openButton.addEventListener('click', function() { panel.hidden = false; panel.setAttribute('aria-hidden', 'false'); refreshStatus(); });
     var activityButton = documentObject.querySelector('[data-act="scm"]');
+    function setPanelOpen(open) {
+      panel.hidden = !open;
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (activityButton) {
+        activityButton.classList.toggle('activo', open);
+        activityButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      if (open) { refreshStatus(); }
+    }
+    openButton.addEventListener('click', function() { setPanelOpen(true); });
     if (activityButton) {
       openButton.hidden = true;
       activityButton.addEventListener('click', function(event) {
         event.preventDefault(); event.stopImmediatePropagation();
-        panel.hidden = false; panel.setAttribute('aria-hidden', 'false'); refreshStatus();
+        setPanelOpen(true);
       }, true);
     }
-    close.addEventListener('click', function() { panel.hidden = true; panel.setAttribute('aria-hidden', 'true'); openButton.focus(); });
+    close.addEventListener('click', function() { setPanelOpen(false); (activityButton || openButton).focus(); });
     refresh.addEventListener('click', refreshStatus); diffClose.addEventListener('click', function() { diffPanel.hidden = true; });
     windowObject.addEventListener('geram:workspace-paths-changed', scheduleRefresh);
     windowObject.addEventListener('geram:model-save', scheduleRefresh);
     windowObject.addEventListener('geram:workspace-state', scheduleRefresh);
     documentObject.addEventListener('keydown', function(event) {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && String(event.key).toLowerCase() === 'g') {
-        event.preventDefault(); panel.hidden = false; panel.setAttribute('aria-hidden', 'false'); refreshStatus();
+        event.preventDefault(); setPanelOpen(true);
       }
     }, true);
     refreshStatus();
-    var apiObject = { refresh: refreshStatus, openDiff: openDiff, close: function() { panel.hidden = true; } };
+    var apiObject = { refresh: refreshStatus, open: function() { setPanelOpen(true); }, openDiff: openDiff, close: function() { setPanelOpen(false); } };
     windowObject.GeramSourceControl = apiObject; return apiObject;
   }
 

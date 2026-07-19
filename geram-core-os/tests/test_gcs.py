@@ -20,14 +20,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.gcs import storage
 from app.core.gcs.agent_factory import AgentDefinition, AgentFactory, AgentValidationError
 from app.core.gcs.context_builder import ContextBuilder, ContextBuilderError
-from app.core.gcs.integrations import IntegrationHub, NotionAdapter, SpotifyAdapter
+from app.core.gcs.integrations import (
+    IntegrationHub, NotionAdapter, ObsidianAdapter, SpotifyAdapter,
+)
 from app.core.gcs.memory import MemoryManager
 from app.core.gcs.permissions import Permission, permission_registry
 from app.core.gcs.skill_retriever import SkillRetriever
@@ -57,6 +59,7 @@ class PermissionRegistryTests(unittest.TestCase):
             {
                 "read", "write", "terminal", "test_runner", "internet",
                 "spotify", "notion", "session_memory", "permanent_memory",
+                "telegram", "supabase", "calendar", "obsidian",
             },
         )
 
@@ -196,7 +199,9 @@ class IntegrationHubTests(unittest.TestCase):
         self.assertEqual(
             self.hub.invoke("nope", "x", {}, granted=[], approved=False).status, "denied"
         )
-        with patch.object(SpotifyAdapter, "is_connected", return_value=True):
+        with patch.object(SpotifyAdapter, "is_connected", return_value=True), patch(
+            "app.core.gcs.integrations._request_json", return_value={}
+        ):
             self.assertEqual(
                 self.hub.invoke("spotify", "explode", {}, granted=["spotify"], approved=False).status,
                 "denied",
@@ -208,7 +213,9 @@ class IntegrationHubTests(unittest.TestCase):
             self.assertEqual(result.status, "unavailable")
 
     def test_permission_gating(self):
-        with patch.object(SpotifyAdapter, "is_connected", return_value=True):
+        with patch.object(SpotifyAdapter, "is_connected", return_value=True), patch(
+            "app.core.gcs.integrations._request_json", return_value={}
+        ):
             # No permission -> denied.
             self.assertEqual(
                 self.hub.invoke("spotify", "status", {}, granted=[], approved=False).status,
@@ -224,16 +231,39 @@ class IntegrationHubTests(unittest.TestCase):
                 self.hub.invoke("spotify", "play", {}, granted=["spotify"], approved=False).status,
                 "approval_required",
             )
-            # Mutating action WITH approval -> ok (mock).
+            # Mutating action WITH approval reaches the real adapter boundary.
             ok = self.hub.invoke("spotify", "play", {}, granted=["spotify"], approved=True)
             self.assertEqual(ok.status, "ok")
-            self.assertTrue(ok.detail.get("mock"))
+            self.assertEqual(ok.detail["playback"], "playing")
 
     def test_notion_connection_reflects_env_presence_only(self):
-        with patch.object(settings, "NOTION_API_KEY", "secret-value"):
+        with patch.object(settings, "NOTION_API_KEY", "secret-value"), patch.object(
+            settings, "NOTION_DATABASE_ID", "database-id"
+        ):
             status = {s["id"]: s for s in self.hub.list_integrations()}["notion"]
             self.assertEqual(status["state"], "connected")
             self.assertNotIn("secret-value", str(status))
+
+    def test_obsidian_write_and_read_are_confined_to_the_vault(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            settings, "OBSIDIAN_VAULT_PATH", directory
+        ):
+            hub = IntegrationHub([ObsidianAdapter()])
+            written = hub.invoke(
+                "obsidian", "write_note", {"path": "notes/hello", "content": "hola"},
+                granted=["obsidian"], approved=True,
+            )
+            self.assertEqual(written.status, "ok")
+            read = hub.invoke(
+                "obsidian", "read_note", {"path": "notes/hello.md"},
+                granted=["obsidian"], approved=False,
+            )
+            self.assertEqual(read.detail["content"], "hola")
+            denied = hub.invoke(
+                "obsidian", "read_note", {"path": "../outside.md"},
+                granted=["obsidian"], approved=False,
+            )
+            self.assertEqual(denied.status, "unavailable")
 
 
 # ----------------------------------------------------------------------
@@ -335,6 +365,12 @@ class ContextBuilderTests(_IsolatedDataDirTest):
             self.builder.build("iris", "mustafa")
         self.assertEqual(caught.exception.code, "profile_mismatch")
 
+    def test_per_user_roster_state_blocks_context(self):
+        with patch("app.core.gcs.context_builder.agent_roster_store.is_enabled", return_value=False):
+            with self.assertRaises(ContextBuilderError) as caught:
+                self.builder.build("ares", "mustafa")
+        self.assertEqual(caught.exception.code, "agent_disabled")
+
     def test_integration_authorized_reflects_permission_and_connection(self):
         # mustafa holds no spotify/notion permission -> not authorized.
         context = self.builder.build("ares", "mustafa").as_dict()
@@ -385,7 +421,7 @@ class GcsRouterTests(_IsolatedDataDirTest):
     def test_permissions_endpoint(self):
         from app.api import gcs
         result = asyncio.run(gcs.list_permissions())
-        self.assertEqual(len(result["permissions"]), 9)
+        self.assertEqual(len(result["permissions"]), 13)
 
     def test_retrieve_endpoint_offline(self):
         from app.api import gcs
@@ -416,6 +452,15 @@ class GcsRouterTests(_IsolatedDataDirTest):
         with patch.object(SpotifyAdapter, "is_connected", return_value=True):
             result = asyncio.run(gcs.invoke_integration("spotify", payload))
         self.assertEqual(result["status"], "denied")
+
+    def test_disabled_agent_cannot_invoke_an_integration(self):
+        from app.api import gcs
+        payload = gcs.InvokeIntegrationRequest(action="status", agent_id="mustafa")
+        with patch.object(gcs.agent_roster_store, "is_enabled", return_value=False):
+            with self.assertRaises(HTTPException) as caught:
+                asyncio.run(gcs.invoke_integration("spotify", payload))
+        self.assertEqual(caught.exception.status_code, 409)
+        self.assertEqual(caught.exception.detail["code"], "agent_disabled")
 
 
 # ----------------------------------------------------------------------

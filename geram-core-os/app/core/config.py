@@ -55,6 +55,10 @@ DEFAULT_IRIS_PROVIDER = "gemini"
 DEFAULT_ARES_PROVIDER = "openai"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_OPENAI_MODEL = "gpt-5.1-codex"
+# Reasoning effort applied to A.R.E.S. when it runs on a reasoning-capable model
+# (o-series / gpt-5 / *-codex). Empty disables it. Non-reasoning models ignore it.
+DEFAULT_ARES_REASONING_EFFORT = "medium"
+REASONING_EFFORT_VALUES = ("minimal", "low", "medium", "high")
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
 DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
 DEFAULT_OLLAMA_MODEL = "llama3.2:1b"
@@ -67,6 +71,19 @@ PROVIDER_CREDENTIAL_FIELDS = {
     "openai": "OPENAI_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "groq": "GROQ_API_KEY",
+    # Pool-only providers have no legacy .env key.  Keeping them in this
+    # authority allows the credential pool validator and Settings UI to accept
+    # them while ``provider_api_key`` still returns an empty legacy value.
+    "anthropic": None,
+    "mistral": None,
+    "deepseek": None,
+    "xai": None,
+    "perplexity": None,
+    "together": None,
+    "openrouter": None,
+    "cerebras": None,
+    "fireworks": None,
+    "moonshot": None,
 }
 
 PROVIDER_TIMEOUT_FIELDS = {
@@ -86,18 +103,38 @@ class SettingsValidationError(ValueError):
         super().__init__(message)
 
 
+def resolve_local_data_dir(values: Mapping[str, str]) -> Path:
+    """Resolve portable per-user application data on Linux, WSL and Windows."""
+    configured = str(values.get("GERAM_LOCAL_DATA_DIR", "")).strip()
+    if configured:
+        candidate = Path(configured).expanduser()
+        return (candidate if candidate.is_absolute() else ROOT_DIR / candidate).resolve()
+    if os.name == "nt":
+        base = str(values.get("LOCALAPPDATA", "")).strip()
+        root = Path(base).expanduser() if base else Path.home() / "AppData" / "Local"
+        return (root / "GERAM CORE OS").resolve()
+    xdg_data_home = str(values.get("XDG_DATA_HOME", "")).strip()
+    root = Path(xdg_data_home).expanduser() if xdg_data_home else Path.home() / ".local" / "share"
+    return (root / "geram-core-os").resolve()
+
+
 def developer_mode_enabled(config_path: Path | None = None) -> bool:
     """True si el Modo Desarrollador está activo en .geram-config.json.
 
     Se lee el JSON DIRECTAMENTE (sin importar user_config) para no crear un
     ciclo de imports; fail-safe: cualquier problema -> False (modo seguro).
     """
-    path = config_path if config_path is not None else (ROOT_DIR / ".geram-config.json")
-    try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-        return bool(data.get("privacy_controls", {}).get("developer_mode", False))
-    except (OSError, ValueError, TypeError, AttributeError):
-        return False
+    candidates = [Path(config_path)] if config_path is not None else [
+        resolve_local_data_dir(_runtime_environment) / "config" / "user-config.json",
+        ROOT_DIR / ".geram-config.json",
+    ]
+    for path in candidates:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return bool(data.get("privacy_controls", {}).get("developer_mode", False))
+        except (OSError, ValueError, TypeError, AttributeError):
+            continue
+    return False
 
 
 def validate_workspace_root(
@@ -213,6 +250,7 @@ class RoleProviderSettings:
     provider: str
     model: str
     fallback_provider: str
+    reasoning_effort: str = ""
 
 
 def normalize_provider_id(
@@ -305,6 +343,20 @@ def _configured_value(
     return default
 
 
+def validate_reasoning_effort(value: str, field: str) -> str:
+    """Validate an OpenAI reasoning effort level. Empty/"none"/"off" disable it."""
+    normalized = value.strip().lower()
+    if normalized in ("", "none", "off"):
+        return ""
+    if normalized not in REASONING_EFFORT_VALUES:
+        raise SettingsValidationError(
+            field,
+            "invalid_reasoning_effort",
+            f"{field} must be one of {REASONING_EFFORT_VALUES} or empty",
+        )
+    return normalized
+
+
 def resolve_provider_configuration(
     values: Mapping[str, str],
 ) -> dict[str, str | float | int]:
@@ -345,6 +397,10 @@ def resolve_provider_configuration(
             values.get("ARES_FALLBACK_PROVIDER", ""),
             "ARES_FALLBACK_PROVIDER",
             allow_empty=True,
+        ),
+        "ARES_REASONING_EFFORT": validate_reasoning_effort(
+            str(values.get("ARES_REASONING_EFFORT", DEFAULT_ARES_REASONING_EFFORT)),
+            "ARES_REASONING_EFFORT",
         ),
         "OPENAI_TIMEOUT_SECONDS": validate_timeout(
             values.get("OPENAI_TIMEOUT_SECONDS", DEFAULT_PROVIDER_TIMEOUT_SECONDS),
@@ -426,7 +482,10 @@ class Settings:
         )
         self.APP_PORT = int(values.get("APP_PORT", 8000))
         self.KIOSK_MODE = values.get("KIOSK_MODE", "true").lower() == "true"
-        self.DEVELOPER_MODE = developer_mode_enabled()
+        self.LOCAL_DATA_DIR = resolve_local_data_dir(values)
+        self.DEVELOPER_MODE = developer_mode_enabled(
+            self.LOCAL_DATA_DIR / "config" / "user-config.json"
+        ) or developer_mode_enabled(ROOT_DIR / ".geram-config.json")
         self.WORKSPACE_ROOT = validate_workspace_root(
             values.get("GERAM_WORKSPACE_ROOT", ""),
             create_default=create_runtime_dirs,
@@ -443,6 +502,9 @@ class Settings:
         self.ARES_MODEL = str(provider_configuration["ARES_MODEL"])
         self.ARES_FALLBACK_PROVIDER = str(
             provider_configuration["ARES_FALLBACK_PROVIDER"]
+        )
+        self.ARES_REASONING_EFFORT = str(
+            provider_configuration["ARES_REASONING_EFFORT"]
         )
 
         # Provider credentials and timeouts
@@ -465,19 +527,7 @@ class Settings:
             provider_configuration["CREDENTIAL_POOL_MAX_ATTEMPTS"]
         )
 
-        configured_data_dir = values.get("GERAM_LOCAL_DATA_DIR", "").strip()
-        if configured_data_dir:
-            local_data_dir = Path(configured_data_dir).expanduser()
-            if not local_data_dir.is_absolute():
-                local_data_dir = ROOT_DIR / local_data_dir
-        else:
-            xdg_data_home = values.get("XDG_DATA_HOME", "").strip()
-            local_data_dir = (
-                Path(xdg_data_home).expanduser()
-                if xdg_data_home
-                else Path.home() / ".local" / "share"
-            ) / "geram-core-os"
-        local_data_dir = local_data_dir.resolve()
+        local_data_dir = self.LOCAL_DATA_DIR
         try:
             local_data_dir.relative_to(ROOT_DIR.resolve())
         except ValueError:
@@ -488,7 +538,6 @@ class Settings:
                 "unsafe_local_data_dir",
                 "GERAM_LOCAL_DATA_DIR must be outside the application source tree",
             )
-        self.LOCAL_DATA_DIR = local_data_dir
         self.CREDENTIAL_STORE_PATH = (
             local_data_dir / "credentials" / "credential_pool.sqlite3"
         )
@@ -501,8 +550,21 @@ class Settings:
         self.ORCHESTRATOR_MODE = values.get("ORCHESTRATOR_MODE", "heuristic")
         self.DEFAULT_MODE = values.get("DEFAULT_MODE", "iris")
 
-        # Agents
-        self.AGENTS_DIR = ROOT_DIR / values.get("AGENTS_DIR", "./agents").lstrip("./")
+        # Agents.  The distributable repository keeps the established IRIS
+        # agents next to ``geram-core-os/``.  Older Core builds accidentally
+        # resolved the documented ``./agents`` default inside Core, where only
+        # a package marker exists, so the dashboard could never discover the
+        # real modules.  Preserve explicit custom paths while repairing that
+        # historical default for existing .env files.
+        configured_agents_dir = str(values.get("AGENTS_DIR", "./agents")).strip()
+        sibling_agents_dir = ROOT_DIR.parent / "agents"
+        if configured_agents_dir in {"", ".", "./agents", "agents"} and sibling_agents_dir.is_dir():
+            agents_dir = sibling_agents_dir
+        else:
+            agents_dir = Path(configured_agents_dir or "agents").expanduser()
+            if not agents_dir.is_absolute():
+                agents_dir = ROOT_DIR / agents_dir
+        self.AGENTS_DIR = agents_dir.resolve()
         self.AGENTS_AUTO_DISCOVER = (
             values.get("AGENTS_AUTO_DISCOVER", "true").lower() == "true"
         )
@@ -519,6 +581,13 @@ class Settings:
             for item in values.get("TELEGRAM_ALLOWED_CHAT_IDS", "").split(",")
             if item.strip()
         ]
+        self.GOOGLE_CALENDAR_ACCESS_TOKEN = values.get(
+            "GOOGLE_CALENDAR_ACCESS_TOKEN", ""
+        )
+        self.GOOGLE_CALENDAR_ID = values.get("GOOGLE_CALENDAR_ID", "primary")
+        self.GOOGLE_ACCOUNT_EMAIL = values.get("GOOGLE_ACCOUNT_EMAIL", "")
+        self.SPOTIFY_ACCESS_TOKEN = values.get("SPOTIFY_ACCESS_TOKEN", "")
+        self.OBSIDIAN_VAULT_PATH = values.get("OBSIDIAN_VAULT_PATH", "")
 
         # Network
         self.TAILSCALE_HOSTNAME = values.get("TAILSCALE_HOSTNAME", "")
@@ -561,6 +630,7 @@ class Settings:
                 self.ARES_PROVIDER,
                 self.ARES_MODEL,
                 self.ARES_FALLBACK_PROVIDER,
+                self.ARES_REASONING_EFFORT,
             )
         raise SettingsValidationError(
             "role",
@@ -572,7 +642,7 @@ class Settings:
         """Return the configured credential value for a supported provider."""
         normalized = normalize_provider_id(provider_id, "provider")
         credential_field = PROVIDER_CREDENTIAL_FIELDS.get(normalized)
-        if credential_field is None:
+        if not credential_field:
             return ""
         return str(getattr(self, credential_field))
 

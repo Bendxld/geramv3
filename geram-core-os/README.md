@@ -1,8 +1,9 @@
 # GERAM CORE OS
 
 GERAM CORE OS es un entorno local-first para flujos de desarrollo asistidos en
-Linux. El backend y el HUD se sirven únicamente en loopback; no deben exponerse
-a una interfaz pública.
+Linux y Windows 11. En Windows el cliente Electron es nativo y el backend se
+ejecuta en WSL2 para conservar el mismo aislamiento Bubblewrap. El backend y el
+HUD se sirven únicamente en loopback; no deben exponerse públicamente.
 
 ## Alcance validado para Build Week
 
@@ -21,8 +22,8 @@ El guion sin credenciales ni red externa está en
 
 ## Requisitos del sistema
 
-El entorno validado es Linux Mint 22.3, Python 3.12 y Bubblewrap 0.9.0. La
-aplicación está orientada a Linux; el Test Runner requiere específicamente:
+El entorno Linux validado es Linux Mint 22.3, Python 3.12 y Bubblewrap 0.9.0.
+El Test Runner requiere específicamente:
 
 - Linux con namespaces de usuario disponibles;
 - `python3`, soporte para `venv` y `pip`;
@@ -33,11 +34,28 @@ Node sólo es necesario para Electron o para la comprobación sintáctica del
 cliente. `pytest` no es una dependencia del repositorio y no se usa para la
 validación canónica.
 
+`poppler-utils` proporciona `pdftotext`, usado para extraer texto de adjuntos
+PDF sin subir el documento a un servicio de extracción. Las imágenes y el
+audio sólo se envían cuando el usuario pulsa enviar y el proveedor de I.R.I.S.
+declara la modalidad correspondiente. La salida de voz usa la síntesis del
+navegador, por lo que no requiere Piper ni un servicio TTS adicional.
+
+### Windows 11
+
+La distribución Windows usa un instalador NSIS y requiere WSL2. Ejecuta una vez
+`windows/GERAM-Windows-Setup.ps1` desde PowerShell; el script instala o valida
+Ubuntu, Python, Bubblewrap, Poppler, Git y Node dentro de WSL. El instalador
+Electron arranca después el backend administrado exclusivamente por `wsl.exe`
+y conserva los datos en `~/.local/share/geram-core-os` de ese usuario WSL.
+
+No existe un fallback inseguro a PowerShell para ejecutar A.R.E.S.: si WSL2 o
+Bubblewrap faltan, el backend no se inicia. Consulta `windows/README.md`.
+
 En distribuciones basadas en Ubuntu, los paquetes del sistema se pueden
 preparar con:
 
 ```bash
-sudo apt install python3 python3-venv bubblewrap
+sudo apt install python3 python3-venv bubblewrap poppler-utils
 ```
 
 Después, desde la raíz del repositorio:
@@ -167,17 +185,20 @@ Ejecutar cada comando por separado:
 python3 -m compileall -q app tests
 ./venv/bin/python -m compileall -q app tests
 node --check static/ares-workspace.js
+node --test electron/test/*.test.js
 git diff --check
 ```
 
-`electron/package.json` no define un script de pruebas. No se debe sustituir
-esta secuencia por `pytest` ni inventar un comando de test de npm.
+La suite de Node incluye una prueba de comportamiento que abre Electron y pulsa
+Agents y Settings cuando hay una sesión gráfica disponible. No se debe
+sustituir la validación Python por `pytest`.
 
 ## Workspace y seguridad local
 
-`GERAM_WORKSPACE_ROOT` define el único proyecto visible. Vacío usa la raíz
-resuelta del repositorio; una ruta alternativa debe ser absoluta, existir y no
-ser un directorio sensible del sistema. El workspace excluye secretos, metadata
+`GERAM_WORKSPACE_ROOT` define el único proyecto visible. Vacío usa
+`~/geram-workspace`; el código interno sólo se desbloquea mediante Modo
+Desarrollador. Una ruta alternativa debe existir y no ser un directorio
+sensible del sistema. El workspace excluye secretos, metadata
 Git, bases de datos, logs, dependencias, caches, entornos virtuales y artefactos
 runtime. Sólo expone texto UTF-8 y guardado con versiones optimistas.
 
@@ -185,6 +206,81 @@ Las credenciales gestionadas por el credential pool se almacenan fuera del
 repositorio mediante el directorio de datos del usuario. La configuración local
 en `.env` está ignorada por Git y no debe copiarse a fixtures, documentación,
 capturas o guiones de demo.
+
+Las preferencias de VOICE, VISION y OFFLINE, así como la activación del roster,
+se guardan con permisos `0600` bajo el directorio de datos del usuario. Cada
+cuenta del sistema operativo obtiene su propio estado al instalar o descargar
+GERAM; esos estados no se escriben en el repositorio.
+El perfil y el progreso de onboarding también viven en
+`LOCAL_DATA_DIR/config/user-config.json`; una `.geram-config.json` antigua se
+copia automáticamente una vez, sin borrar el original.
+
+## Agentes e integraciones
+
+El roster descubre los módulos Python incluidos en el directorio `agents/` sin
+importarlos, por lo que todos se muestran aunque no estén cargados. Además une
+las definiciones de Agent Factory almacenadas en el directorio de datos del
+usuario. El HUD distingue `available`, `loaded`, sistema y personalizado; no
+presenta un módulo instalado como si ya estuviera ejecutándose.
+Deshabilitar un agente es una decisión de ejecución: descarga un módulo activo,
+bloquea su carga futura y niega contexto e integraciones para esa definición.
+
+El Integration Hub ejecuta acciones delimitadas y reales para Spotify, Notion,
+Telegram, Supabase, Google Calendar y un vault local de Obsidian. Toda acción
+requiere el permiso específico del agente y las mutaciones requieren aprobación
+explícita. Las respuestas nunca incluyen credenciales.
+
+Las comprobaciones contra servicios reales son explícitamente opt-in y sólo
+usan acciones de lectura:
+
+```bash
+GERAM_LIVE_INTEGRATION_TESTS=1 \
+GERAM_LIVE_SUPABASE_TABLE=tabla_de_prueba \
+./venv/bin/python -m unittest -v tests.test_integrations_live
+```
+
+Se requieren credenciales de prueba para las seis integraciones. La suite
+normal omite este módulo y nunca realiza llamadas externas.
+
+## Onboarding, respaldo y recuperación
+
+El primer arranque abre un asistente por usuario que comprueba plataforma,
+sandbox, proveedores, Ollama, PDF, cámara y micrófono. Los permisos multimedia
+se solicitan sólo al pulsar su prueba y Electron los concede únicamente al HUD
+loopback.
+
+Settings → Profile, appearance & privacy permite crear backups y restaurarlos.
+Incluyen perfil, estados, roster, agentes/skills personalizados y extensiones
+declarativas. Excluyen credenciales, tokens, adjuntos pendientes y archivos del
+workspace. Cada restauración valida rutas, tamaños y SHA-256 y crea primero un
+backup de seguridad. El diagnóstico local no devuelve rutas ni secretos.
+
+## Releases Linux y Windows
+
+El payload versionado contiene código y wheels Python para instalación offline:
+
+```bash
+./venv/bin/python scripts/prepare_release_payload.py --download-wheels
+cd electron
+npm run dist:linux
+# En un runner Windows:
+npm run dist:windows
+```
+
+Electron Builder genera AppImage, `.deb` y NSIS `.exe`. Una actualización
+reemplaza sólo el backend empaquetado, conserva `.env` y mantiene todo el estado
+por usuario. `scripts/release_artifacts.py dist` crea `SHA256SUMS`; `--sign`
+añade una firma GPG separada y `--verify` comprueba ambos. El workflow de release
+acepta `WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD` y
+`GERAM_GPG_PRIVATE_KEY` como secretos de firma, nunca como archivos del repo.
+
+## Extensiones
+
+GERAM mantiene deliberadamente un modelo declarativo: temas, snippets,
+gramáticas TextMate y configuraciones de lenguaje. No ejecuta comandos,
+debuggers, language servers ni código arbitrario de extensiones VS Code. Un
+extension host completo implicaría otra frontera de procesos y permisos y no se
+simula en esta aplicación.
 
 ## Limitaciones aceptadas
 
@@ -195,8 +291,8 @@ capturas o guiones de demo.
 - Una avería del filesystem que impida también el rollback puede dejar una
   aplicación multarchivo parcial, reportada como `rollback_failed`.
 - Reiniciar el único worker invalida todas las propuestas y aprobaciones.
-- No se ha validado esta entrega como servicio público, multiusuario ni
-  multiplataforma.
+- No se ha validado esta entrega como servicio público ni como backend
+  multiusuario. Windows requiere Windows 11, WSL2 y una distribución compatible.
 
 ## Componentes principales
 

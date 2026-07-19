@@ -1,5 +1,6 @@
 """Gemini generateContent adapter for the provider registry."""
 
+import base64
 import json
 from urllib.parse import quote
 
@@ -13,6 +14,7 @@ from app.core.providers.base import (
     ProviderResult,
     ProviderSpec,
     ProviderUnavailableError,
+    ensure_supported_inputs,
     require_credential,
     sanitized_http_error,
 )
@@ -28,6 +30,7 @@ class GeminiProvider:
         provider_id="gemini",
         display_label="Gemini",
         default_model=DEFAULT_GEMINI_MODEL,
+        input_modalities=("text", "image", "audio"),
     )
 
     async def generate(
@@ -42,8 +45,16 @@ class GeminiProvider:
             "Content-Type": "application/json",
             "x-goog-api-key": credential._reveal(),
         }
+        ensure_supported_inputs(self.spec, request)
+        parts = [{"text": request.prompt}]
+        parts.extend({
+            "inlineData": {
+                "mimeType": attachment.media_type,
+                "data": base64.b64encode(attachment.data).decode("ascii"),
+            }
+        } for attachment in request.attachments)
         body = {
-            "contents": [{"parts": [{"text": request.prompt}]}],
+            "contents": [{"parts": parts}],
             "generationConfig": {
                 "maxOutputTokens": 8192,
                 "thinkingConfig": {"thinkingBudget": 0},

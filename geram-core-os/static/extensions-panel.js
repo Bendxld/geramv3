@@ -219,11 +219,11 @@
     panel.id = 'extensionesPanel';
     panel.innerHTML = [
       '<div class="ext-fondo" id="extFondo"></div>',
-      '<div class="ext-caja" role="dialog" aria-modal="true" aria-label="Extensions">',
-      '  <div class="ext-header"><h2 class="panel-titulo"><span class="dot"></span>EXTENSIONS</h2>',
+      '<div class="ext-caja" role="dialog" aria-modal="true" aria-label="Declarative extensions">',
+      '  <div class="ext-header"><h2 class="panel-titulo"><span class="dot"></span>DECLARATIVE EXTENSIONS</h2>',
       '    <button class="ext-cerrar" id="extCerrar" title="Close" aria-label="Close">&times;</button></div>',
       '  <div class="ext-cuerpo">',
-      '    <p class="ext-nota">Import a VS Code <b>.vsix</b> (or a theme/snippet/grammar JSON). Monaco uses the extension\'s themes, snippets, grammars and language configs — not its runtime code.</p>',
+      '    <p class="ext-nota"><b>Themes, snippets, grammars and language configuration only.</b> Import a VS Code .vsix or compatible JSON. Monaco cannot run extension commands, debuggers, views or language servers.</p>',
       '    <div class="ext-fila">',
       '      <input type="file" id="extFile" accept=".vsix,.json" class="ext-file">',
       '      <button id="extImportar" class="ext-btn principal" type="button">Import</button>',
@@ -268,8 +268,24 @@
     return panel;
   }
 
-  function abrir() { construirPanel(); panel.classList.add('activo'); poblarSelectorTemas(); cargarLista(); }
-  function cerrar() { if (panel) { panel.classList.remove('activo'); } }
+  function marcarBoton(abierto) {
+    var toggle = $('toggleExtensiones');
+    if (!toggle) { return; }
+    toggle.classList.toggle('activo', abierto);
+    toggle.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+  }
+
+  function abrir() {
+    construirPanel();
+    panel.classList.add('activo');
+    marcarBoton(true);
+    poblarSelectorTemas();
+    cargarLista();
+  }
+  function cerrar() {
+    if (panel) { panel.classList.remove('activo'); }
+    marcarBoton(false);
+  }
 
   function importar() {
     var input = $('extFile');
@@ -317,11 +333,18 @@
 
   function cargarLista() {
     var cont = $('extLista'); if (!cont) { return; }
-    cont.innerHTML = '<p class="ext-vacio">Loading…</p>';
+    function mensaje(texto) {
+      cont.textContent = '';
+      var parrafo = documentObject.createElement('p');
+      parrafo.className = 'ext-vacio';
+      parrafo.textContent = texto;
+      cont.appendChild(parrafo);
+    }
+    mensaje('Loading…');
     api('/api/extensions').then(function (d) {
       var exts = d.extensions || [];
-      if (!exts.length) { cont.innerHTML = '<p class="ext-vacio">No extensions imported yet.</p>'; return; }
-      cont.innerHTML = '';
+      if (!exts.length) { mensaje('No extensions imported yet.'); return; }
+      cont.textContent = '';
       exts.forEach(function (e) {
         var card = documentObject.createElement('div'); card.className = 'ext-card';
         var head = documentObject.createElement('div'); head.className = 'ext-card-head';
@@ -339,7 +362,7 @@
         card.appendChild(meta);
         cont.appendChild(card);
       });
-    }).catch(function (err) { cont.innerHTML = '<p class="ext-vacio">Could not load: ' + err.message + '</p>'; });
+    }).catch(function (err) { mensaje('Could not load: ' + err.message); });
   }
 
   function eliminar(id) {

@@ -15,15 +15,25 @@ route_request() is a thin HTTP wrapper around it.
 import uuid
 
 from enum import Enum
-from fastapi import APIRouter, Request
-from pydantic import BaseModel
+from typing import Literal
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.api.telemetry import get_snapshot
 from app.core.gcs.skill_retriever import skill_retriever
 from app.core.providers.registry import provider_registry
 from app.core.user_config import system_prompt_override
+from app.core.attachments import AttachmentError, attachment_store
+from app.core.rate_limit import enforce_orchestrator_rate_limit
+from app.core.security import require_local_origin, require_localhost
+from app.core.runtime_state import runtime_state_store
+from app.core.config import settings
 
-router = APIRouter(prefix="/orchestrator", tags=["orchestrator"])
+router = APIRouter(
+    prefix="/orchestrator",
+    tags=["orchestrator"],
+    dependencies=[Depends(require_localhost)],
+)
 
 HEAVY_SIGNALS = (
     "code", "código", "codigo", "bug", "error", "debug", "refactor",
@@ -112,12 +122,21 @@ class SourceChannel(str, Enum):
 
 
 class OrchestratorRequest(BaseModel):
-    prompt: str
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(default="", max_length=20_000)
     source: SourceChannel
-    force_mode: str | None = None  # manual override: "iris" | "ares"
+    force_mode: Literal["iris", "ares"] | None = None
     # Offline-first: when True, a confident local Skill match answers WITHOUT
     # calling any external provider. Default False preserves provider dispatch.
     prefer_local_skills: bool = False
+    use_pending_attachment: bool = False
+
+    @model_validator(mode="after")
+    def _prompt_or_attachment(self):
+        if not self.prompt.strip() and not self.use_pending_attachment:
+            raise ValueError("prompt cannot be empty without an attachment")
+        return self
 
 
 class OrchestratorResponse(BaseModel):
@@ -133,10 +152,38 @@ async def procesar_orquestacion(
     force_mode: str | None = None,
     session_id: str | None = None,
     prefer_local_skills: bool = False,
+    use_pending_attachment: bool = False,
 ) -> OrchestratorResponse:
     """Lógica real de ruteo, sin nada de FastAPI/Request de por medio —
     la usan tanto route_request() (HTTP) como el poller de Telegram."""
     session_id = session_id or str(uuid.uuid4())
+    attachments = ()
+    if use_pending_attachment and source == SourceChannel.HUD_LOCAL.value:
+        try:
+            consumed = attachment_store.consume()
+        except AttachmentError as error:
+            return OrchestratorResponse(
+                mode="iris",
+                session_id=session_id,
+                result={"status": "error", "message": str(error), "error_code": error.code},
+                metadata={"source": source, "provider": "local", "fallback_used": False},
+            )
+        if consumed is None:
+            return OrchestratorResponse(
+                mode="iris",
+                session_id=session_id,
+                result={"status": "error", "message": "The pending attachment is unavailable", "error_code": "attachment_unavailable"},
+                metadata={"source": source, "provider": "local", "fallback_used": False},
+            )
+        prompt = prompt.strip() or (
+            "Describe this image clearly and mention any visible text."
+            if consumed.provider_attachment is not None
+            else "Summarize the attached PDF."
+        )
+        prompt += consumed.prompt_context
+        if consumed.provider_attachment is not None:
+            attachments = (consumed.provider_attachment,)
+
     mode = classify_mode(prompt, source, force_mode)
 
     # Offline-first Skill Retriever short-circuit: if a local Skill confidently
@@ -170,7 +217,15 @@ async def procesar_orquestacion(
     # si no hay config o está vacío, no cambia nada.
     provider_prompt = _con_system_prompt(provider_prompt)
 
-    dispatch = await provider_registry.generate_for_role(mode, provider_prompt)
+    if runtime_state_store.load().offline_forced:
+        dispatch = await provider_registry.generate_with_provider(
+            "ollama", settings.OLLAMA_MODEL, mode, provider_prompt,
+            attachments=attachments,
+        )
+    else:
+        dispatch = await provider_registry.generate_for_role(
+            mode, provider_prompt, attachments=attachments
+        )
 
     return OrchestratorResponse(
         mode=mode,
@@ -180,7 +235,11 @@ async def procesar_orquestacion(
     )
 
 
-@router.post("/route", response_model=OrchestratorResponse)
+@router.post(
+    "/route",
+    response_model=OrchestratorResponse,
+    dependencies=[Depends(require_local_origin), Depends(enforce_orchestrator_rate_limit)],
+)
 async def route_request(payload: OrchestratorRequest, request: Request):
     """Central routing endpoint. Decide IRIS vs ARES y despacha la tarea."""
     session_id = getattr(request.state, "session_id", "unknown")
@@ -190,4 +249,5 @@ async def route_request(payload: OrchestratorRequest, request: Request):
         payload.force_mode,
         session_id,
         prefer_local_skills=payload.prefer_local_skills,
+        use_pending_attachment=payload.use_pending_attachment,
     )

@@ -19,6 +19,9 @@
 
   // Estado local de la lista de rutas bloqueadas (se edita antes de guardar).
   var blockedPaths = [];
+  var onboardingState = { manual_version_seen: 0, setup_version_seen: 0 };
+  var developerMode = false;
+  var loading = false;
 
   function aplicarTema(theme) {
     if (!theme) { return; }
@@ -74,6 +77,8 @@
     $('gsAccent').value = tema.accent_color || '#8d1f68';
 
     blockedPaths = Array.isArray(privacidad.blocked_paths) ? privacidad.blocked_paths.slice() : [];
+    onboardingState = config.onboarding || onboardingState;
+    developerMode = Boolean(privacidad.developer_mode);
     renderBlocked();
     aplicarTema(tema);
   }
@@ -94,17 +99,78 @@
         core_identity_view: $('gsIdentity').value
       },
       privacy_controls: {
-        blocked_paths: blockedPaths.slice()
-      }
+        blocked_paths: blockedPaths.slice(),
+        developer_mode: developerMode
+      },
+      onboarding: onboardingState
     };
   }
 
+  function maintenanceStatus(value) {
+    var output = $('gsMaintenanceStatus');
+    if (output) { output.textContent = value || ''; }
+  }
+
+  function cargarBackups() {
+    return windowObject.fetch('/api/maintenance/backups', { cache: 'no-store' })
+      .then(function (response) { if (!response.ok) { throw new Error('HTTP ' + response.status); } return response.json(); })
+      .then(function (payload) {
+        var select = $('gsBackupList');
+        if (!select) { return; }
+        select.textContent = '';
+        (payload.backups || []).forEach(function (backup) {
+          var option = documentObject.createElement('option');
+          option.value = backup.id;
+          option.textContent = String(backup.created_at || backup.id) + ' · ' + String(backup.label || 'manual') + ' · ' + Number(backup.files || 0) + ' files';
+          select.appendChild(option);
+        });
+        if (!select.options.length) {
+          var empty = documentObject.createElement('option');
+          empty.value = ''; empty.textContent = 'No backups yet'; select.appendChild(empty);
+        }
+      })
+      .catch(function (error) { maintenanceStatus('Backups unavailable: ' + error.message); });
+  }
+
+  function diagnosticar() {
+    maintenanceStatus('Running local diagnostic…');
+    windowObject.fetch('/api/maintenance/diagnostics', { cache: 'no-store' })
+      .then(function (response) { if (!response.ok) { throw new Error('HTTP ' + response.status); } return response.json(); })
+      .then(function (payload) { maintenanceStatus(JSON.stringify(payload, null, 2)); })
+      .catch(function (error) { maintenanceStatus('Diagnostic failed: ' + error.message); });
+  }
+
+  function crearBackup() {
+    maintenanceStatus('Creating portable backup…');
+    windowObject.fetch('/api/maintenance/backups', { method: 'POST' })
+      .then(function (response) { if (!response.ok) { throw new Error('HTTP ' + response.status); } return response.json(); })
+      .then(function (payload) { maintenanceStatus('Backup created: ' + payload.backup.id); return cargarBackups(); })
+      .catch(function (error) { maintenanceStatus('Backup failed: ' + error.message); });
+  }
+
+  function restaurarBackup() {
+    var select = $('gsBackupList');
+    var backupId = select ? select.value : '';
+    if (!backupId) { maintenanceStatus('Select a backup first.'); return; }
+    if (!windowObject.confirm('Restore portable state from this backup? A safety backup will be created first.')) { return; }
+    maintenanceStatus('Validating and restoring backup…');
+    windowObject.fetch('/api/maintenance/restore', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backup_id: backupId, confirm: 'RESTORE' })
+    }).then(function (response) { if (!response.ok) { throw new Error('HTTP ' + response.status); } return response.json(); })
+      .then(function (payload) { maintenanceStatus('Restored. Safety backup: ' + payload.safety_backup + '. Restart GERAM to reload every service.'); })
+      .catch(function (error) { maintenanceStatus('Restore failed: ' + error.message); });
+  }
+
   function cargar() {
+    if (loading) { return; }
+    loading = true;
     setEstado('Loading…', false);
     windowObject.fetch('/api/config', { cache: 'no-store' })
       .then(function (r) { if (!r.ok) { throw new Error('HTTP ' + r.status); } return r.json(); })
       .then(function (config) { poblarFormulario(config); setEstado('', false); })
-      .catch(function (err) { setEstado('Settings could not be loaded: ' + err.message, true); });
+      .catch(function (err) { setEstado('Settings could not be loaded: ' + err.message, true); })
+      .then(function () { loading = false; });
   }
 
   function guardar() {
@@ -129,33 +195,7 @@
       .catch(function (err) { setEstado('Could not save: ' + err.message, true); });
   }
 
-  function abrir() {
-    var panel = $('geramSettingsPanel');
-    if (!panel) { return; }
-    panel.classList.add('activo');
-    panel.setAttribute('aria-hidden', 'false');
-    cargar();
-  }
-
-  function cerrar() {
-    var panel = $('geramSettingsPanel');
-    if (!panel) { return; }
-    panel.classList.remove('activo');
-    panel.setAttribute('aria-hidden', 'true');
-  }
-
   function inicializar() {
-    var toggle = $('toggleGeramSettings');
-    if (toggle) {
-      toggle.addEventListener('click', function () {
-        var panel = $('geramSettingsPanel');
-        if (panel && panel.classList.contains('activo')) { cerrar(); } else { abrir(); }
-      });
-    }
-    var cerrarBtn = $('geramSettingsCerrar');
-    if (cerrarBtn) { cerrarBtn.addEventListener('click', cerrar); }
-    var fondo = $('geramSettingsFondo');
-    if (fondo) { fondo.addEventListener('click', cerrar); }
     var guardarBtn = $('gsGuardar');
     if (guardarBtn) { guardarBtn.addEventListener('click', guardar); }
     var addBtn = $('gsBlockedAdd');
@@ -180,11 +220,16 @@
       var input = $(id);
       if (input) { input.addEventListener('input', function () { aplicarTema(leerFormulario().ui_theme); }); }
     });
-    documentObject.addEventListener('keydown', function (event) {
-      var panel = $('geramSettingsPanel');
-      if (event.key === 'Escape' && panel && panel.classList.contains('activo')) { cerrar(); }
-    });
+    if ($('gsDiagnostic')) { $('gsDiagnostic').addEventListener('click', diagnosticar); }
+    if ($('gsBackup')) { $('gsBackup').addEventListener('click', crearBackup); }
+    if ($('gsBackupRefresh')) { $('gsBackupRefresh').addEventListener('click', cargarBackups); }
+    if ($('gsRestore')) { $('gsRestore').addEventListener('click', restaurarBackup); }
+    cargarBackups();
   }
+
+  // The unified Settings panel owns navigation and visibility. This module
+  // only owns the personal-settings form and exposes a small integration API.
+  windowObject.GeramSettings = { load: cargar, save: guardar, applyTheme: aplicarTema };
 
   if (documentObject.readyState === 'loading') {
     documentObject.addEventListener('DOMContentLoaded', inicializar);

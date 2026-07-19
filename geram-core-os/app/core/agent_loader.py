@@ -15,6 +15,7 @@ import importlib
 import gc
 import sys
 import time
+import re
 from pathlib import Path
 
 from app.core.config import settings
@@ -34,11 +35,11 @@ class AgentRegistry:
         """Scan /agents directory for candidate agent modules (*.py, no dunder)."""
         if not settings.AGENTS_DIR.exists():
             return []
-        return [
+        return sorted([
             p.stem
             for p in settings.AGENTS_DIR.glob("*.py")
-            if not p.stem.startswith("_")
-        ]
+            if not p.stem.startswith("_") and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,127}", p.stem)
+        ])
 
     def list_loaded(self) -> list[dict]:
         return [
@@ -48,6 +49,14 @@ class AgentRegistry:
 
     def load(self, agent_name: str) -> dict:
         """Load (or reload) an agent module by name via importlib."""
+        if agent_name not in self.list_available():
+            raise ModuleNotFoundError(agent_name)
+        # Import lazily to avoid the roster -> loader singleton import cycle.
+        # The roster is the per-user execution authority, not only UI state.
+        from app.core.agent_roster import agent_roster_store
+
+        if not agent_roster_store.is_enabled(f"bundled:{agent_name}"):
+            raise PermissionError("agent_disabled")
         module_path = f"{settings.AGENTS_DIR.name}.{agent_name}"
 
         if agent_name in self._loaded:

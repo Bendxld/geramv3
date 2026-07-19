@@ -40,6 +40,10 @@ EXT_SUBDIR = "extensions"
 # room per manifest while still bounding memory against hostile bloat.
 MAX_MANIFEST_BYTES = 6 * 1024 * 1024
 MAX_UPLOAD_BYTES = 40 * 1024 * 1024
+MAX_ZIP_MEMBER_BYTES = 8 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 10_000
+MAX_ARCHIVE_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
+MAX_CONTRIBUTION_ENTRIES = 500
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{0,98}$")
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3,8})$")
@@ -295,10 +299,34 @@ def _read_zip_member(zf: zipfile.ZipFile, name: str) -> bytes | None:
         info = zf.getinfo(name)
     except KeyError:
         return None
-    if info.file_size > MAX_UPLOAD_BYTES:
+    if info.file_size > MAX_ZIP_MEMBER_BYTES:
         raise ExtensionError("too_large", "A file inside the extension is too large.")
     with zf.open(info) as handle:
         return handle.read()
+
+
+def _validate_vsix_archive(zf: zipfile.ZipFile) -> None:
+    """Reject archives whose directory alone describes unreasonable work."""
+    members = zf.infolist()
+    if len(members) > MAX_ARCHIVE_MEMBERS:
+        raise ExtensionError("too_many_files", "The .vsix contains too many files.")
+    total = sum(max(0, info.file_size) for info in members)
+    if total > MAX_ARCHIVE_UNCOMPRESSED_BYTES:
+        raise ExtensionError(
+            "too_large_uncompressed",
+            "The .vsix is too large after decompression.",
+        )
+
+
+def _bounded_contributions(value: object) -> list:
+    if not isinstance(value, list):
+        return []
+    if len(value) > MAX_CONTRIBUTION_ENTRIES:
+        raise ExtensionError(
+            "too_many_contributions",
+            "The extension declares too many contributions.",
+        )
+    return value
 
 
 def _resolve_member(zf: zipfile.ZipFile, base: str, rel: str) -> str | None:
@@ -337,6 +365,7 @@ def import_vsix(data: bytes) -> dict:
         raise ExtensionError("bad_vsix", "That file is not a valid .vsix archive.") from None
 
     with zf:
+        _validate_vsix_archive(zf)
         pkg_bytes = _read_zip_member(zf, "extension/package.json")
         base = "extension"
         if pkg_bytes is None:
@@ -354,10 +383,18 @@ def import_vsix(data: bytes) -> dict:
         publisher = str(pkg.get("publisher") or "")
         ext_id = _slug(f"{publisher}.{pkg.get('name', name)}" if publisher else name, "extension")
 
-        themes = _collect_themes(zf, base, contributes.get("themes", []))
-        snippets = _collect_snippets(zf, base, contributes.get("snippets", []))
-        languages = _collect_languages(zf, base, contributes.get("languages", []))
-        grammars = _collect_grammars(zf, base, contributes.get("grammars", []))
+        themes = _collect_themes(
+            zf, base, _bounded_contributions(contributes.get("themes", []))
+        )
+        snippets = _collect_snippets(
+            zf, base, _bounded_contributions(contributes.get("snippets", []))
+        )
+        languages = _collect_languages(
+            zf, base, _bounded_contributions(contributes.get("languages", []))
+        )
+        grammars = _collect_grammars(
+            zf, base, _bounded_contributions(contributes.get("grammars", []))
+        )
 
     if not (themes or snippets or grammars or languages):
         raise ExtensionError(

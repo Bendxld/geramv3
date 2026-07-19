@@ -16,8 +16,9 @@ class ProviderSpec:
     default_model: str
     requires_api_key: bool = True
     implementation_available: bool = True
+    input_modalities: tuple[str, ...] = ("text",)
 
-    def catalog_entry(self) -> dict[str, str | bool]:
+    def catalog_entry(self) -> dict[str, object]:
         """Return only public provider metadata suitable for the config API."""
         return {
             "provider_id": self.provider_id,
@@ -25,7 +26,21 @@ class ProviderSpec:
             "default_model": self.default_model,
             "requires_api_key": self.requires_api_key,
             "implementation_available": self.implementation_available,
+            "input_modalities": list(self.input_modalities),
         }
+
+
+@dataclass(frozen=True)
+class ProviderAttachment:
+    """Bounded binary input passed only at the provider HTTP boundary."""
+
+    media_type: str
+    data: bytes = field(repr=False)
+    filename: str = "attachment"
+
+    @property
+    def modality(self) -> str:
+        return "image" if self.media_type.startswith("image/") else "audio"
 
 
 @dataclass(frozen=True)
@@ -36,6 +51,10 @@ class ProviderRequest:
     role: str
     response_schema: dict[str, object] | None = None
     response_schema_name: str = "structured_response"
+    attachments: tuple[ProviderAttachment, ...] = ()
+    # OpenAI reasoning effort ("minimal"|"low"|"medium"|"high"). Empty disables
+    # it; providers/models that do not support reasoning ignore it.
+    reasoning_effort: str = ""
 
 
 @dataclass(frozen=True)
@@ -111,6 +130,23 @@ class ProviderUnavailableError(ProviderError):
 
 class ProviderResponseError(ProviderError):
     code = "provider_response_error"
+
+
+class ProviderUnsupportedInputError(ProviderConfigurationError):
+    code = "unsupported_provider_input"
+
+
+def ensure_supported_inputs(spec: ProviderSpec, request: ProviderRequest) -> None:
+    unsupported = {
+        attachment.modality
+        for attachment in request.attachments
+        if attachment.modality not in spec.input_modalities
+    }
+    if unsupported:
+        raise ProviderUnsupportedInputError(
+            spec.provider_id,
+            f"{spec.display_label} does not support this attachment type",
+        )
 
 
 class AIProvider(Protocol):

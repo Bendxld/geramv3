@@ -24,6 +24,7 @@ from app.core.providers.base import (
     ProviderResult,
     ProviderSpec,
     ProviderUnavailableError,
+    ensure_supported_inputs,
     require_credential,
     sanitized_http_error,
 )
@@ -53,6 +54,7 @@ class OpenAICompatibleProvider:
         credential: ProviderCredential | None,
     ) -> ProviderResult:
         credential = require_credential(self.spec, credential)
+        ensure_supported_inputs(self.spec, request)
         headers = {
             "Authorization": f"Bearer {credential._reveal()}",
             "Content-Type": "application/json",

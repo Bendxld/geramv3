@@ -85,6 +85,27 @@
       .catch(function () { toast('The Test Runner could not be started.'); });
   }
 
+  function runActiveFile() {
+    var controller = root.GeramWorkspaceController;
+    var path = controller && controller.activePath && controller.activePath();
+    if (!path) { toast('Open a Python or JavaScript file first.'); return; }
+    var button = $('inlineAiRunFile');
+    if (!button || button.hidden) {
+      toast('Safe Run supports Python and JavaScript files.');
+      return;
+    }
+    button.click();
+  }
+
+  function openGlobalSearch() {
+    var navigation = root.GeramWorkspaceNavigation;
+    if (navigation && typeof navigation.open === 'function') {
+      navigation.open('search');
+      return;
+    }
+    toast('Global search is not ready yet.');
+  }
+
   // ---- Definición de menús (label, atajo visible, acción) ----
   var MENUS = {
     file: [
@@ -122,6 +143,7 @@
       { label: 'Go to Symbol…', key: 'Ctrl+Shift+O', run: function () { runEditorAction('editor.action.quickOutline'); } }
     ],
     run: [
+      { label: 'Run Active File', key: 'Ctrl+F5', run: runActiveFile },
       { label: 'Run Tests on Active File', key: 'Ctrl+Shift+T', run: runTestsActive },
       { label: 'Ask A.R.E.S. (Inline)…', key: 'Ctrl+I', run: function () { focusAiBar(''); } }
     ],
@@ -206,18 +228,21 @@
   }
   var ACT_HANDLERS = {
     explorer: toggleExplorer,
-    search: function () { setActive('search'); runEditorAction('actions.find') || toast('Search: open a file first.'); },
-    scm: function () { setActive('scm'); toast('Source Control — changes: ' + (lastChanges || 0) + (lastBranch ? ' · ' + lastBranch : '')); },
-    run: function () { setActive('run'); runTestsActive(); },
-    extensions: function () { setActive('extensions'); toast('Extensions — panel de ejemplo (sin marketplace).'); },
-    testing: function () { setActive('testing'); clickIf('toggleTerminalWatcher'); }
+    search: openGlobalSearch,
+    // Source Control and Testing own their real panels and capture the click.
+    scm: function () {},
+    run: runActiveFile,
+    // extensions-panel.js conecta y refleja el estado del gestor real.
+    extensions: function () {},
+    testing: function () {},
+    terminal: function () {}
   };
   function wireActivityBar() {
     documentObject.querySelectorAll('.act-btn[data-act]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var act = btn.getAttribute('data-act');
         // marca activo (uno a la vez, salvo el explorador que es toggle real)
-        if (act !== 'explorer') {
+        if (act !== 'explorer' && act !== 'extensions' && act !== 'terminal') {
           documentObject.querySelectorAll('.act-btn[data-act]').forEach(function (b) { b.classList.remove('activo'); });
           btn.classList.add('activo');
         }
@@ -294,6 +319,8 @@
       if (event.shiftKey && k === 'e') { event.preventDefault(); toggleExplorer(); }
       else if (event.shiftKey && k === 'n') { event.preventDefault(); newProject(); }
       else if (event.shiftKey && k === 't') { event.preventDefault(); runTestsActive(); }
+      else if (event.shiftKey && k === 'x') { event.preventDefault(); clickIf('toggleExtensiones'); }
+      else if (!event.shiftKey && k === 'f5') { event.preventDefault(); runActiveFile(); }
       else if (event.key === '`') { event.preventDefault(); clickIf('toggleTerminalWatcher'); }
     }, true);
   }

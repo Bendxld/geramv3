@@ -279,19 +279,18 @@ class WorkspaceFrontendStaticTests(unittest.TestCase):
     def test_settings_has_sidebar_provider_directory_and_extensible_integrations(self):
         script = (ROOT / "static/script.js").read_text(encoding="utf-8")
         style = STYLE_CSS.read_text(encoding="utf-8")
-        self.assertIn('data-config-view="ai"', self.html)
-        self.assertIn('data-config-view="integrations"', self.html)
+        self.assertIn("itemAi.dataset.configView = 'ai'", script)
+        self.assertIn("item.dataset.configView = 'integrations'", script)
+        self.assertIn('data-config-view="geram"', self.html)
         self.assertIn("configProviderDirectory", script)
         self.assertIn("At least one AI provider is required", script)
         self.assertIn("Recommended · free tier", script)
-        for provider in ("Claude", "ChatGPT / OpenAI", "Gemini", "Groq"):
-            self.assertIn(provider, script)
         self.assertIn("ollama", script)
         self.assertNotIn("providerId === 'ollama' || vistos", script)
         for field in (
             "TELEGRAM_BOT_TOKEN",
             "NOTION_API_KEY",
-            "GOOGLE_CALENDAR_CREDENTIALS_PATH",
+            "GOOGLE_CALENDAR_ACCESS_TOKEN",
             "SPOTIFY_ACCESS_TOKEN",
             "OBSIDIAN_VAULT_PATH",
         ):
@@ -307,7 +306,7 @@ class WorkspaceFrontendStaticTests(unittest.TestCase):
         style = STYLE_CSS.read_text(encoding="utf-8")
         profile_logic = script[
             script.index("function activarPerfil(perfil)"):
-            script.index("// Abre workspace + Terminal Watcher")
+            script.index("// Abre el workspace disparando")
         ]
         self.assertIn('class="modo-dev perfil-ares"', self.html)
         self.assertIn('data-profile="ares"', self.html)
@@ -320,6 +319,19 @@ class WorkspaceFrontendStaticTests(unittest.TestCase):
         self.assertEqual(script.count("btnIris.addEventListener('click'"), 1)
         self.assertIn("body.modo-dev.perfil-iris .inline-ai-bar { display: none; }", style)
         self.assertIn("body.modo-dev.perfil-ares .inline-ai-bar { display: flex; }", style)
+
+    def test_developer_activity_bar_uses_real_feature_panels(self):
+        chrome = (ROOT / "static/vscode-chrome.js").read_text(encoding="utf-8")
+        navigation = (ROOT / "static/workspace-navigation.js").read_text(encoding="utf-8")
+        extensions = (ROOT / "static/extensions-panel.js").read_text(encoding="utf-8")
+        self.assertEqual(self.html.count('id="toggleExtensiones"'), 1)
+        self.assertEqual(self.html.count('id="toggleTesting"'), 1)
+        self.assertEqual(self.html.count('id="toggleTerminalWatcher"'), 1)
+        self.assertIn("navigation.open('search')", chrome)
+        self.assertIn("runActiveFile", chrome)
+        self.assertIn("markSearchActivity", navigation)
+        self.assertIn("DECLARATIVE EXTENSIONS", extensions)
+        self.assertNotIn("panel de ejemplo", chrome)
 
     def test_inline_ares_reuses_diff_editor_without_disposing_shared_ui_services(self):
         show_logic = self.inline_ai_source[
