@@ -1,4 +1,8 @@
-import os, signal, subprocess, sys, time
+import os
+import signal
+import subprocess
+import sys
+import time
 task = sys.argv[1] if len(sys.argv) == 2 else ""
 if task == "stdout": print("terminal watcher stdout")
 elif task == "stderr": print("terminal watcher stderr", file=sys.stderr)

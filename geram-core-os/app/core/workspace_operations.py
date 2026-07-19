@@ -10,7 +10,7 @@ import stat
 import threading
 import time
 from contextlib import contextmanager
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 from typing import Any, Iterator
 
 from app.core.workspace import MAX_TREE_ENTRIES, WorkspaceError, WorkspaceService, _public_error

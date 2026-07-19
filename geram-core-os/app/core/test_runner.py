@@ -1,5 +1,4 @@
 """Internal, allowlisted Python file and unittest runner."""
-import asyncio
 import uuid
 from dataclasses import dataclass
 from pathlib import Path

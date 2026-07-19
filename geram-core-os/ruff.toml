@@ -1,0 +1,15 @@
+# Lint del backend. El objetivo es que `ruff check` sea señal accionable:
+# si sale limpio, algo que aparezca es algo que mirar de verdad.
+
+target-version = "py312"
+
+[lint]
+# Selección por defecto (errores de pyflakes y pycodestyle) menos el estilo
+# compacto que el proyecto usa a propósito en las rutas de limpieza:
+#     try: os.unlink(temporary)
+#     except OSError: pass
+ignore = ["E701", "E702"]
+
+[lint.per-file-ignores]
+# Ajusta sys.path antes de importar el paquete: los imports no pueden ir arriba.
+"scripts/build_week_demo.py" = ["E402"]

@@ -20,7 +20,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -31,7 +31,7 @@ from app.core.gcs.integrations import (
     IntegrationHub, NotionAdapter, ObsidianAdapter, SpotifyAdapter,
 )
 from app.core.gcs.memory import MemoryManager
-from app.core.gcs.permissions import Permission, permission_registry
+from app.core.gcs.permissions import permission_registry
 from app.core.gcs.skill_retriever import SkillRetriever
 from app.core.gcs.skills import Skill, SkillStore
 from app.core.gcs.storage import StorageError

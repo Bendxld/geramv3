@@ -20,7 +20,7 @@ from app.core.credential_pool import CredentialPoolError, credential_pool_manage
 from app.core.gcs.integrations import integration_hub
 from app.core.providers.base import ProviderAttachment
 from app.core.providers.registry import provider_registry
-from app.core.runtime_state import RuntimePreferences, runtime_state_store
+from app.core.runtime_state import runtime_state_store
 from app.core.security import require_local_origin, require_localhost
 from app.core.user_config import load_config_safe
 from app.core.sandbox_backend import SandboxUnavailableError, detect_sandbox_backend
@@ -62,7 +62,10 @@ def _provider_configured(provider_id: str) -> bool:
         if credential_pool_manager.has_credentials(provider_id):
             return True
     except (CredentialPoolError, sqlite3.Error, OSError):
-        return False
+        # El pool puede fallar de forma transitoria; la clave del entorno sigue
+        # siendo válida, así que se cae al fallback en lugar de reportar
+        # "no configurado" por un error de almacenamiento.
+        pass
     return bool(settings.provider_api_key(provider_id))
 
 

@@ -17,7 +17,7 @@ import os
 import re
 from pathlib import Path
 
-from app.core.workspace import WorkspaceError, _public_error, normalize_relative_path
+from app.core.workspace import _public_error, normalize_relative_path
 
 # Nombre de proyecto: un solo segmento seguro (evita rutas y caracteres raros).
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")

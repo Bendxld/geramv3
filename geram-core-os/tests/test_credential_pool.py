@@ -371,7 +371,7 @@ class CredentialPoolRoutingTests(CredentialPoolTestCase):
         return Settings(values, create_runtime_dirs=False)
 
     def test_authentication_failure_invalidates_and_rotates(self):
-        first = self.add("first")
+        self.add("first")
         self.add("second")
         provider = SequencedProvider(
             "openai",

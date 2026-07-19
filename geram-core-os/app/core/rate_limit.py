@@ -16,10 +16,16 @@ class SlidingWindowLimiter:
         self._entries: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
+    def _evict(self, threshold: float) -> None:
+        """Purga las claves ya vencidas: sin esto el mapa sólo crece."""
+        for key in [k for k, v in self._entries.items() if not v or v[-1] <= threshold]:
+            del self._entries[key]
+
     def check(self, key: str) -> None:
         now = time.monotonic()
         threshold = now - self.window_seconds
         with self._lock:
+            self._evict(threshold)
             entries = self._entries[key]
             while entries and entries[0] <= threshold:
                 entries.popleft()

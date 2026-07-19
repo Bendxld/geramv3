@@ -8,6 +8,7 @@
     "postinstall": "npm run prepare:monaco",
     "prepare:monaco": "node scripts/prepare-monaco-assets.js",
     "start": "electron .",
+    "test": "node --test test/*.test.js",
     "pack": "electron-builder --dir",
     "dist:linux": "electron-builder --linux AppImage deb",
     "dist:windows": "electron-builder --win nsis"

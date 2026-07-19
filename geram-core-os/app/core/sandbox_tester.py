@@ -1,5 +1,4 @@
 """Deterministic, local adversarial checks for the closed Sandbox Guard catalog."""
-import asyncio
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path

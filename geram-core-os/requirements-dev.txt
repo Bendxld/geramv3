@@ -1,0 +1,5 @@
+# Herramientas de desarrollo. El runtime no las necesita: instalar con
+#     ./venv/bin/pip install -r requirements-dev.txt
+# y luego  ./venv/bin/python -m ruff check .
+-r requirements.txt
+ruff==0.15.22

@@ -5,7 +5,7 @@ import ast
 from pathlib import PurePosixPath
 from typing import Any
 
-from app.core.workspace import WorkspaceError, WorkspaceService, _public_error
+from app.core.workspace import WorkspaceError, WorkspaceService
 
 MAX_DISCOVERY_FILES = 200
 MAX_DISCOVERED_TESTS = 1000
