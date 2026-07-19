@@ -2563,3 +2563,23 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
   color: var(--principal-clr, var(--principal)); font-family: var(--f-mono); font-size: 10px; margin: 0 0 10px; }
 .ares-explica-status { min-height: 14px; font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); margin: 4px 0 0; }
 .ares-explica-status.error { color: #ff6b8a; }
+
+/* Plegado y contención de altura. El panel vive DEBAJO del editor: sin tope,
+   una explicación larga empuja el código fuera de la pantalla y ya no se
+   puede seguir escribiendo. El cuerpo hace su propio scroll. */
+.ares-explica-cabecera { display: flex; align-items: center; gap: 8px; }
+.ares-explica-cabecera h4 { flex: 1; margin: 0; }
+.ares-explica-plegar, .ares-explica-cerrar {
+  background: transparent; border: 0; cursor: pointer; padding: 0 4px;
+  color: var(--texto-dim); font-family: var(--f-mono); line-height: 1;
+}
+.ares-explica-plegar { font-size: 11px; }
+.ares-explica-cerrar { font-size: 17px; }
+.ares-explica-plegar:hover, .ares-explica-cerrar:hover { color: var(--texto); }
+.ares-explica-cuerpo {
+  max-height: 42vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 8px;
+}
+.ares-explica-cuerpo[hidden] { display: none; }

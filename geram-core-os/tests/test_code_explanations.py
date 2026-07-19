@@ -609,6 +609,23 @@ class ExplanationFrontendTests(unittest.TestCase):
     def test_demo_mode_is_labelled_in_the_view(self):
         self.assertIn("PLANTILLA DE DEMOSTRACIÓN", self.source)
 
+    def test_the_panel_can_be_collapsed_and_hidden(self):
+        """El panel vive debajo del editor: si crece sin tope, tapa el código."""
+        self.assertIn("cabeceraPlegable", self.source)
+        self.assertIn("Ocultar todo", self.source)
+        # Plegar y ocultar son acciones distintas: una conserva el resultado.
+        self.assertIn("cuerpo.hidden = !oculto", self.source)
+        self.assertIn("caja.hidden = true", self.source)
+
+    def test_long_output_scrolls_instead_of_pushing_the_editor(self):
+        css = STYLE_CSS.read_text(encoding="utf-8")
+        self.assertIn(".ares-explica-cuerpo", css)
+        self.assertIn("max-height", css)
+        self.assertIn("overflow-y: auto", css)
+
+    def test_collapsing_is_announced_to_assistive_tech(self):
+        self.assertIn("aria-expanded", self.source)
+
     def test_task_action_only_copies_a_summary(self):
         self.assertIn("usarParaTarea", self.source)
         self.assertIn("workspaceAresInstruction", self.source)

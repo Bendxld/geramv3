@@ -149,10 +149,42 @@
   }
 
   // ---- Preview del contexto (antes de enviar nada) ----
+  // Cabecera con botón de plegar. El panel vive debajo del editor: si crece
+  // sin límite, empuja el código fuera de la pantalla y no se puede seguir
+  // escribiendo. Por eso todo lo que se pinta aquí se puede plegar, y además
+  // tiene altura máxima con scroll propio (ver .ares-explica-cuerpo en CSS).
+  function cabeceraPlegable(caja, titulo, cuerpo, alCerrar) {
+    var cabecera = crear('div', 'ares-explica-cabecera');
+    var plegar = crear('button', 'ares-explica-plegar', '▾');
+    plegar.type = 'button';
+    plegar.title = 'Plegar / desplegar';
+    plegar.setAttribute('aria-expanded', 'true');
+    plegar.addEventListener('click', function () {
+      var oculto = cuerpo.hidden;
+      cuerpo.hidden = !oculto;
+      plegar.textContent = oculto ? '▾' : '▸';
+      plegar.setAttribute('aria-expanded', String(oculto));
+    });
+    cabecera.appendChild(plegar);
+    cabecera.appendChild(crear('h4', null, titulo));
+    var cerrar = crear('button', 'ares-explica-cerrar', '×');
+    cerrar.type = 'button';
+    cerrar.title = 'Ocultar';
+    cerrar.setAttribute('aria-label', 'Ocultar ' + titulo);
+    cerrar.addEventListener('click', function () {
+      caja.hidden = true;
+      if (alCerrar) { alCerrar(); }
+    });
+    cabecera.appendChild(cerrar);
+    return cabecera;
+  }
+
   function pintarPreview(preview) {
     vaciar(cajaPreview);
     cajaPreview.hidden = false;
-    cajaPreview.appendChild(crear('h4', null, 'Contexto que se enviará'));
+    var cuerpo = crear('div', 'ares-explica-cuerpo');
+    cajaPreview.appendChild(cabeceraPlegable(cajaPreview, 'Contexto que se enviará', cuerpo));
+    cajaPreview.appendChild(cuerpo);
     var lista = crear('ul', 'ares-explica-preview-lista');
 
     function fila(etiqueta, valor) {
@@ -185,9 +217,9 @@
     });
     fila('Tamaño aproximado', preview.approximate_chars + ' caracteres');
     fila('Secretos excluidos', preview.secrets_excluded ? 'sí (.env, credenciales, .git)' : 'no');
-    cajaPreview.appendChild(lista);
+    cuerpo.appendChild(lista);
     (preview.notes || []).forEach(function (nota) {
-      cajaPreview.appendChild(crear('p', 'ares-explica-nota', nota));
+      cuerpo.appendChild(crear('p', 'ares-explica-nota', nota));
     });
   }
 
@@ -287,8 +319,13 @@
     vaciar(cajaResultado);
     cajaResultado.hidden = false;
 
+    var cuerpo = crear('div', 'ares-explica-cuerpo');
+    cajaResultado.appendChild(cabeceraPlegable(
+      cajaResultado, datos.demo ? 'Explicación (demostración)' : 'Explicación', cuerpo));
+    cajaResultado.appendChild(cuerpo);
+
     if (datos.demo) {
-      cajaResultado.appendChild(crear('p', 'ares-explica-demo',
+      cuerpo.appendChild(crear('p', 'ares-explica-demo',
         'PLANTILLA DE DEMOSTRACIÓN — no es un análisis de tu código.'));
     }
 
@@ -303,7 +340,7 @@
       seccionReferencias(explicacion.references),
       seccionInferencias(explicacion.inferences)
     ].forEach(function (bloque) {
-      if (bloque) { cajaResultado.appendChild(bloque); }
+      if (bloque) { cuerpo.appendChild(bloque); }
     });
 
     // Acción separada y explícita: SÓLO copia un resumen al cuadro de
@@ -313,7 +350,17 @@
     usar.type = 'button';
     usar.addEventListener('click', usarParaTarea);
     acciones.appendChild(usar);
-    cajaResultado.appendChild(acciones);
+    // Cerrar el resultado Y el contexto de una vez: es lo que se quiere
+    // cuando terminas de leer y vuelves a escribir código.
+    var ocultar = crear('button', null, 'Ocultar todo');
+    ocultar.type = 'button';
+    ocultar.addEventListener('click', function () {
+      cajaResultado.hidden = true;
+      cajaPreview.hidden = true;
+      setEstado('');
+    });
+    acciones.appendChild(ocultar);
+    cuerpo.appendChild(acciones);
   }
 
   function usarParaTarea() {
