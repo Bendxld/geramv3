@@ -16,17 +16,37 @@ if (-not $py) { $py = Get-Command python3 -ErrorAction SilentlyContinue }
 if (-not $py) { Write-Error "No encuentro python. Instala Python 3.11+ y reintenta."; exit 1 }
 Write-Host "==> Python: $(& $py.Source --version)"
 
-Write-Host "==> [1/2] GERAM CORE OS (:8000) — venv + dependencias"
+Write-Host "==> [1/3] GERAM CORE OS (:8000) — venv + dependencias"
 & $py.Source -m venv geram-core-os\venv
 & geram-core-os\venv\Scripts\python.exe -m pip install --upgrade pip | Out-Null
 & geram-core-os\venv\Scripts\python.exe -m pip install -r geram-core-os\requirements.txt
 
-Write-Host "==> [2/2] Configuracion"
+Write-Host "==> [2/3] Configuracion"
 if (Test-Path .env) {
   Write-Host "    .env ya existe — lo dejo como esta."
 } else {
   Copy-Item .env.example .env
   Write-Host "    creado .env desde la plantilla (todas las claves son opcionales)."
+}
+
+# pdftotext (poppler) habilita adjuntar PDFs al chat. bubblewrap no aplica en
+# Windows: el sandbox del runner es de Linux. Solo informamos; no instalamos
+# nada por tu cuenta.
+Write-Host "==> [3/3] Paquetes del sistema (PDFs)"
+if (Get-Command pdftotext -ErrorAction SilentlyContinue) {
+  Write-Host "    OK pdftotext ya esta instalado."
+} else {
+  Write-Host "    Falta pdftotext (poppler) — sin el no se pueden adjuntar PDFs al chat."
+  if (Get-Command scoop -ErrorAction SilentlyContinue) {
+    Write-Host "    Para instalarlo:  scoop install poppler"
+  } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+    Write-Host "    Para instalarlo:  choco install poppler"
+  } else {
+    Write-Host "    Instalalo con scoop ('scoop install poppler'), con choco"
+    Write-Host "    ('choco install poppler'), o descarga poppler para Windows y"
+    Write-Host "    agrega su carpeta bin al PATH."
+  }
+  Write-Host "    (Opcional: el resto de la app funciona sin el.)"
 }
 
 Write-Host ""

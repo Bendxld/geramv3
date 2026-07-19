@@ -45,8 +45,21 @@ guardado alternativa, aún no escrita/probada.
 - **Node.js 18+** y **npm** (para la ventana Electron y sus assets de Monaco; en Windows en navegador no hace falta Electron)
 - Opcionales, según qué features uses:
   - **[Ollama](https://ollama.com)** — para modelos de IA locales (sin API key).
+  - **`poppler-utils`** — para adjuntar PDFs al chat (aporta `pdftotext`).
+  - **`bubblewrap`** (Linux) — sandbox del runner de código y de la terminal.
   - `xclip`/`xsel` (Linux) — historial de portapapeles de IRIS.
   - Cuentas/API keys de los proveedores e integraciones que quieras (todo opcional).
+
+`setup.sh` detecta si faltan `poppler-utils` y `bubblewrap`, y te ofrece
+instalarlos (te pregunta antes; nunca ejecuta `sudo` por su cuenta). Si prefieres
+hacerlo a mano, en Debian/Ubuntu/Mint:
+
+```bash
+sudo apt-get install -y poppler-utils bubblewrap
+```
+
+Sin ellos la app arranca igual: sólo quedan apagadas esas dos features, y la
+interfaz te dice cuál falta cuando intentas usarlas.
 
 ---
 
@@ -65,6 +78,11 @@ cd geramv3
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1   # Windows (prepara GERAM CORE OS)
 ```
+
+> **Instalación reproducible.** `requirements.txt` no fija versiones, así que
+> resuelve contra lo que PyPI publique ese día. Si quieres exactamente las
+> versiones verificadas, usa el lock después de crear el venv:
+> `./venv/bin/python -m pip install -r requirements-lock.txt`
 
 Después edita `.env` con tus claves (todas opcionales) y arranca (ver [Cómo se usa](#cómo-se-usa)).
 

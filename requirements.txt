@@ -5,7 +5,10 @@ python-dotenv
 google-genai
 supabase
 httpx
-faster-whisper
+# Piso obligatorio: las versiones <1.2 exigen av==11.*, que no tiene binario
+# para Python 3.12 e intenta compilarse contra ffmpeg. Sin este piso pip puede
+# retroceder hasta ahí y romper la instalación en una máquina limpia.
+faster-whisper>=1.2.1
 sounddevice
 numpy
 python-multipart
