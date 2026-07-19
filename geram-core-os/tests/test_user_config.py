@@ -179,18 +179,28 @@ class SystemPromptOverrideTests(unittest.TestCase):
         self.assertFalse(prompt.startswith("[USER SYSTEM PROMPT]"))
         self.assertTrue(prompt.startswith("You are A.R.E.S."))
 
-    def test_orchestrator_prepends_override(self):
+    def test_orchestrator_includes_the_override_in_the_instructions(self):
         with patch("app.api.orchestrator.system_prompt_override", return_value="Soy joven Mauri"):
-            result = orchestrator_api._con_system_prompt("¿qué hora es?")
+            result = orchestrator_api._instrucciones_de_sistema()
         self.assertIn("Soy joven Mauri", result)
-        self.assertTrue(result.rstrip().endswith("¿qué hora es?"))
-
-    def test_orchestrator_without_override_matches_request_language(self):
-        with patch("app.api.orchestrator.system_prompt_override", return_value=""):
-            result = orchestrator_api._con_system_prompt("hola")
-        self.assertIn("[RESPONSE LANGUAGE]", result)
         self.assertIn("respond in that same language", result)
-        self.assertTrue(result.rstrip().endswith("hola"))
+
+    def test_orchestrator_without_override_still_asks_for_the_request_language(self):
+        with patch("app.api.orchestrator.system_prompt_override", return_value=""):
+            result = orchestrator_api._instrucciones_de_sistema()
+        self.assertIn("respond in that same language", result)
+
+    def test_instructions_never_contain_the_user_message(self):
+        """Van en el campo `system`, no pegadas al prompt.
+
+        Cuando se anteponían al mensaje del usuario, los modelos las repetían
+        literalmente antes de contestar; esta prueba fija ese contrato.
+        """
+        with patch("app.api.orchestrator.system_prompt_override", return_value=""):
+            result = orchestrator_api._instrucciones_de_sistema()
+        self.assertNotIn("hola", result)
+        # Y se le pide explícitamente al modelo que no las mencione.
+        self.assertIn("Never mention", result)
 
 
 class UserConfigEndpointTests(unittest.TestCase):

@@ -59,9 +59,14 @@ class OpenAICompatibleProvider:
             "Authorization": f"Bearer {credential._reveal()}",
             "Content-Type": "application/json",
         }
+        # Rol system nativo: separa instrucciones de la pregunta.
+        messages = []
+        if request.system:
+            messages.append({"role": "system", "content": request.system})
+        messages.append({"role": "user", "content": request.prompt})
         body = {
             "model": request.model,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": messages,
         }
         if request.response_schema is not None:
             # JSON-object mode is the broadly-portable structured-output knob

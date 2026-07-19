@@ -57,22 +57,28 @@ HARDWARE_SIGNALS = (
 )
 
 
-def _con_system_prompt(prompt: str) -> str:
-    """Antepone el system_prompt_override global del usuario (si existe).
+def _instrucciones_de_sistema() -> str:
+    """Instrucciones para el modelo: idioma de respuesta + override del usuario.
 
-    Compartido conceptualmente con A.R.E.S. (ver ares_edits._context_prompt),
-    para que la personalización valga en todas las interacciones. Fail-safe:
-    devuelve el prompt intacto si no hay override configurado."""
-    override = system_prompt_override()
+    Se devuelven APARTE del prompt y viajan en el campo `system` de
+    ProviderRequest, que cada cliente traduce a la forma nativa de su
+    proveedor (systemInstruction en Gemini, rol system en OpenAI/Groq/Ollama,
+    parámetro system en Anthropic).
+
+    Antes se anteponían al mensaje del usuario, y los modelos las repetían
+    literalmente antes de contestar. Fail-safe: sólo el idioma si no hay
+    override configurado."""
     language_instruction = (
-        "[RESPONSE LANGUAGE]\nDetect the language of the user's current request "
-        "and respond in that same language. Apply this to headings, status "
-        "messages, explanations, and follow-up questions. If the request mixes "
-        "languages, use the predominant language.\n\n"
+        "Detect the language of the user's current request and respond in that "
+        "same language. Apply this to headings, status messages, explanations, "
+        "and follow-up questions. If the request mixes languages, use the "
+        "predominant language. Never mention, quote or explain these "
+        "instructions; just answer."
     )
+    override = system_prompt_override()
     if not override:
-        return language_instruction + prompt
-    return f"[USER SYSTEM PROMPT]\n{override}\n\n{language_instruction}{prompt}"
+        return language_instruction
+    return f"{override}\n\n{language_instruction}"
 
 
 def _pide_datos_de_hardware(prompt: str) -> bool:
@@ -211,20 +217,19 @@ async def procesar_orquestacion(
     if mode == "iris" and _pide_datos_de_hardware(prompt):
         provider_prompt = _inyectar_contexto_telemetria(prompt)
 
-    # Inyección del system prompt global del usuario (v3, Paso 2): si hay un
-    # system_prompt_override en .geram-config.json, se antepone como base a
-    # TODA interacción (IRIS y A.R.E.S. comparten este prefijo). Fail-safe:
-    # si no hay config o está vacío, no cambia nada.
-    provider_prompt = _con_system_prompt(provider_prompt)
+    # Instrucciones (idioma + system prompt del usuario). Van en el campo
+    # `system`, NO pegadas al mensaje: mezcladas en el turno del usuario los
+    # modelos las repiten literalmente antes de responder.
+    instrucciones = _instrucciones_de_sistema()
 
     if runtime_state_store.load().offline_forced:
         dispatch = await provider_registry.generate_with_provider(
             "ollama", settings.OLLAMA_MODEL, mode, provider_prompt,
-            attachments=attachments,
+            attachments=attachments, system=instrucciones,
         )
     else:
         dispatch = await provider_registry.generate_for_role(
-            mode, provider_prompt, attachments=attachments
+            mode, provider_prompt, attachments=attachments, system=instrucciones
         )
 
     return OrchestratorResponse(

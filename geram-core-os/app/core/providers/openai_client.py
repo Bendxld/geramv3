@@ -73,6 +73,10 @@ class OpenAIProvider:
             "input": provider_input,
             "store": False,
         }
+        # La Responses API tiene 'instructions' para esto; así el turno del
+        # usuario queda limpio y el modelo no repite la instrucción.
+        if request.system:
+            body["instructions"] = request.system
         if request.response_schema is not None:
             body["text"] = {
                 "format": {

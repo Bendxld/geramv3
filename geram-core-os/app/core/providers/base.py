@@ -49,6 +49,11 @@ class ProviderRequest:
     model: str
     timeout_seconds: float
     role: str
+    # Instrucciones para el modelo (idioma de respuesta, system prompt del
+    # usuario…). Van SEPARADAS del prompt a propósito: mezcladas en el mismo
+    # turno de usuario, los modelos las repiten en la respuesta. Cada cliente
+    # la traduce a la forma nativa de su proveedor.
+    system: str = ""
     response_schema: dict[str, object] | None = None
     response_schema_name: str = "structured_response"
     attachments: tuple[ProviderAttachment, ...] = ()

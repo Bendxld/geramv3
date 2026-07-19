@@ -47,9 +47,14 @@ class OllamaProvider:
                 base64.b64encode(attachment.data).decode("ascii")
                 for attachment in request.attachments
             ]
+        # Rol system nativo, antes del turno del usuario.
+        messages: list[dict[str, object]] = []
+        if request.system:
+            messages.append({"role": "system", "content": request.system})
+        messages.append(message)
         body: dict[str, object] = {
             "model": request.model,
-            "messages": [message],
+            "messages": messages,
             "stream": False,
         }
         if request.response_schema is not None:

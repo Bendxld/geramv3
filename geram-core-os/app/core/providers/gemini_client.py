@@ -60,6 +60,10 @@ class GeminiProvider:
                 "thinkingConfig": {"thinkingBudget": 0},
             },
         }
+        # Las instrucciones van en systemInstruction, no dentro del turno del
+        # usuario: mezcladas ahí, el modelo tiende a repetirlas en la respuesta.
+        if request.system:
+            body["systemInstruction"] = {"parts": [{"text": request.system}]}
         if request.response_schema is not None:
             body["generationConfig"].update({
                 "responseMimeType": "application/json",

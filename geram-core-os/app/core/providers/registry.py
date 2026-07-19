@@ -90,6 +90,7 @@ class ProviderRegistry:
         configuration: Settings | None = None,
         *,
         attachments: tuple[ProviderAttachment, ...] = (),
+        system: str = "",
     ) -> ProviderDispatchResult:
         """Dispatch to one explicit provider without an online fallback."""
         active_settings = configuration or settings
@@ -97,6 +98,7 @@ class ProviderRegistry:
             provider = self.get(provider_id)
             request = ProviderRequest(
                 prompt=prompt,
+                system=system,
                 model=model,
                 timeout_seconds=active_settings.provider_timeout(provider_id),
                 role=role,
@@ -229,6 +231,7 @@ class ProviderRegistry:
         response_schema: dict[str, object] | None = None,
         response_schema_name: str = "structured_response",
         attachments: tuple[ProviderAttachment, ...] = (),
+        system: str = "",
     ) -> ProviderDispatchResult:
         """Generate through a role's provider and one explicit fallback at most."""
         active_settings = configuration or settings
@@ -267,6 +270,7 @@ class ProviderRegistry:
 
         primary_request = ProviderRequest(
             prompt=prompt,
+            system=system,
             model=role_settings.model,
             timeout_seconds=active_settings.provider_timeout(
                 primary.spec.provider_id
@@ -331,6 +335,7 @@ class ProviderRegistry:
 
         fallback_request = ProviderRequest(
             prompt=prompt,
+            system=system,
             model=fallback.spec.default_model,
             timeout_seconds=active_settings.provider_timeout(
                 fallback.spec.provider_id

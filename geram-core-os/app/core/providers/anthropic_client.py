@@ -74,6 +74,10 @@ class AnthropicProvider:
             "max_tokens": ANTHROPIC_MAX_TOKENS,
             "messages": [{"role": "user", "content": content}],
         }
+        # Anthropic lleva las instrucciones en un parámetro 'system' aparte,
+        # no como un mensaje más de la conversación.
+        if request.system:
+            body["system"] = request.system
         if request.response_schema is not None:
             # Structured outputs: same json_schema shape the OpenAI client uses,
             # so the app's (already strict-compatible) schemas port directly.
