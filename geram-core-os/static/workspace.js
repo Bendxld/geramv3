@@ -350,7 +350,7 @@
         }));
       });
       loadingElement.textContent = payload && payload.truncated ?
-        'Vista limitada por seguridad.' : String(entries.length) + ' entradas locales.';
+        'View limited for safety.' : String(entries.length) + ' local entries.';
       windowObject.dispatchEvent(new windowObject.CustomEvent('geram:workspace-tree-rendered', {
         detail: { count: entries.length }
       }));

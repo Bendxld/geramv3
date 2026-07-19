@@ -576,8 +576,8 @@ class ExplanationFrontendTests(unittest.TestCase):
 
     def test_structured_view_covers_every_contract_section(self):
         for label in (
-            "Resumen", "Propósito", "Flujo", "Entradas", "Salidas",
-            "Dependencias", "Riesgos", "Referencias al código", "Inferencias",
+            "Summary", "Purpose", "Flow", "Inputs", "Outputs",
+            "Dependencies", "Risks", "Code references", "Inferences",
         ):
             with self.subTest(label=label):
                 self.assertIn(label, self.source)
@@ -602,17 +602,17 @@ class ExplanationFrontendTests(unittest.TestCase):
         self.assertLess(pintar_preview, pedir_explicacion)
 
     def test_inferences_are_visually_separated_from_facts(self):
-        self.assertIn("Inferencias (no confirmadas)", self.source)
-        self.assertIn("no un hecho verificado", self.source)
+        self.assertIn("Inferences (not confirmed)", self.source)
+        self.assertIn("not verified fact", self.source)
         self.assertIn(".ares-explica-inferencias", STYLE_CSS.read_text(encoding="utf-8"))
 
     def test_demo_mode_is_labelled_in_the_view(self):
-        self.assertIn("PLANTILLA DE DEMOSTRACIÓN", self.source)
+        self.assertIn("DEMONSTRATION TEMPLATE", self.source)
 
     def test_the_panel_can_be_collapsed_and_hidden(self):
         """El panel vive debajo del editor: si crece sin tope, tapa el código."""
         self.assertIn("cabeceraPlegable", self.source)
-        self.assertIn("Ocultar todo", self.source)
+        self.assertIn("Hide all", self.source)
         # Plegar y ocultar son acciones distintas: una conserva el resultado.
         self.assertIn("cuerpo.hidden = !oculto", self.source)
         self.assertIn("caja.hidden = true", self.source)
@@ -625,6 +625,14 @@ class ExplanationFrontendTests(unittest.TestCase):
 
     def test_collapsing_is_announced_to_assistive_tech(self):
         self.assertIn("aria-expanded", self.source)
+
+    def test_the_panel_is_written_in_english_like_the_rest_of_the_hud(self):
+        """El HUD está en inglés; este panel no debe volver a desentonar."""
+        import re
+
+        visibles = re.findall(r"'([^']*)'", self.source)
+        acentos = [t for t in visibles if re.search(r"[áéíóúñ¿¡]", t)]
+        self.assertEqual(acentos, [], f"texto visible en español: {acentos}")
 
     def test_task_action_only_copies_a_summary(self):
         self.assertIn("usarParaTarea", self.source)

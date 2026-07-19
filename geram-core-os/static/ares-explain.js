@@ -29,17 +29,17 @@
   var ultimaExplicacion = null;
 
   var MENSAJES = {
-    empty_selection: 'Selecciona código en el editor antes de explicar.',
-    empty_file: 'Ese archivo no tiene contenido legible.',
-    empty_project: 'El workspace no tiene archivos legibles.',
-    not_found: 'Ese archivo no existe en el workspace.',
-    protected_path: 'Ese archivo está protegido y no se puede analizar.',
-    excluded_path: 'Ese archivo está excluido del workspace.',
-    context_too_large: 'El contexto supera el límite local. Reduce el alcance.',
-    invalid_contract: 'A.R.E.S. devolvió una explicación con formato inválido.',
-    invalid_reference: 'A.R.E.S. citó una ubicación que no existe.',
-    unsafe_content: 'Se descartó la explicación por contener marcado o URLs.',
-    provider_unavailable: 'A.R.E.S. no está disponible. Prueba el modo demostración.'
+    empty_selection: 'Select some code in the editor first.',
+    empty_file: 'That file has no readable content.',
+    empty_project: 'The workspace has no readable files.',
+    not_found: 'That file does not exist in the workspace.',
+    protected_path: 'That file is protected and cannot be analysed.',
+    excluded_path: 'That file is excluded from the workspace.',
+    context_too_large: 'The context exceeds the local limit. Narrow the scope.',
+    invalid_contract: 'A.R.E.S. returned a malformed explanation.',
+    invalid_reference: 'A.R.E.S. cited a location that does not exist.',
+    unsafe_content: 'The explanation was discarded: it contained markup or URLs.',
+    provider_unavailable: 'A.R.E.S. is unavailable. Try demo mode.'
   };
 
   function crear(tag, clase, texto) {
@@ -59,7 +59,7 @@
   }
 
   function mensajeDe(codigo) {
-    return MENSAJES[codigo] || 'No se pudo completar la explicación.';
+    return MENSAJES[codigo] || 'The explanation could not be completed.';
   }
 
   function pedir(ruta, cuerpo) {
@@ -157,7 +157,7 @@
     var cabecera = crear('div', 'ares-explica-cabecera');
     var plegar = crear('button', 'ares-explica-plegar', '▾');
     plegar.type = 'button';
-    plegar.title = 'Plegar / desplegar';
+    plegar.title = 'Collapse / expand';
     plegar.setAttribute('aria-expanded', 'true');
     plegar.addEventListener('click', function () {
       var oculto = cuerpo.hidden;
@@ -169,8 +169,8 @@
     cabecera.appendChild(crear('h4', null, titulo));
     var cerrar = crear('button', 'ares-explica-cerrar', '×');
     cerrar.type = 'button';
-    cerrar.title = 'Ocultar';
-    cerrar.setAttribute('aria-label', 'Ocultar ' + titulo);
+    cerrar.title = 'Hide';
+    cerrar.setAttribute('aria-label', 'Hide ' + titulo);
     cerrar.addEventListener('click', function () {
       caja.hidden = true;
       if (alCerrar) { alCerrar(); }
@@ -183,7 +183,7 @@
     vaciar(cajaPreview);
     cajaPreview.hidden = false;
     var cuerpo = crear('div', 'ares-explica-cuerpo');
-    cajaPreview.appendChild(cabeceraPlegable(cajaPreview, 'Contexto que se enviará', cuerpo));
+    cajaPreview.appendChild(cabeceraPlegable(cajaPreview, 'Context to be sent', cuerpo));
     cajaPreview.appendChild(cuerpo);
     var lista = crear('ul', 'ares-explica-preview-lista');
 
@@ -194,29 +194,29 @@
       lista.appendChild(li);
     }
 
-    fila('Proveedor', preview.provider || '(no configurado)');
-    fila('Modelo', preview.model || '(no configurado)');
-    fila('Alcance', preview.scope);
-    fila('Nivel', preview.level);
-    fila('Selección incluida', preview.selection_included ? 'sí' : 'no');
+    fila('Provider', preview.provider || '(not configured)');
+    fila('Model', preview.model || '(not configured)');
+    fila('Scope', preview.scope);
+    fila('Level', preview.level);
+    fila('Selection included', preview.selection_included ? 'yes' : 'no');
     if (preview.selection) {
-      fila('Selección', preview.selection.path + ' · líneas ' +
+      fila('Selection', preview.selection.path + ' · lines ' +
         preview.selection.start_line + '-' + preview.selection.end_line +
         (preview.selection.symbol ? ' · ' + preview.selection.symbol : ''));
     }
-    fila('Archivos incluidos', String((preview.files || []).length));
+    fila('Files included', String((preview.files || []).length));
     (preview.files || []).forEach(function (archivo) {
-      fila('· ' + archivo.path, archivo.chars + ' caracteres' + (archivo.truncated ? ' (truncado)' : ''));
+      fila('· ' + archivo.path, archivo.chars + ' characters' + (archivo.truncated ? ' (truncated)' : ''));
     });
-    if (preview.diagnostics) { fila('Diagnósticos del editor', String(preview.diagnostics)); }
-    if (preview.references) { fila('Otras apariciones del símbolo', String(preview.references)); }
-    if (preview.changed_files) { fila('Archivos modificados (git)', String(preview.changed_files)); }
+    if (preview.diagnostics) { fila('Editor diagnostics', String(preview.diagnostics)); }
+    if (preview.references) { fila('Other occurrences of the symbol', String(preview.references)); }
+    if (preview.changed_files) { fila('Modified files (git)', String(preview.changed_files)); }
     var fuentes = preview.sources || {};
     Object.keys(fuentes).forEach(function (clave) {
-      fila('  fuente · ' + clave, fuentes[clave]);
+      fila('  source · ' + clave, fuentes[clave]);
     });
-    fila('Tamaño aproximado', preview.approximate_chars + ' caracteres');
-    fila('Secretos excluidos', preview.secrets_excluded ? 'sí (.env, credenciales, .git)' : 'no');
+    fila('Approximate size', preview.approximate_chars + ' characters');
+    fila('Secrets excluded', preview.secrets_excluded ? 'yes (.env, credentials, .git)' : 'no');
     cuerpo.appendChild(lista);
     (preview.notes || []).forEach(function (nota) {
       cuerpo.appendChild(crear('p', 'ares-explica-nota', nota));
@@ -253,14 +253,14 @@
 
     function revelar(intentos) {
       c.navigate(ref.file, ref.start_line, 1).then(function (ok) {
-        if (ok) { setEstado('Abierto ' + ref.file + ':' + ref.start_line + '.'); return; }
+        if (ok) { setEstado('Opened ' + ref.file + ':' + ref.start_line + '.'); return; }
         if (intentos <= 0) {
-          setEstado('No se pudo abrir ' + ref.file + '.', true);
+          setEstado('Could not open ' + ref.file + '.', true);
           return;
         }
         root.setTimeout(function () { revelar(intentos - 1); }, 150);
       }).catch(function () {
-        setEstado('No se pudo abrir ' + ref.file + '.', true);
+        setEstado('Could not open ' + ref.file + '.', true);
       });
     }
 
@@ -272,7 +272,7 @@
   function seccionReferencias(referencias) {
     if (!referencias || !referencias.length) { return null; }
     var bloque = crear('div', 'ares-explica-bloque');
-    bloque.appendChild(crear('h4', null, 'Referencias al código'));
+    bloque.appendChild(crear('h4', null, 'Code references'));
     var lista = crear('ul', 'ares-explica-refs');
     referencias.forEach(function (ref) {
       var li = crear('li');
@@ -281,7 +281,7 @@
         (ref.symbol ? ' · ' + ref.symbol : '');
       var boton = crear('button', 'ares-explica-ir', etiqueta);
       boton.type = 'button';
-      boton.title = 'Abrir ' + ref.file + ' en la línea ' + ref.start_line;
+      boton.title = 'Open ' + ref.file + ' at line ' + ref.start_line;
       boton.addEventListener('click', function () { irAReferencia(ref); });
       li.appendChild(boton);
       if (ref.claim) { li.appendChild(crear('span', 'ares-explica-claim', ref.claim)); }
@@ -294,13 +294,13 @@
   function seccionInferencias(inferencias) {
     if (!inferencias || !inferencias.length) { return null; }
     var bloque = crear('div', 'ares-explica-bloque ares-explica-inferencias');
-    bloque.appendChild(crear('h4', null, 'Inferencias (no confirmadas)'));
+    bloque.appendChild(crear('h4', null, 'Inferences (not confirmed)'));
     bloque.appendChild(crear('p', 'ares-explica-nota',
-      'Lo siguiente es interpretación a partir de lo observado, no un hecho verificado.'));
+      'The following is interpretation from what was observed, not verified fact.'));
     var lista = crear('ul');
     inferencias.forEach(function (inferencia) {
       var li = crear('li');
-      li.appendChild(crear('span', 'ares-explica-confianza', 'confianza: ' + inferencia.confidence));
+      li.appendChild(crear('span', 'ares-explica-confianza', 'confidence: ' + inferencia.confidence));
       li.appendChild(crear('span', 'ares-explica-inferencia-texto', inferencia.text));
       if (inferencia.evidence && inferencia.evidence.length) {
         var pruebas = crear('ul', 'ares-explica-evidencia');
@@ -321,22 +321,22 @@
 
     var cuerpo = crear('div', 'ares-explica-cuerpo');
     cajaResultado.appendChild(cabeceraPlegable(
-      cajaResultado, datos.demo ? 'Explicación (demostración)' : 'Explicación', cuerpo));
+      cajaResultado, datos.demo ? 'Explanation (demo)' : 'Explanation', cuerpo));
     cajaResultado.appendChild(cuerpo);
 
     if (datos.demo) {
       cuerpo.appendChild(crear('p', 'ares-explica-demo',
-        'PLANTILLA DE DEMOSTRACIÓN — no es un análisis de tu código.'));
+        'DEMONSTRATION TEMPLATE — not an analysis of your code.'));
     }
 
     [
-      seccionTexto('Resumen', explicacion.summary),
-      seccionTexto('Propósito', explicacion.purpose),
-      seccionLista('Flujo', explicacion.flow),
-      seccionLista('Entradas', explicacion.inputs),
-      seccionLista('Salidas', explicacion.outputs),
-      seccionLista('Dependencias', explicacion.dependencies),
-      seccionLista('Riesgos', explicacion.risks),
+      seccionTexto('Summary', explicacion.summary),
+      seccionTexto('Purpose', explicacion.purpose),
+      seccionLista('Flow', explicacion.flow),
+      seccionLista('Inputs', explicacion.inputs),
+      seccionLista('Outputs', explicacion.outputs),
+      seccionLista('Dependencies', explicacion.dependencies),
+      seccionLista('Risks', explicacion.risks),
       seccionReferencias(explicacion.references),
       seccionInferencias(explicacion.inferences)
     ].forEach(function (bloque) {
@@ -346,13 +346,13 @@
     // Acción separada y explícita: SÓLO copia un resumen al cuadro de
     // A.R.E.S. No ejecuta, no edita y no crea propuesta.
     var acciones = crear('div', 'ares-explica-actions');
-    var usar = crear('button', null, 'Usar explicación para crear tarea');
+    var usar = crear('button', null, 'Use explanation to create a task');
     usar.type = 'button';
     usar.addEventListener('click', usarParaTarea);
     acciones.appendChild(usar);
     // Cerrar el resultado Y el contexto de una vez: es lo que se quiere
     // cuando terminas de leer y vuelves a escribir código.
-    var ocultar = crear('button', null, 'Ocultar todo');
+    var ocultar = crear('button', null, 'Hide all');
     ocultar.type = 'button';
     ocultar.addEventListener('click', function () {
       cajaResultado.hidden = true;
@@ -369,11 +369,11 @@
     var partes = [];
     if (ultimaExplicacion.summary) { partes.push(ultimaExplicacion.summary); }
     if (ultimaExplicacion.risks && ultimaExplicacion.risks.length) {
-      partes.push('Riesgos señalados: ' + ultimaExplicacion.risks.join('; '));
+      partes.push('Risks reported: ' + ultimaExplicacion.risks.join('; '));
     }
     caja.value = partes.join('\n\n');
     caja.focus();
-    setEstado('Resumen copiado al cuadro de A.R.E.S. No se ejecutó ni editó nada.');
+    setEstado('Summary copied to the A.R.E.S. box. Nothing was run or edited.');
   }
 
   // ---- Flujo ----
@@ -392,26 +392,26 @@
       cuerpo.selection = seleccion.selection;
       cuerpo.start_line = seleccion.start_line;
       cuerpo.end_line = seleccion.end_line;
-      if (!cuerpo.path) { setEstado('Abre un archivo antes de explicar la selección.', true); return; }
+      if (!cuerpo.path) { setEstado('Open a file before explaining a selection.', true); return; }
       cuerpo.diagnostics = diagnosticosActivos(cuerpo.path);
     } else if (scope === 'file') {
       cuerpo.path = rutaActiva();
-      if (!cuerpo.path) { setEstado('Abre un archivo antes de explicarlo.', true); return; }
+      if (!cuerpo.path) { setEstado('Open a file before explaining it.', true); return; }
       cuerpo.diagnostics = diagnosticosActivos(cuerpo.path);
     }
 
     ocupado = true;
-    setEstado('Preparando contexto…');
+    setEstado('Preparing context…');
     cajaResultado.hidden = true;
 
     // Preview SIEMPRE primero: el usuario ve qué se envía antes de enviarlo.
     pedir(API + '/preview', cuerpo).then(function (preview) {
       pintarPreview(preview);
-      setEstado(cuerpo.offline ? 'Generando demostración…' : 'Consultando a A.R.E.S…');
+      setEstado(cuerpo.offline ? 'Generating demo…' : 'Asking A.R.E.S…');
       return pedir(API, cuerpo);
     }).then(function (datos) {
       pintarResultado(datos);
-      setEstado(datos.demo ? 'Demostración generada (no es tu código).' : 'Explicación lista.');
+      setEstado(datos.demo ? 'Demo generated (not your code).' : 'Explanation ready.');
     }).catch(function (error) {
       setEstado(error.message, true);
     }).then(function () {

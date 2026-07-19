@@ -354,7 +354,7 @@ var trozosAudio = [];
 
 function iniciarGrabacion() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    esc('ERROR: este navegador no soporta grabación de audio');
+    esc('ERROR: this browser does not support audio recording');
     return;
   }
   navigator.mediaDevices.getUserMedia({ audio: true })
@@ -560,7 +560,7 @@ function subirAdjunto(archivo, nombreForzado) {
     .then(function(d) {
       adjuntoPendiente = d;
       mostrarChipAdjunto(d.nombre);
-      chatInput.placeholder = 'Pregunta algo sobre el adjunto, o dale enviar así nomás…';
+      chatInput.placeholder = 'Ask something about the attachment, or just hit send…';
       chatInput.focus();
     })
     .catch(function(err) {
@@ -678,7 +678,7 @@ function agregarMensaje(texto, quien, esConfirmacion) {
 
 function hablarConVozDelNavegador(texto) {
   if (!window.speechSynthesis) {
-    esc('ERROR: tampoco hay síntesis de voz nativa en este navegador.');
+    esc('ERROR: this browser has no native speech synthesis either.');
     return;
   }
   try {
@@ -754,7 +754,7 @@ function enviarMensaje() {
       // (Codex, todavía stub) o Gemini tronó, result.message trae el
       // detalle en vez de un texto de respuesta real.
       var respuestaOrquestador = (d.result && (d.result.text || d.result.message))
-        || 'ERROR: el orquestador no regresó una respuesta utilizable.';
+        || 'ERROR: the orchestrator returned no usable response.';
 
       var textoRespuesta = respuestaOrquestador;
 
@@ -948,7 +948,7 @@ function crearPantallaBloqueo() {
   input.type = 'password';
   input.className = 'chat-input';
   input.style.cssText = 'max-width:260px;text-align:center;';
-  input.placeholder = 'Contraseña';
+  input.placeholder = 'Password';
 
   var boton = document.createElement('button');
   boton.className = 'chat-enviar';
@@ -971,7 +971,7 @@ function crearPantallaBloqueo() {
           esc('DESBLOQUEO CORRECTO');
           ocultarPantallaBloqueo();
         } else {
-          error.textContent = 'Contraseña incorrecta';
+          error.textContent = 'Incorrect password';
           input.value = '';
           input.focus();
         }
@@ -1485,20 +1485,20 @@ var toastGestoTimeoutId = null;
 // scroll_*, modo_mouse_*) ya se explican solos en el toast con su
 // nombre, no necesitan descripción aparte.
 var DESCRIPCION_GESTO = {
-  mano_abierta: 'activa el micrófono',
-  'puño': 'detiene el micrófono',
-  pulgar_arriba: 'sube el volumen',
-  pulgar_abajo: 'baja el volumen',
-  swipe: 'expande/contrae el panel',
-  wave: 'bloqueo de emergencia',
-  modo_mouse_activado: 'modo mouse activado',
-  modo_mouse_salir: 'modo mouse desactivado',
-  shaka: 'analizando tu pantalla con Gemini Vision…',
+  mano_abierta: 'turns the microphone on',
+  'puño': 'turns the microphone off',
+  pulgar_arriba: 'volume up',
+  pulgar_abajo: 'volume down',
+  swipe: 'expands / collapses the panel',
+  wave: 'emergency lock',
+  modo_mouse_activado: 'mouse mode on',
+  modo_mouse_salir: 'mouse mode off',
+  shaka: 'analysing your screen with Gemini Vision…',
   rock: 'play / pause',
-  tres_dedos: 'siguiente pestaña',
-  pinch: 'silencia / activa el audio',
-  toggle_dia_noche: 'cambia el modo día/noche',
-  activar_mic: 'activa el micrófono'
+  tres_dedos: 'next tab',
+  pinch: 'mutes / unmutes audio',
+  toggle_dia_noche: 'toggles day / night mode',
+  activar_mic: 'turns the microphone on'
 };
 
 function mostrarToastGesto(nombre) {
@@ -2845,7 +2845,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     aplicarVistaConfig();
     cargando = true;
     cuerpo.setAttribute('aria-busy', 'true');
-    estadoEl.textContent = 'Cargando configuración...';
+    estadoEl.textContent = 'Loading configuration...';
     actualizarBotonGuardar();
 
     var providersRequest = solicitarJSON('/config/providers')
@@ -2896,11 +2896,11 @@ function toggleAgente(agentId, estabaHabilitado) {
           estadoEl.textContent = providerResult.ok ? '' : 'AI provider catalog unavailable.';
         } catch (_errorConfiguracion) {
           configuracionLista = false;
-          estadoEl.textContent = 'No se pudo cargar la configuración local.';
+          estadoEl.textContent = 'Could not load the local configuration.';
         }
       } else {
         configuracionLista = false;
-        estadoEl.textContent = 'No se pudo cargar la configuración local.';
+        estadoEl.textContent = 'Could not load the local configuration.';
       }
 
       cargando = false;
@@ -2989,7 +2989,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     var aiError = $('#configAiRolesError');
     aiError.textContent = mensaje;
     aiError.classList.add('activo');
-    estadoEl.textContent = 'Revisa la configuración de AI Roles.';
+    estadoEl.textContent = 'Check the AI Roles configuration.';
   }
 
   // Poll health until the existing restart flow brings the backend back.
@@ -3014,7 +3014,7 @@ function toggleAgente(agentId, estabaHabilitado) {
       if (intentos >= MAX_INTENTOS) {
         clearInterval(intervalo);
         guardando = false;
-        estadoEl.textContent = 'ERROR: el backend no volvió a responder tras ' + MAX_INTENTOS + 's. Revisa el log.';
+        estadoEl.textContent = 'ERROR: the backend did not respond again after ' + MAX_INTENTOS + 's. Revisa el log.';
         actualizarBotonGuardar();
       }
     }, 1000);
@@ -3031,7 +3031,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     }
 
     guardando = true;
-    estadoEl.textContent = 'Guardando...';
+    estadoEl.textContent = 'Saving...';
     actualizarBotonGuardar();
 
     fetch('/config/keys', {
@@ -3053,7 +3053,7 @@ function toggleAgente(agentId, estabaHabilitado) {
         if (error.validation) {
           mostrarErrorValidacion(error.validation);
         } else {
-          estadoEl.textContent = 'No se pudo guardar la configuración. Intenta de nuevo.';
+          estadoEl.textContent = 'Could not save the configuration. Try again.';
         }
         actualizarBotonGuardar();
       });

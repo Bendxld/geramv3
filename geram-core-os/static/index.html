@@ -555,28 +555,28 @@
           <p id="workspaceAresStatus" class="workspace-ares-status" role="status" aria-live="polite"></p>
         </section>
 
-        <!-- Explicaciones de código: SÓLO LECTURA. Deliberadamente separado
+        <!-- Code explanations: READ-ONLY. Deliberately separate
              del bloque de propuestas de arriba: este flujo no genera diffs ni
              tiene ruta de aplicación. -->
         <section class="ares-explica" aria-labelledby="aresExplicaTitulo">
-          <h3 id="aresExplicaTitulo">A.R.E.S. · EXPLICAR CÓDIGO</h3>
-          <p class="ares-explica-nota">Sólo lectura: analiza y explica. No modifica archivos ni ejecuta nada.</p>
+          <h3 id="aresExplicaTitulo">A.R.E.S. · EXPLAIN CODE</h3>
+          <p class="ares-explica-nota">Read-only: it analyses and explains. It never modifies files or runs anything.</p>
           <div class="ares-explica-actions">
-            <button id="aresExplicaSeleccion" type="button">Explicar selección</button>
-            <button id="aresExplicaArchivo" type="button">Explicar archivo</button>
-            <button id="aresExplicaProyecto" type="button">Explicar proyecto</button>
+            <button id="aresExplicaSeleccion" type="button">Explain selection</button>
+            <button id="aresExplicaArchivo" type="button">Explain file</button>
+            <button id="aresExplicaProyecto" type="button">Explain project</button>
           </div>
           <div class="ares-explica-fila">
-            <label for="aresExplicaNivel">Nivel</label>
+            <label for="aresExplicaNivel">Level</label>
             <select id="aresExplicaNivel">
               <option value="simple">Simple</option>
-              <option value="technical" selected>Técnica</option>
-              <option value="step_by_step">Paso a paso</option>
-              <option value="risks">Riesgos</option>
-              <option value="architecture">Arquitectura</option>
+              <option value="technical" selected>Technical</option>
+              <option value="step_by_step">Step by step</option>
+              <option value="risks">Risks</option>
+              <option value="architecture">Architecture</option>
             </select>
             <label class="ares-explica-offline">
-              <input type="checkbox" id="aresExplicaOffline"> Modo demostración (sin proveedor)
+              <input type="checkbox" id="aresExplicaOffline"> Demo mode (no provider)
             </label>
           </div>
           <div id="aresExplicaPreview" class="ares-explica-preview" hidden></div>

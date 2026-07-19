@@ -21,7 +21,7 @@
     var branch = status && status.branch ? status.branch : null;
     var nameEl = $('statusbarBranchName');
     var branchEl = $('statusbarBranch');
-    if (nameEl) { nameEl.textContent = branch || 'sin git'; }
+    if (nameEl) { nameEl.textContent = branch || 'no git'; }
     if (branchEl) { branchEl.classList.toggle('sin-git', !branch); }
 
     var wsEl = $('statusbarWorkspace');
