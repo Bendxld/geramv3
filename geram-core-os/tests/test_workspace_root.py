@@ -191,6 +191,77 @@ class WorkspaceRootApiTests(unittest.TestCase):
         self.assertTrue(body["usable"])
 
 
+class NativeFolderDialogTests(unittest.TestCase):
+    """El selector de carpetas del escritorio (zenity/kdialog/Explorer/Finder)."""
+
+    def setUp(self):
+        import tempfile
+
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.project = Path(self.temporary.name) / "elegida"
+        self.project.mkdir()
+
+    def _run_returns(self, stdout=b"", returncode=0):
+        return mock.patch.object(
+            workspace_root_store.subprocess,
+            "run",
+            return_value=mock.Mock(stdout=stdout, returncode=returncode),
+        )
+
+    def test_chosen_folder_is_validated_like_any_other(self):
+        with self._run_returns(stdout=str(self.project).encode() + b"\n"):
+            self.assertEqual(
+                workspace_root_store.pick_with_native_dialog(), self.project.resolve()
+            )
+
+    def test_cancelling_the_dialog_is_not_an_error(self):
+        # zenity y kdialog salen con código != 0 cuando se cancela.
+        with self._run_returns(stdout=b"", returncode=1):
+            self.assertIsNone(workspace_root_store.pick_with_native_dialog())
+
+    def test_a_dangerous_folder_chosen_by_hand_is_still_refused(self):
+        with self._run_returns(stdout=str(Path.home()).encode()):
+            with self.assertRaises(workspace_root_store.WorkspaceRootError):
+                workspace_root_store.pick_with_native_dialog()
+
+    def test_multi_selection_output_takes_the_first_path(self):
+        payload = (str(self.project) + "|" + str(Path.home())).encode()
+        with self._run_returns(stdout=payload):
+            self.assertEqual(
+                workspace_root_store.pick_with_native_dialog(), self.project.resolve()
+            )
+
+    def test_a_dialog_left_open_forever_times_out_instead_of_hanging(self):
+        import subprocess as sp
+
+        with mock.patch.object(
+            workspace_root_store.subprocess,
+            "run",
+            side_effect=sp.TimeoutExpired(cmd="zenity", timeout=1),
+        ):
+            with self.assertRaises(workspace_root_store.WorkspaceRootError) as caught:
+                workspace_root_store.pick_with_native_dialog()
+        self.assertEqual(caught.exception.code, "native_dialog_timeout")
+
+    def test_headless_linux_reports_unavailable_so_the_ui_can_fall_back(self):
+        with mock.patch.object(workspace_root_store.sys, "platform", "linux"):
+            with mock.patch.dict(
+                workspace_root_store.os.environ,
+                {"DISPLAY": "", "WAYLAND_DISPLAY": ""},
+                clear=False,
+            ):
+                self.assertFalse(workspace_root_store.native_dialog_available())
+                with self.assertRaises(workspace_root_store.WorkspaceRootError) as caught:
+                    workspace_root_store.pick_with_native_dialog()
+        self.assertEqual(caught.exception.code, "native_dialog_unavailable")
+
+    def test_the_command_never_goes_through_a_shell(self):
+        command = workspace_root_store._native_dialog_command(Path.home())
+        self.assertIsInstance(command, list)
+        self.assertTrue(all(isinstance(part, str) for part in command))
+
+
 class OpenFolderFrontendTests(unittest.TestCase):
     """El selector se carga, no inyecta HTML y está enganchado al menú."""
 
@@ -211,6 +282,17 @@ class OpenFolderFrontendTests(unittest.TestCase):
         for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
             self.assertNotIn(sink, self.source)
         self.assertIn("textContent", self.source)
+
+    def test_open_tries_the_system_dialog_first_and_falls_back_to_browsing(self):
+        # Lo que el usuario espera al pulsar "Open Folder…" es el selector del
+        # escritorio; el navegador propio sólo aparece si aquél no existe.
+        self.assertIn("/native", self.source)
+        self.assertIn("/pick", self.source)
+        self.assertIn("open: abrirSelector", self.source)
+        self.assertIn("browse: mostrar", self.source)
+
+    def test_cancelling_the_system_dialog_does_not_open_the_fallback(self):
+        self.assertIn("if (datos && datos.cancelled) { return true; }", self.source)
 
     def test_menu_exposes_open_folder_and_keeps_the_explorer_toggle(self):
         chrome = CHROME_JS.read_text(encoding="utf-8")

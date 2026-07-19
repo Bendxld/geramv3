@@ -38,6 +38,40 @@ async def current_root():
     return {"path": str(settings.WORKSPACE_ROOT)}
 
 
+@router.get("/native")
+async def native_dialog_status():
+    """Le dice a la interfaz si puede ofrecer el diálogo del sistema."""
+    return {"available": workspace_root_store.native_dialog_available()}
+
+
+# Síncrono a propósito: FastAPI lo ejecuta en el threadpool, así que el
+# diálogo (que puede quedarse abierto minutos) no bloquea el event loop.
+@router.post("/pick", dependencies=[Depends(require_local_origin)])
+def pick_with_native_dialog():
+    try:
+        chosen = workspace_root_store.pick_with_native_dialog(settings.WORKSPACE_ROOT)
+    except workspace_root_store.WorkspaceRootError as error:
+        status = 503 if error.code.startswith("native_dialog") else 422
+        raise HTTPException(
+            status_code=status,
+            detail={"code": error.code, "message": str(error)},
+        ) from None
+    if chosen is None:
+        return {"cancelled": True}
+    try:
+        workspace_root_store.save(chosen)
+    except OSError:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "workspace_root_unavailable",
+                "message": "The folder choice could not be saved",
+            },
+        ) from None
+    workspace_root_store.apply(chosen)
+    return {"cancelled": False, "path": str(chosen)}
+
+
 @router.get("/browse")
 async def browse(path: str | None = Query(default=None, max_length=4096)):
     try:

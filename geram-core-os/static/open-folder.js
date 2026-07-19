@@ -151,6 +151,17 @@
     caja.appendChild(noteElement);
 
     var pie = crear('div', 'of-pie');
+    var nativo = crear('button', 'of-btn of-nativo', 'System dialog…');
+    nativo.type = 'button';
+    nativo.title = 'Open your desktop file manager to pick a folder';
+    nativo.addEventListener('click', function () {
+      elegirConDialogoDelSistema().then(function (resuelto) {
+        if (resuelto) { cerrar(); }
+      }).catch(function (error) {
+        noteElement.textContent = error.message || 'The system dialog is not available here';
+      });
+    });
+    pie.appendChild(nativo);
     var cancelar = crear('button', 'of-btn', 'Cancel');
     cancelar.type = 'button';
     cancelar.addEventListener('click', cerrar);
@@ -175,6 +186,43 @@
     documentObject.removeEventListener('keydown', alPulsarTecla);
   }
 
+  // ---- Aplicar una carpeta ya elegida (por el diálogo nativo) ----
+  function aplicarCarpeta(ruta) {
+    avisar('Workspace: ' + ruta);
+    var controlador = root.GeramWorkspaceController;
+    if (controlador && typeof controlador.reloadTree === 'function') {
+      controlador.reloadTree();
+      if (typeof controlador.refreshState === 'function') { controlador.refreshState(); }
+    } else {
+      root.location.reload();
+    }
+  }
+
+  // ---- Diálogo nativo del sistema (Thunar/Explorer/Finder) ----
+  // Es lo que espera cualquiera: el selector de carpetas del escritorio. Si
+  // el backend no puede abrirlo (sin entorno gráfico, sin zenity/kdialog),
+  // caemos al navegador de carpetas propio en lugar de dejar al usuario sin
+  // salida.
+  function elegirConDialogoDelSistema() {
+    return pedir(API + '/pick', { method: 'POST' }).then(function (datos) {
+      if (datos && datos.cancelled) { return true; }  // canceló: no abrimos nada más
+      if (datos && datos.path) { aplicarCarpeta(datos.path); return true; }
+      return false;
+    });
+  }
+
+  function abrirSelector() {
+    pedir(API + '/native').then(function (estado) {
+      if (!estado || !estado.available) { mostrar(); return; }
+      elegirConDialogoDelSistema().then(function (resuelto) {
+        if (!resuelto) { mostrar(); }
+      }).catch(function () {
+        // El diálogo del sistema falló en caliente: navegador propio.
+        mostrar();
+      });
+    }).catch(function () { mostrar(); });
+  }
+
   function mostrar() {
     construir();
     overlay.hidden = false;
@@ -186,5 +234,9 @@
     }).catch(function () { return navegar(''); });
   }
 
-  root.GeramOpenFolder = { open: mostrar, close: cerrar };
+  root.GeramOpenFolder = {
+    open: abrirSelector,      // intenta el diálogo del sistema primero
+    browse: mostrar,          // navegador de carpetas propio (respaldo)
+    close: cerrar
+  };
 }(typeof window !== 'undefined' ? window : null));

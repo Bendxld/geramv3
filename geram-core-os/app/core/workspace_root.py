@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 from pathlib import Path
@@ -125,6 +128,88 @@ def apply(path: Path) -> Path:
         settings.WORKSPACE_ROOT = path
         workspace_service.root = path
         return path
+
+
+# ------------------------------------------------------------------
+# Diálogo nativo del sistema ("elegir carpeta" del escritorio).
+#
+# Se lanza desde el backend y no desde Electron a propósito: la ventana de
+# Electron corre con sandbox y contextIsolation y sin preload, y abrirle un
+# puente IPC sólo para esto debilitaría esa superficie. Además así también
+# funciona cuando GERAM se usa desde el navegador.
+#
+# Nunca se pasa por shell: argv fijo y la ruta elegida se valida igual que
+# cualquier otra. Si no hay entorno gráfico o herramienta, se informa y la
+# interfaz cae al navegador de carpetas propio.
+# ------------------------------------------------------------------
+NATIVE_DIALOG_TIMEOUT_SECONDS = 300
+
+
+def _native_dialog_command(start_at: Path) -> list[str] | None:
+    if sys.platform == "win32":
+        powershell = shutil.which("powershell") or shutil.which("pwsh")
+        if not powershell:
+            return None
+        script = (
+            "Add-Type -AssemblyName System.Windows.Forms;"
+            "$d = New-Object System.Windows.Forms.FolderBrowserDialog;"
+            "if ($d.ShowDialog() -eq 'OK') { Write-Output $d.SelectedPath }"
+        )
+        return [powershell, "-NoProfile", "-NonInteractive", "-Command", script]
+    if sys.platform == "darwin":
+        osascript = shutil.which("osascript")
+        if not osascript:
+            return None
+        return [osascript, "-e", 'POSIX path of (choose folder with prompt "Open folder")']
+    # Linux: zenity (GTK/XFCE) y kdialog (KDE) cubren prácticamente todo.
+    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
+        return None
+    zenity = shutil.which("zenity")
+    if zenity:
+        return [
+            zenity, "--file-selection", "--directory",
+            "--title=Open folder", f"--filename={start_at}/",
+        ]
+    kdialog = shutil.which("kdialog")
+    if kdialog:
+        return [kdialog, "--getexistingdirectory", str(start_at)]
+    return None
+
+
+def native_dialog_available() -> bool:
+    return _native_dialog_command(Path.home()) is not None
+
+
+def pick_with_native_dialog(start_at: Path | None = None) -> Path | None:
+    """Abre el selector de carpetas del escritorio. None si se cancela."""
+    command = _native_dialog_command(start_at or Path.home())
+    if command is None:
+        raise WorkspaceRootError(
+            "native_dialog_unavailable",
+            "The system folder dialog is not available here",
+        )
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            check=False,
+            timeout=NATIVE_DIALOG_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        raise WorkspaceRootError(
+            "native_dialog_timeout", "The folder dialog was left open too long"
+        ) from None
+    except OSError:
+        raise WorkspaceRootError(
+            "native_dialog_unavailable",
+            "The system folder dialog could not be opened",
+        ) from None
+    chosen = result.stdout.decode("utf-8", "replace").strip()
+    if result.returncode != 0 or not chosen:
+        return None  # el usuario canceló
+    # zenity puede devolver varias rutas separadas por '|' si el diálogo se
+    # configuró en multi-selección; nos quedamos con la primera.
+    return validate_candidate(chosen.split("|", 1)[0].strip())
 
 
 def browse(raw_path: str | None) -> dict:

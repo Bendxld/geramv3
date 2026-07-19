@@ -2499,7 +2499,10 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
 .of-vacio { font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); padding: 8px 10px; margin: 0; }
 .of-nota { min-height: 15px; padding: 0 18px; margin: 6px 0 0; font-family: var(--f-mono);
   font-size: 10px; color: var(--texto-dim); overflow-wrap: anywhere; }
+/* El botón del diálogo del sistema va a la izquierda (vía principal);
+   Cancel y Open quedan juntos a la derecha como acciones de cierre. */
 .of-pie { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px 16px; }
+.of-nativo { margin-right: auto; }
 .of-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--linea-suave);
   background: transparent; color: var(--texto-dim); cursor: pointer;
   font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.6px; }
