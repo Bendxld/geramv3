@@ -1,0 +1,161 @@
+name: Test and build GERAM releases
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: geram-core-os
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: geram-core-os/electron/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y bubblewrap poppler-utils
+      - run: python -m venv venv && ./venv/bin/pip install -r requirements.txt
+      - run: npm ci
+        working-directory: geram-core-os/electron
+      - run: ./venv/bin/python -m unittest discover -s tests -p 'test_*.py' -q
+      - run: node --test electron/test/*.test.js
+
+  payload:
+    needs: test-linux
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: geram-core-os
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: geram-core-os/electron/package-lock.json
+      - run: npm ci
+        working-directory: geram-core-os/electron
+      - run: python scripts/prepare_release_payload.py --download-wheels
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-payload
+          path: geram-core-os/build/backend-payload
+          if-no-files-found: error
+
+  build-linux:
+    needs: payload
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: geram-core-os
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: geram-core-os/electron/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-payload
+          path: geram-core-os/build/backend-payload
+      - run: npm ci
+        working-directory: geram-core-os/electron
+      - run: npm run dist:linux
+        working-directory: geram-core-os/electron
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            geram-core-os/dist/*.AppImage
+            geram-core-os/dist/*.deb
+          if-no-files-found: error
+
+  build-windows:
+    needs: payload
+    runs-on: windows-2025
+    defaults:
+      run:
+        working-directory: geram-core-os
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: geram-core-os/electron/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-payload
+          path: geram-core-os/build/backend-payload
+      - run: npm ci
+        working-directory: geram-core-os/electron
+      - run: npm run dist:windows
+        working-directory: geram-core-os/electron
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: geram-core-os/dist/*.exe
+          if-no-files-found: error
+
+  sign-and-release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-installer*'
+          path: geram-core-os/dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-installers
+          path: geram-core-os/dist
+      - name: Import release signing key
+        if: ${{ secrets.GERAM_GPG_PRIVATE_KEY != '' }}
+        working-directory: geram-core-os
+        env:
+          GERAM_GPG_PRIVATE_KEY: ${{ secrets.GERAM_GPG_PRIVATE_KEY }}
+        run: echo "$GERAM_GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
+      - name: Create checksums
+        working-directory: geram-core-os
+        run: python3 scripts/release_artifacts.py dist
+      - name: Sign checksums
+        if: ${{ secrets.GERAM_GPG_PRIVATE_KEY != '' }}
+        working-directory: geram-core-os
+        run: python3 scripts/release_artifacts.py dist --sign
+      - name: Verify release manifest
+        working-directory: geram-core-os
+        run: python3 scripts/release_artifacts.py dist --verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-release
+          path: geram-core-os/dist/*
+          if-no-files-found: error
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: geram-core-os
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --generate-notes --verify-tag
