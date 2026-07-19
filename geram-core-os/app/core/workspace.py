@@ -910,6 +910,60 @@ class WorkspaceService:
                 pass
         return {"path": resolved.relative, "version": self._version(encoded)}
 
+    def create_binary_file(self, raw_path: str, data: bytes, max_bytes: int) -> dict[str, object]:
+        """Crea un archivo NUEVO con contenido binario (subidas del explorador).
+
+        Gemelo de create_file para datos que no son texto: comparte
+        resolve_path (symlinks por componente, fuera de root, rutas excluidas
+        y protegidas) y el mismo O_CREAT|O_EXCL|O_NOFOLLOW, así que tampoco
+        sigue enlaces ni pisa nada existente. Sólo cambia que no se codifica
+        a UTF-8 y que el límite de tamaño lo pone quien llama: subir un PNG
+        de 4 MB es legítimo aunque el editor no pueda abrirlo.
+        """
+        if not isinstance(data, (bytes, bytearray)):
+            raise _public_error("invalid_request", "The upload request is invalid", 422)
+        data = bytes(data)
+        if len(data) > max_bytes:
+            raise _public_error("file_too_large", "The file exceeds the upload limit", 413)
+        resolved = self.resolve_path(raw_path)
+        abs_path = self._abs_path(resolved)
+        try:
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise _public_error("upload_failed", "The file could not be created", 500) from None
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        for optional in ("O_CLOEXEC", "O_NOFOLLOW", "O_BINARY"):
+            if hasattr(os, optional):
+                flags |= getattr(os, optional)
+        try:
+            descriptor = os.open(str(abs_path), flags, 0o600)
+        except FileExistsError:
+            raise _public_error("file_exists", "A file already exists at that path", 409) from None
+        except OSError:
+            raise _public_error("upload_failed", "The file could not be created", 500) from None
+        try:
+            self._write_all(descriptor, data)
+            os.fsync(descriptor)
+        except OSError:
+            try:
+                os.unlink(str(abs_path))
+            except OSError:
+                pass
+            raise _public_error("upload_failed", "The file could not be created", 500) from None
+        finally:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+        # Mismo criterio que _tree_file_editable: extensión binaria conocida,
+        # tamaño por encima del límite de edición, o bytes nulos -> no editable.
+        editable = (
+            Path(resolved.parts[-1]).suffix.casefold() not in BINARY_FILE_SUFFIXES
+            and len(data) <= self.max_file_bytes
+            and b"\x00" not in data[:TREE_SAMPLE_BYTES]
+        )
+        return {"path": resolved.relative, "size": len(data), "editable": editable}
+
     # ------------------------------------------------------------------ #
     # Capa de acceso por RUTA — Windows / plataformas sin openat/dir_fd.
     #

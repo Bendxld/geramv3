@@ -2509,3 +2509,11 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
 .of-btn:hover:not(:disabled) { color: var(--texto); border-color: var(--principal-med); }
 .of-btn.principal { color: var(--principal-clr, var(--principal)); border-color: var(--principal-med); background: rgba(232,67,147,0.1); }
 .of-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Zona de arrastre del explorador: sólo se ilumina mientras hay archivos
+   del sistema encima, para distinguirlo de mover ficheros dentro del árbol. */
+.workspace-arbol.subiendo-encima {
+  outline: 1px dashed var(--principal-med);
+  outline-offset: -3px;
+  background: rgba(232,67,147,0.06);
+}

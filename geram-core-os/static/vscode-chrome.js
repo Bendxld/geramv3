@@ -116,6 +116,15 @@
       } },
       { label: 'Toggle Explorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
       { sep: true },
+      { label: 'Upload Files…', run: function () {
+        if (root.GeramWorkspaceUpload) { root.GeramWorkspaceUpload.files(); return; }
+        toast('Upload is not available.');
+      } },
+      { label: 'Upload Folder…', run: function () {
+        if (root.GeramWorkspaceUpload) { root.GeramWorkspaceUpload.folder(); return; }
+        toast('Upload is not available.');
+      } },
+      { sep: true },
       { label: 'Save', key: 'Ctrl+S', run: function () { clickIf('workspaceGuardar'); } },
       { label: 'Sign in with GitHub…', run: openGithub }
     ],

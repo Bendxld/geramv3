@@ -23,6 +23,7 @@ from app.api import orchestrator, agents, telemetry, config, workspace, ares_edi
 from app.api import source_control
 from app.api import testing
 from app.api import workspace_root
+from app.api import workspace_upload
 from app.core import workspace_root as workspace_root_store
 from app.core.user_config import CONFIG_PATH, load_config
 from app.websocket import hud_socket
@@ -173,6 +174,7 @@ app.include_router(python_lsp.router)
 app.include_router(workspace_navigation.router)
 app.include_router(workspace_operations.router)
 app.include_router(workspace_root.router)
+app.include_router(workspace_upload.router)
 app.include_router(source_control.router)
 app.include_router(testing.router)
 
