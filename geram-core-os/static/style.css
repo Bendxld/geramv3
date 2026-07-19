@@ -2517,3 +2517,49 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
   outline-offset: -3px;
   background: rgba(232,67,147,0.06);
 }
+
+/* ============================================================
+   A.R.E.S. · Explicar código (sólo lectura)
+   ============================================================ */
+.ares-explica { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--linea-suave); }
+.ares-explica h3 { font-family: var(--f-mono); font-size: 11px; letter-spacing: 1px; margin: 0 0 6px; }
+.ares-explica-nota { font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); margin: 0 0 10px; }
+.ares-explica-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.ares-explica-actions button { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--linea-suave);
+  background: transparent; color: var(--texto-dim); cursor: pointer; font-family: var(--f-mono); font-size: 10px; }
+.ares-explica-actions button:hover { color: var(--texto); border-color: var(--principal-med); }
+.ares-explica-fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); }
+.ares-explica-fila select { padding: 5px 8px; background: var(--contraste-suave); color: var(--texto);
+  border: 1px solid var(--linea-suave); border-radius: 7px; font-family: var(--f-mono); font-size: 10px; }
+.ares-explica-offline { display: flex; align-items: center; gap: 5px; }
+.ares-explica-preview, .ares-explica-resultado { border: 1px solid var(--linea-suave); border-radius: 9px;
+  padding: 10px 12px; margin-bottom: 10px; }
+.ares-explica-preview[hidden], .ares-explica-resultado[hidden] { display: none; }
+.ares-explica-preview h4, .ares-explica-bloque h4 { font-family: var(--f-mono); font-size: 10px;
+  letter-spacing: 0.6px; color: var(--principal-clr, var(--principal)); margin: 0 0 6px; }
+.ares-explica-preview-lista { list-style: none; margin: 0; padding: 0; font-family: var(--f-mono); font-size: 10px; }
+.ares-explica-preview-lista li { display: flex; gap: 8px; padding: 2px 0; }
+.ares-explica-clave { color: var(--texto-dim); min-width: 150px; }
+.ares-explica-valor { color: var(--texto); overflow-wrap: anywhere; }
+.ares-explica-bloque { margin-bottom: 12px; }
+.ares-explica-bloque p, .ares-explica-bloque li { font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
+.ares-explica-bloque ul { margin: 0; padding-left: 18px; }
+/* Botón de "ir a la ubicación": se ve como enlace pero es un button real. */
+.ares-explica-refs { list-style: none; padding: 0; }
+.ares-explica-refs li { margin-bottom: 6px; }
+.ares-explica-ir { display: inline-block; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid var(--linea-suave); background: transparent;
+  color: var(--principal-clr, var(--principal)); cursor: pointer;
+  font-family: var(--f-mono); font-size: 10px; }
+.ares-explica-ir:hover { border-color: var(--principal-med); }
+.ares-explica-claim { display: block; color: var(--texto-dim); font-size: 10px; margin-top: 3px; }
+/* Las inferencias van visualmente separadas: no son hechos verificados. */
+.ares-explica-inferencias { border-left: 2px solid var(--principal-med); padding-left: 10px; }
+.ares-explica-confianza { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 5px;
+  background: var(--contraste-suave); color: var(--texto-dim); font-family: var(--f-mono); font-size: 9px; }
+.ares-explica-evidencia { margin-top: 4px; color: var(--texto-dim); font-size: 10px; }
+.ares-explica-demo { padding: 6px 9px; border-radius: 7px; background: rgba(232,67,147,0.12);
+  color: var(--principal-clr, var(--principal)); font-family: var(--f-mono); font-size: 10px; margin: 0 0 10px; }
+.ares-explica-status { min-height: 14px; font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); margin: 4px 0 0; }
+.ares-explica-status.error { color: #ff6b8a; }

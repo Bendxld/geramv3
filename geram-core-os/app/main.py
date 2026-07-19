@@ -23,6 +23,7 @@ from app.api import orchestrator, agents, telemetry, config, workspace, ares_edi
 from app.api import source_control
 from app.api import testing
 from app.api import workspace_root
+from app.api import code_explanations
 from app.api import workspace_upload
 from app.core import workspace_root as workspace_root_store
 from app.core.user_config import CONFIG_PATH, load_config
@@ -169,6 +170,7 @@ app.include_router(workspace.router)
 
 # /api/ares/proposals -> bounded, reviewable existing-file edits
 app.include_router(ares_edits.router)
+app.include_router(code_explanations.router)
 app.include_router(terminal_watcher.router)
 app.include_router(python_lsp.router)
 app.include_router(workspace_navigation.router)

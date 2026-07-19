@@ -554,6 +554,35 @@
           </div>
           <p id="workspaceAresStatus" class="workspace-ares-status" role="status" aria-live="polite"></p>
         </section>
+
+        <!-- Explicaciones de código: SÓLO LECTURA. Deliberadamente separado
+             del bloque de propuestas de arriba: este flujo no genera diffs ni
+             tiene ruta de aplicación. -->
+        <section class="ares-explica" aria-labelledby="aresExplicaTitulo">
+          <h3 id="aresExplicaTitulo">A.R.E.S. · EXPLICAR CÓDIGO</h3>
+          <p class="ares-explica-nota">Sólo lectura: analiza y explica. No modifica archivos ni ejecuta nada.</p>
+          <div class="ares-explica-actions">
+            <button id="aresExplicaSeleccion" type="button">Explicar selección</button>
+            <button id="aresExplicaArchivo" type="button">Explicar archivo</button>
+            <button id="aresExplicaProyecto" type="button">Explicar proyecto</button>
+          </div>
+          <div class="ares-explica-fila">
+            <label for="aresExplicaNivel">Nivel</label>
+            <select id="aresExplicaNivel">
+              <option value="simple">Simple</option>
+              <option value="technical" selected>Técnica</option>
+              <option value="step_by_step">Paso a paso</option>
+              <option value="risks">Riesgos</option>
+              <option value="architecture">Arquitectura</option>
+            </select>
+            <label class="ares-explica-offline">
+              <input type="checkbox" id="aresExplicaOffline"> Modo demostración (sin proveedor)
+            </label>
+          </div>
+          <div id="aresExplicaPreview" class="ares-explica-preview" hidden></div>
+          <div id="aresExplicaResultado" class="ares-explica-resultado" hidden></div>
+          <p id="aresExplicaStatus" class="ares-explica-status" role="status" aria-live="polite"></p>
+        </section>
       </section>
     </div>
   </div>
@@ -1001,6 +1030,7 @@
 <script src="manual.js"></script>
 <script src="open-folder.js"></script>
 <script src="workspace-upload.js"></script>
+<script src="ares-explain.js"></script>
 <script src="vscode-chrome.js"></script>
 <script src="script.js"></script>
 <script src="runtime-status.js"></script>
