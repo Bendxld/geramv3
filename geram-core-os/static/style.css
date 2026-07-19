@@ -2464,3 +2464,45 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
 .ext-card-del { background: transparent; border: 0; color: var(--texto-dim); font-size: 18px; cursor: pointer; line-height: 1; }
 .ext-card-del:hover { color: #ff6b8a; }
 .ext-card-meta { font-family: var(--f-mono); font-size: 9px; color: var(--texto-dim); margin: 4px 0 0; }
+
+/* ============================================================
+   Abrir carpeta (selector de workspace, estilo "Open Folder")
+   Reutiliza el lenguaje visual del panel de extensiones.
+   ============================================================ */
+.of-overlay { position: fixed; inset: 0; z-index: 62; }
+.of-overlay[hidden] { display: none; }
+.of-fondo { position: absolute; inset: 0; background: rgba(2,4,8,0.72); backdrop-filter: blur(3px); }
+.of-caja {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: min(560px, 94vw); max-height: 82vh; display: flex; flex-direction: column;
+  background: var(--panel, #0c0e14); border: 1px solid var(--linea-suave); border-radius: 14px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.6); overflow: hidden;
+}
+.of-header { display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 18px; border-bottom: 1px solid var(--linea-suave); }
+.of-cerrar { background: transparent; border: 0; color: var(--texto-dim); font-size: 22px; cursor: pointer; line-height: 1; }
+.of-cerrar:hover { color: var(--texto); }
+/* La ruta puede ser larguísima: que rompa por cualquier lado antes que
+   ensanchar el diálogo o desbordarlo horizontalmente. */
+.of-ruta { margin: 0; padding: 11px 18px; font-family: var(--f-mono); font-size: 10px;
+  color: var(--texto-dim); border-bottom: 1px solid var(--linea-suave);
+  overflow-wrap: anywhere; word-break: break-all; }
+.of-lista { flex: 1; overflow-y: auto; padding: 8px 10px; min-height: 180px; }
+.of-item { display: block; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 2px;
+  background: transparent; border: 0; border-radius: 7px; cursor: pointer;
+  color: var(--texto); font-family: var(--f-mono); font-size: 11px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.of-item::before { content: "▸ "; color: var(--texto-dim); }
+.of-item:hover { background: var(--contraste-suave); }
+.of-item.of-arriba { color: var(--texto-dim); }
+.of-item.of-arriba::before { content: "↑ "; }
+.of-vacio { font-family: var(--f-mono); font-size: 10px; color: var(--texto-dim); padding: 8px 10px; margin: 0; }
+.of-nota { min-height: 15px; padding: 0 18px; margin: 6px 0 0; font-family: var(--f-mono);
+  font-size: 10px; color: var(--texto-dim); overflow-wrap: anywhere; }
+.of-pie { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px 16px; }
+.of-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--linea-suave);
+  background: transparent; color: var(--texto-dim); cursor: pointer;
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.6px; }
+.of-btn:hover:not(:disabled) { color: var(--texto); border-color: var(--principal-med); }
+.of-btn.principal { color: var(--principal-clr, var(--principal)); border-color: var(--principal-med); background: rgba(232,67,147,0.1); }
+.of-btn:disabled { opacity: 0.45; cursor: not-allowed; }

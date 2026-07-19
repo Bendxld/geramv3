@@ -486,6 +486,12 @@ class Settings:
         self.DEVELOPER_MODE = developer_mode_enabled(
             self.LOCAL_DATA_DIR / "config" / "user-config.json"
         ) or developer_mode_enabled(ROOT_DIR / ".geram-config.json")
+        # Se recuerda si la raíz vino configurada explícitamente: en ese caso
+        # manda sobre la carpeta que el usuario haya elegido con "Abrir
+        # carpeta" (ver app/main.py). Config explícita > elección guardada.
+        self.WORKSPACE_ROOT_IS_EXPLICIT = bool(
+            str(values.get("GERAM_WORKSPACE_ROOT", "") or "").strip()
+        )
         self.WORKSPACE_ROOT = validate_workspace_root(
             values.get("GERAM_WORKSPACE_ROOT", ""),
             create_default=create_runtime_dirs,

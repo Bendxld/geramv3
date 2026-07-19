@@ -110,7 +110,11 @@
   var MENUS = {
     file: [
       { label: 'New Project…', key: 'Ctrl+Shift+N', run: function () { newProject(); } },
-      { label: 'Open Folder (Explorer)', key: 'Ctrl+Shift+E', run: toggleExplorer },
+      { label: 'Open Folder…', key: 'Ctrl+K Ctrl+O', run: function () {
+        if (root.GeramOpenFolder) { root.GeramOpenFolder.open(); return; }
+        toast('The folder picker is not available.');
+      } },
+      { label: 'Toggle Explorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
       { sep: true },
       { label: 'Save', key: 'Ctrl+S', run: function () { clickIf('workspaceGuardar'); } },
       { label: 'Sign in with GitHub…', run: openGithub }
@@ -347,6 +351,10 @@
     refreshGithub();
     root.setInterval(cargarBadges, 15000);  // el badge de cambios se refresca solo
   }
+
+  // El toast es el único canal de aviso del cromo; lo exponemos para que
+  // otros módulos (p. ej. el selector de carpeta) no monten uno propio.
+  root.GeramVscodeChrome = { toast: toast };
 
   if (documentObject.readyState === 'loading') {
     documentObject.addEventListener('DOMContentLoaded', inicializar);

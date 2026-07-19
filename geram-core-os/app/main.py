@@ -22,6 +22,8 @@ from app.middleware.session_logging import SessionLoggingMiddleware
 from app.api import orchestrator, agents, telemetry, config, workspace, ares_edits, terminal_watcher, user_config, github, preview, share, gcs, python_lsp, workspace_navigation, workspace_operations, instance, iris_proxy, extensions, runtime, maintenance
 from app.api import source_control
 from app.api import testing
+from app.api import workspace_root
+from app.core import workspace_root as workspace_root_store
 from app.core.user_config import CONFIG_PATH, load_config
 from app.websocket import hud_socket
 
@@ -45,10 +47,13 @@ async def lifespan(app: FastAPI):
     # Workspace AISLADO (v3): si está vacío la primera vez, deja una nota de
     # bienvenida para que el explorador no aparezca vacío y quede claro que
     # este —y no el código de GERAM— es el espacio editable del usuario.
+    # Sólo aplica al workspace por defecto: en una carpeta que el usuario
+    # abrió con "Abrir carpeta" no escribimos nada sin que lo pida.
+    default_workspace = settings.WORKSPACE_ROOT
     try:
-        workspace_root = settings.WORKSPACE_ROOT
-        if workspace_root.is_dir() and not any(workspace_root.iterdir()):
-            (workspace_root / "WELCOME.md").write_text(
+        workspace_root_value = default_workspace
+        if workspace_root_value.is_dir() and not any(workspace_root_value.iterdir()):
+            (workspace_root_value / "WELCOME.md").write_text(
                 "# Your GERAM workspace\n\n"
                 "This folder (`~/geram-workspace`) is your ISOLATED workspace.\n"
                 "The explorer, Monaco editor, and A.R.E.S. can only view and modify\n"
@@ -56,6 +61,18 @@ async def lifespan(app: FastAPI):
                 "Create or copy your projects into this folder to get started.\n",
                 encoding="utf-8",
             )
+    except OSError:
+        pass
+    # Carpeta elegida con "Abrir carpeta". Se revalida en cada arranque: si
+    # desapareció o dejó de ser válida, se sigue con el workspace por defecto
+    # en lugar de impedir el arranque. Un GERAM_WORKSPACE_ROOT explícito manda
+    # sobre la elección guardada: quien fija la variable (despliegues, pruebas)
+    # espera exactamente esa carpeta.
+    try:
+        if not getattr(settings, "WORKSPACE_ROOT_IS_EXPLICIT", False):
+            saved_root = workspace_root_store.load_saved()
+            if saved_root is not None:
+                workspace_root_store.apply(saved_root)
     except OSError:
         pass
     asyncio.create_task(hud_socket.telemetry_broadcast_loop())
@@ -155,6 +172,7 @@ app.include_router(terminal_watcher.router)
 app.include_router(python_lsp.router)
 app.include_router(workspace_navigation.router)
 app.include_router(workspace_operations.router)
+app.include_router(workspace_root.router)
 app.include_router(source_control.router)
 app.include_router(testing.router)
 
