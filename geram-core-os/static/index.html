@@ -232,7 +232,7 @@
   <!-- Columna izquierda -->
   <aside class="col col-izq">
     <section class="panel">
-      <h2 class="panel-titulo"><span class="dot"></span>SYSTEM STATUS</h2>
+      <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.systemstatus">SYSTEM STATUS</span></h2>
       <div class="stat"><label>CPU</label><div class="barra"><i id="bCpu"></i></div><b id="vCpu">34%</b></div>
       <div class="stat"><label>RAM</label><div class="barra"><i id="bRam"></i></div><b id="vRam">68%</b></div>
       <div class="stat"><label>NETWORK</label><div class="barra"><i id="bRed"></i></div><b id="vRed">120 KB/s</b></div>
@@ -242,7 +242,7 @@
     </section>
 
     <section class="panel consola">
-      <h2 class="panel-titulo"><span class="dot"></span>CONSOLE</h2>
+      <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.console">CONSOLE</span></h2>
       <div class="log" id="log"></div>
     </section>
   </aside>
@@ -250,7 +250,7 @@
   <!-- Columna derecha -->
   <aside class="col col-der">
     <section class="panel centrado">
-      <h2 class="panel-titulo"><span class="dot"></span>CHRONOMETRY</h2>
+      <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.chronometry">CHRONOMETRY</span></h2>
       <div class="reloj" id="reloj">00:00:00</div>
       <div class="fecha" id="fecha">&mdash;</div>
       <div class="mini-datos">
@@ -260,7 +260,7 @@
     </section>
 
     <section class="panel">
-      <h2 class="panel-titulo"><span class="dot"></span>VOICE ANALYSIS</h2>
+      <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.voice">VOICE ANALYSIS</span></h2>
       <canvas id="osc" width="256" height="56"></canvas>
       <p class="micro-label" id="vozEstado">LISTENING&hellip;</p>
     </section>
@@ -310,7 +310,7 @@
   <div class="dashboard-fondo" id="dashboardFondo"></div>
   <div class="dashboard-panel">
     <div class="dashboard-header">
-      <h2 class="panel-titulo"><span class="dot"></span>AGENTS AND SKILLS</h2>
+      <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.agents">AGENTS AND SKILLS</span></h2>
       <button class="dashboard-cerrar" id="dashboardCerrar" title="Close">&times;</button>
     </div>
 
@@ -422,13 +422,13 @@
   <div class="workspace-fondo" id="workspaceFondo"></div>
   <div class="workspace-caja" role="dialog" aria-modal="true" aria-labelledby="workspaceTitulo">
     <div class="workspace-header">
-      <h2 class="panel-titulo" id="workspaceTitulo"><span class="dot"></span>LOCAL WORKSPACE</h2>
+      <h2 class="panel-titulo" id="workspaceTitulo"><span class="dot"></span><span data-i18n="panel.workspace">LOCAL WORKSPACE</span></h2>
       <button class="workspace-cerrar" id="workspaceCerrar" type="button" title="Close" aria-label="Close workspace">&times;</button>
     </div>
     <div class="workspace-cuerpo">
       <aside class="workspace-explorador" aria-labelledby="workspaceArchivosTitulo">
         <div class="workspace-explorador-head">
-          <h3 id="workspaceArchivosTitulo">FILES</h3>
+          <h3 id="workspaceArchivosTitulo" data-i18n="panel.files">FILES</h3>
           <div class="workspace-explorador-actions">
             <button class="workspace-explorador-btn" id="workspaceNuevoProyecto" type="button" title="New project (Ctrl+Shift+N)" aria-label="New project">＋</button>
             <button class="workspace-explorador-btn" id="workspaceRefrescar" type="button" title="Refresh explorer" aria-label="Refresh explorer">↻</button>
@@ -533,7 +533,7 @@
         </div>
 
         <section class="workspace-ares" aria-labelledby="workspaceAresTitulo">
-          <h3 id="workspaceAresTitulo">A.R.E.S. · REVIEWABLE PROPOSAL</h3>
+          <h3 id="workspaceAresTitulo" data-i18n="panel.ares.proposal">A.R.E.S. · REVIEWABLE PROPOSAL</h3>
           <p class="workspace-ares-limites" id="workspaceAresLimites">Up to 3 files and 512 KiB of context. A.R.E.S. only proposes changes to existing files.</p>
           <label for="workspaceAresInstruction">Change instruction</label>
           <textarea id="workspaceAresInstruction" maxlength="4000" rows="3" placeholder="Describe the change without commands or Git operations."></textarea>
@@ -559,7 +559,7 @@
              del bloque de propuestas de arriba: este flujo no genera diffs ni
              tiene ruta de aplicación. -->
         <section class="ares-explica" aria-labelledby="aresExplicaTitulo">
-          <h3 id="aresExplicaTitulo">A.R.E.S. · EXPLAIN CODE</h3>
+          <h3 id="aresExplicaTitulo" data-i18n="panel.ares.explain">A.R.E.S. · EXPLAIN CODE</h3>
           <p class="ares-explica-nota">Read-only: it analyses and explains. It never modifies files or runs anything.</p>
           <div class="ares-explica-actions">
             <button id="aresExplicaSeleccion" type="button">Explain selection</button>
@@ -594,8 +594,8 @@
   <div class="config-fondo" id="configFondo"></div>
   <div class="config-caja" role="dialog" aria-modal="true" aria-labelledby="configTitulo">
     <div class="config-header">
-      <h2 class="panel-titulo" id="configTitulo"><span class="dot"></span>SETTINGS</h2>
-      <button class="config-cerrar" id="configCerrar" title="Close" aria-label="Close settings">&times;</button>
+      <h2 class="panel-titulo" id="configTitulo"><span class="dot"></span><span data-i18n="settings.title">SETTINGS</span></h2>
+      <button class="config-cerrar" id="configCerrar" title="Close" aria-label="Close settings" data-i18n-aria="settings.close">&times;</button>
     </div>
     <div class="config-layout">
       <!-- Sidebar externo (API IA + integraciones). Lo llena script.js
@@ -612,63 +612,63 @@
       <div class="config-cuerpo" id="configCuerpo" aria-busy="false">
         <section class="config-seccion config-geram-settings" id="configGeramSettings" data-config-view="geram" hidden>
           <fieldset class="gs-grupo">
-            <legend>Profile</legend>
-            <label for="gsName">Name</label>
+            <legend data-i18n="gs.profile">Profile</legend>
+            <label for="gsName" data-i18n="gs.name">Name</label>
             <input id="gsName" type="text" maxlength="120" autocomplete="off" spellcheck="false">
-            <label for="gsAge">Age</label>
+            <label for="gsAge" data-i18n="gs.age">Age</label>
             <input id="gsAge" type="number" min="0" max="150" inputmode="numeric">
-            <label for="gsPrompt">Global personalization prompt</label>
-            <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a developer; adapt explanations to my preferences..."></textarea>
-            <label for="gsLanguage">Assistant language</label>
+            <label for="gsPrompt" data-i18n="gs.prompt">Global personalization prompt</label>
+            <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a developer; adapt explanations to my preferences..." data-i18n-ph="gs.prompt.ph"></textarea>
+            <label for="gsLanguage" data-i18n="gs.language">Assistant language</label>
             <select id="gsLanguage">
-              <option value="auto">Auto (match my message)</option>
+              <option value="auto" data-i18n="gs.lang.auto">Auto (match my message)</option>
               <option value="es">Español (siempre)</option>
               <option value="en">English (always)</option>
             </select>
             <div class="gs-fila">
               <input id="gsTts" type="checkbox">
-              <label for="gsTts">Voice notifications (TTS)</label>
+              <label for="gsTts" data-i18n="gs.tts">Voice notifications (TTS)</label>
             </div>
           </fieldset>
           <fieldset class="gs-grupo">
-            <legend>Core identity</legend>
-            <label for="gsIdentity">Core view</label>
+            <legend data-i18n="gs.identity">Core identity</legend>
+            <label for="gsIdentity" data-i18n="gs.coreview">Core view</label>
             <select id="gsIdentity">
-              <option value="core">Animated core</option>
-              <option value="pet">Pet</option>
-              <option value="minimal">Minimal</option>
+              <option value="core" data-i18n="gs.core.core">Animated core</option>
+              <option value="pet" data-i18n="gs.core.pet">Pet</option>
+              <option value="minimal" data-i18n="gs.core.minimal">Minimal</option>
             </select>
           </fieldset>
           <fieldset class="gs-grupo">
-            <legend>Color palette</legend>
-            <div class="gs-fila"><label for="gsPrimary">Primary color</label><input id="gsPrimary" type="color"></div>
-            <div class="gs-fila"><label for="gsBackground">Background color</label><input id="gsBackground" type="color"></div>
-            <div class="gs-fila"><label for="gsAccent">Accent color</label><input id="gsAccent" type="color"></div>
+            <legend data-i18n="gs.palette">Color palette</legend>
+            <div class="gs-fila"><label for="gsPrimary" data-i18n="gs.primary">Primary color</label><input id="gsPrimary" type="color"></div>
+            <div class="gs-fila"><label for="gsBackground" data-i18n="gs.background">Background color</label><input id="gsBackground" type="color"></div>
+            <div class="gs-fila"><label for="gsAccent" data-i18n="gs.accent">Accent color</label><input id="gsAccent" type="color"></div>
           </fieldset>
           <fieldset class="gs-grupo">
-            <legend>Privacy · blocked paths</legend>
-            <label for="gsBlockedInput">Add a path or name (e.g. .env)</label>
+            <legend data-i18n="gs.privacy">Privacy · blocked paths</legend>
+            <label for="gsBlockedInput" data-i18n="gs.blocked.label">Add a path or name (e.g. .env)</label>
             <div class="gs-fila">
               <input id="gsBlockedInput" type="text" placeholder=".env" autocomplete="off" spellcheck="false">
-              <button id="gsBlockedAdd" type="button">Add</button>
+              <button id="gsBlockedAdd" type="button" data-i18n="gs.add">Add</button>
             </div>
             <ul id="gsBlockedList" class="gs-blocked-list"></ul>
           </fieldset>
           <fieldset class="gs-grupo">
-            <legend>Backup, recovery, and diagnostics</legend>
-            <p>Portable state includes profile, runtime switches, agent state, custom skills/agents, and declarative extensions. Credentials, tokens, pending media, and workspace files are excluded.</p>
+            <legend data-i18n="gs.backup.legend">Backup, recovery, and diagnostics</legend>
+            <p data-i18n="gs.backup.p">Portable state includes profile, runtime switches, agent state, custom skills/agents, and declarative extensions. Credentials, tokens, pending media, and workspace files are excluded.</p>
             <div class="gs-fila">
-              <button id="gsDiagnostic" type="button">Run local diagnostic</button>
-              <button id="gsBackup" type="button">Create backup</button>
-              <button id="gsBackupRefresh" type="button">Refresh backups</button>
+              <button id="gsDiagnostic" type="button" data-i18n="gs.diagnostic">Run local diagnostic</button>
+              <button id="gsBackup" type="button" data-i18n="gs.backup.create">Create backup</button>
+              <button id="gsBackupRefresh" type="button" data-i18n="gs.backup.refresh">Refresh backups</button>
             </div>
-            <select id="gsBackupList" aria-label="Available local backups"></select>
-            <button id="gsRestore" type="button">Restore selected backup</button>
+            <select id="gsBackupList" aria-label="Available local backups" data-i18n-aria="gs.backuplist.aria"></select>
+            <button id="gsRestore" type="button" data-i18n="gs.restore">Restore selected backup</button>
             <pre id="gsMaintenanceStatus" class="gs-maintenance-status" aria-live="polite"></pre>
           </fieldset>
           <div class="geram-settings-footer">
             <span class="geram-settings-estado" id="gsEstado" role="status" aria-live="polite"></span>
-            <button class="geram-settings-guardar" id="gsGuardar" type="button">Save personal settings</button>
+            <button class="geram-settings-guardar" id="gsGuardar" type="button" data-i18n="gs.save">Save personal settings</button>
           </div>
         </section>
       </div>
@@ -676,7 +676,7 @@
     </div>
     <div class="config-footer" id="configFooter">
       <span class="config-estado" id="configEstado" role="status" aria-live="polite"></span>
-      <button class="config-guardar" id="configGuardar">Save and restart</button>
+      <button class="config-guardar" id="configGuardar" data-i18n="settings.save">Save and restart</button>
     </div>
   </div>
 </div>
