@@ -11,6 +11,10 @@
   'use strict';
 
   function $(id) { return document.getElementById(id); }
+  function t(key) {
+    var i18n = window.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
 
   var btn = $('shareBtn');
   var modal = $('shareModal');
@@ -72,7 +76,7 @@
     pubNota.hidden = !pedidoSinPublico;
 
     if (hayLan || hayPub) {
-      estado.textContent = 'Sharing “' + (data.file || '') + '”. It stops when you close the app or click “Stop sharing”.';
+      estado.textContent = t('share.sharing').replace('{file}', data.file || '');
     }
   }
 
@@ -92,8 +96,8 @@
   // ------------------------------------------------------------- acciones
   btn.addEventListener('click', function () {
     var path = activePath();
-    if (!path) { alert('Open a page in the editor first.'); return; }
-    if (!esWeb(path)) { alert('Only a web page (.html) can be shared.'); return; }
+    if (!path) { alert(t('share.openfirst')); return; }
+    if (!esWeb(path)) { alert(t('share.onlyweb')); return; }
     archivoLbl.textContent = path;
 
     // Si ya hay una sesión activa, muestra directamente el paso en línea.
@@ -122,17 +126,17 @@
     var path = activePath();
     mostrarOnline();
     lanRow.hidden = true; pubRow.hidden = true; pubNota.hidden = true;
-    estado.textContent = 'Starting… (the public tunnel may take a few seconds)';
+    estado.textContent = t('share.starting.long');
     api('/share/start', { method: 'POST', body: JSON.stringify({ path: path, tunnel: true }) })
       .then(pintarEstado)
       .catch(function (err) {
-        estado.textContent = 'Could not share: ' + err.message;
+        estado.textContent = t('share.fail') + err.message;
       });
   });
 
   // Dejar de compartir.
   $('shareStop').addEventListener('click', function () {
-    estado.textContent = 'Stopping…';
+    estado.textContent = t('share.stopping');
     api('/share/stop', { method: 'POST' }).then(function () {
       mostrarModos();
     }).catch(function () { mostrarModos(); });
@@ -146,7 +150,7 @@
     if (!input || !input.value) { return; }
     var done = function () {
       var prev = copyBtn.textContent;
-      copyBtn.textContent = 'Copied!';
+      copyBtn.textContent = t('share.copied');
       setTimeout(function () { copyBtn.textContent = prev; }, 1200);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {

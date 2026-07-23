@@ -50,14 +50,15 @@
       button.classList.toggle('activo', selected);
       button.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
+    var t = (root.GeramI18n && root.GeramI18n.t) || function(key) { return key; };
     if (activeRole === 'ares') {
-      if (eyebrow) { eyebrow.textContent = 'A.R.E.S. · DEVELOPMENT MANUAL'; }
-      if (title) { title.textContent = 'Reviewable AI-assisted development'; }
-      if (status) { status.textContent = 'You can reopen this guide from Help → A.R.E.S. Manual.'; }
+      if (eyebrow) { eyebrow.textContent = t('manual.ares.eyebrow'); }
+      if (title) { title.textContent = t('manual.ares.title'); }
+      if (status) { status.textContent = t('manual.status.ares'); }
     } else {
-      if (eyebrow) { eyebrow.textContent = 'I.R.I.S. · ADAPTED USER MANUAL'; }
-      if (title) { title.textContent = 'Everything you can ask I.R.I.S. to do'; }
-      if (status) { status.textContent = 'You can reopen this guide from Help → I.R.I.S. Manual.'; }
+      if (eyebrow) { eyebrow.textContent = t('manual.eyebrow'); }
+      if (title) { title.textContent = t('manual.title'); }
+      if (status) { status.textContent = t('manual.status.iris'); }
     }
     var panel = documentObject.querySelector('[data-manual-panel="' + activeRole + '"]');
     var panelContent = panel && panel.querySelector('.manual-content');

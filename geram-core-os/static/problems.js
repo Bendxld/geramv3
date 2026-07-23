@@ -29,6 +29,10 @@
     var close = documentObject.getElementById('workspaceProblemsClose');
     var count = documentObject.getElementById('workspaceProblemsCount');
     var summary = documentObject.getElementById('workspaceProblemsSummary');
+    function t(key) {
+      var i18n = root.GeramI18n;
+      return (i18n && i18n.t) ? i18n.t(key) : key;
+    }
     var list = documentObject.getElementById('workspaceProblemsList');
     if (!panel || !toggle || !close || !count || !summary || !list) { return null; }
     var sources = { monaco: [], python: [] };
@@ -44,7 +48,9 @@
       var errors = problems.filter(function(item) { return item.severity === 8; }).length;
       var warnings = problems.length - errors;
       count.textContent = String(problems.length);
-      summary.textContent = problems.length ? errors + ' errors · ' + warnings + ' warnings' : 'No problems';
+      summary.textContent = problems.length
+        ? t('ws.problems.summary').replace('{e}', errors).replace('{w}', warnings)
+        : t('ws.problems.none');
       toggle.classList.toggle('has-errors', errors > 0);
       toggle.classList.toggle('has-warnings', warnings > 0);
       problems.forEach(function(problem) {

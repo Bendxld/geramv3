@@ -5,6 +5,10 @@
   var documentObject = root.document;
 
   function byId(id) { return documentObject.getElementById(id); }
+  function t(key) {
+    var i18n = root.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
   function log(message) {
     if (typeof root.geramLog === 'function') { root.geramLog(message); }
   }
@@ -65,12 +69,12 @@
     applyState(status.state || {});
     var summary = byId('runtimeUserSummary');
     if (summary) {
-      summary.textContent = 'USER: ' + String((status.user && status.user.name) || 'Local user').toUpperCase() +
-        ' · DATA: PRIVATE LOCAL PROFILE';
+      summary.textContent = t('rt.usersummary')
+        .replace('{name}', String((status.user && status.user.name) || 'Local user').toUpperCase());
     }
     var pill = documentObject.querySelector('.estado-pill');
     if (pill) {
-      pill.lastChild.textContent = 'SYSTEM ONLINE · REAL DATA';
+      pill.lastChild.textContent = t('rt.online');
     }
     var ring = byId('anilloAgentes');
     if (ring) {
@@ -78,11 +82,10 @@
         return item.state === 'connected';
       }).length;
       var agents = status.agents || {};
-      ring.textContent = 'GERAM OS v3 · USER ' +
-        String((status.user && status.user.name) || 'LOCAL').toUpperCase() +
-        ' · AGENTS ' + Number(agents.enabled || 0) + '/' + Number(agents.total || 0) +
-        ' · INTEGRATIONS ' + connected + '/' + (status.integrations || []).length +
-        ' · LOCAL PROFILE · ';
+      ring.textContent = t('rt.ring')
+        .replace('{name}', String((status.user && status.user.name) || 'LOCAL').toUpperCase())
+        .replace('{agents}', Number(agents.enabled || 0) + '/' + Number(agents.total || 0))
+        .replace('{integrations}', connected + '/' + (status.integrations || []).length);
     }
     (status.integrations || []).forEach(function (item) {
       log('INTEGRATION ' + String(item.name || item.id).toUpperCase() + ': ' + String(item.state || 'available').toUpperCase());
