@@ -16,7 +16,8 @@ from datetime import datetime
 import config
 from agents import (
     balancer, calendar_agent, context_engine, control_agent, daily_briefing_agent, email_agent,
-    examen_agent, finance_agent, groq_agent, habla, manual, memory, notion_agent, obsidian_agent,
+    examen_agent, finance_agent, groq_agent, habla, manual, memory, notion_agent, notion_memoria,
+    obsidian_agent,
     offline_agent, pendientes_agent, personality, proyectos_agent, reminder_agent, research_agent,
     spotify_agent, web_agent,
 )
@@ -2431,10 +2432,13 @@ def _procesar_conocimiento(texto_usuario, historial, system_prompt):
     return respuesta + "\n\n¿Quieres que te arme un documento más completo en Notion?"
 
 
-def _generar_documento_notion(tema):
-    """Genera un documento largo sobre `tema` con Groq y lo guarda
-    como página nueva en Notion. Devuelve el mensaje final para el
-    usuario (nunca lanza excepción, todo error se refleja en el texto)."""
+def _generar_documento_notion(tema, texto_usuario=""):
+    """Genera un documento largo sobre `tema` con Groq y lo guarda como
+    página nueva en Notion. Si el usuario registró varias bases en
+    config/notion_bases.json (ver notion_memoria), elige la base según el
+    mensaje/tema y devuelve el nombre de la base + la URL de la página; si
+    no hay bases registradas, cae al flujo clásico de un solo
+    NOTION_DATABASE_ID. Nunca lanza: todo error se refleja en el texto."""
     prompt_groq = _PROMPT_GROQ_NOTION.format(tema=tema)
     contenido = groq_agent.generar_contenido(prompt_groq, system_prompt=_SYSTEM_PROMPT_GROQ_NOTION)
 
@@ -2442,8 +2446,19 @@ def _generar_documento_notion(tema):
         log.warning("director: Groq falló generando el documento (%s)", contenido)
         return f"No pude generar el documento: {contenido}"
 
-    resultado = notion_agent.crear_pagina(titulo=tema.strip()[:200] or "Documento", contenido=contenido)
+    titulo = tema.strip()[:200] or "Documento"
 
+    # Multi-base: elige por lo que pidió el jefe (o el tema); si no matchea
+    # ninguna en concreto, usa la primera registrada.
+    base = notion_memoria.elegir_base(f"{texto_usuario} {tema}") or notion_memoria.base_por_defecto()
+    if base is not None:
+        resultado = notion_memoria.guardar(base, titulo, contenido)
+        if resultado.get("error"):
+            log.warning("director: Notion falló guardando el documento (%s)", resultado["error"])
+        return notion_memoria.mensaje_guardado(base, resultado, titulo)
+
+    # Sin bases registradas: comportamiento de siempre (un solo database).
+    resultado = notion_agent.crear_pagina(titulo=titulo, contenido=contenido)
     if resultado.get("error"):
         log.warning("director: Notion falló guardando el documento (%s)", resultado["error"])
         return f"Generé el contenido pero no lo pude guardar en Notion: {resultado['error']}"
@@ -3000,8 +3015,16 @@ def _despachar(texto_usuario, permitir_compuesto=True, sesion="hud"):
                 else f"Listo, guardé '{resultado['titulo']}' como nota de estudio en Obsidian."
             )
         elif _es_afirmacion(texto_usuario):
-            resultado = notion_agent.crear_pagina(titulo=pendiente_resumen["titulo"][:200], contenido=pendiente_resumen["contenido"])
-            respuesta = "No pude guardar el resumen en Notion: " + resultado["error"] if resultado.get("error") else "Listo, guardé el resumen en Notion."
+            titulo_resumen = pendiente_resumen["titulo"][:200]
+            # Multi-base: elige por el mensaje + el título del resumen; si el
+            # usuario no registró bases, cae al database único de siempre.
+            base = notion_memoria.elegir_base(f"{texto_usuario} {titulo_resumen}") or notion_memoria.base_por_defecto()
+            if base is not None:
+                resultado = notion_memoria.guardar(base, titulo_resumen, pendiente_resumen["contenido"])
+                respuesta = notion_memoria.mensaje_guardado(base, resultado, titulo_resumen)
+            else:
+                resultado = notion_agent.crear_pagina(titulo=titulo_resumen, contenido=pendiente_resumen["contenido"])
+                respuesta = "No pude guardar el resumen en Notion: " + resultado["error"] if resultado.get("error") else "Listo, guardé el resumen en Notion."
         else:
             respuesta = _despachar_normal(texto_usuario, permitir_compuesto, sesion)
 
@@ -3031,7 +3054,7 @@ def _despachar(texto_usuario, permitir_compuesto=True, sesion="hud"):
         _tema_pendiente_notion = None
 
         if _es_afirmacion(texto_usuario):
-            respuesta = _generar_documento_notion(tema)
+            respuesta = _generar_documento_notion(tema, texto_usuario)
         else:
             respuesta = _despachar_normal(texto_usuario, permitir_compuesto, sesion)
 

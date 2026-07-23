@@ -140,9 +140,28 @@ propio** proyecto de [Supabase](https://supabase.com) (plan gratis). Pon
 `SUPABASE_URL` y `SUPABASE_KEY` en tu `.env` y la memoria se activa sola; **si
 las dejas vacías, el asistente funciona igual, solo sin memoria persistente**
 (no rompe nada). Los datos quedan en tu cuenta de Supabase, no en la nuestra.
-*(Nota: hoy la memoria es solo Supabase. `NOTION_API_KEY` es para documentos,
-pendientes, finanzas y proyectos en Notion — no es, por ahora, un backend de
-memoria del chat.)*
+
+**Memoria en Notion — TUS bases (opcional).** Además de Supabase, puedes darle a
+IRIS **tus propias bases (databases) de Notion** para que guarde ahí lo que le
+pidas: una de **Resúmenes**, otra de **Finanzas**, las que quieras. Cómo:
+
+1. Crea cada base en tu Notion y **compártela con tu integración** (la de
+   `NOTION_API_KEY`): en la base, `···` → **Conexiones** → agrega tu integración.
+2. Copia `config/notion_bases.example.json` a **`config/notion_bases.json`** y
+   registra cada base con su `nombre`, `database_id` (los 32 caracteres de la URL
+   de la base), su `url`, una `descripcion` y `palabras_clave` para que IRIS elija
+   la base correcta según lo que le digas.
+
+Ejemplo: le dices *"busca información del Canelo"* → te da un resumen y te ofrece
+*"¿armo un documento más completo en Notion?"*; al confirmar, IRIS lo guarda en la
+base que corresponda (por defecto la primera, o *"guárdalo en finanzas"* para
+elegir) y te responde con el **nombre de la base** y la **URL de la página**
+creada (compartible con quien tenga acceso a esa base). Sin
+`config/notion_bases.json`, se usa el flujo clásico de un solo `NOTION_DATABASE_ID`.
+
+*(Recordatorio: `notion_bases.json` está en `.gitignore` — los `database_id` son
+tuyos y no se suben. `NOTION_API_KEY`/`NOTION_DATABASE_ID` y las DB de pendientes/
+finanzas/proyectos siguen igual que antes, ver `.env`.)*
 
 **Proveedores de IA de A.R.E.S. (CORE OS)** se configuran **desde la interfaz**, no en `.env`: abre **Settings → API IA** y agrega tu key por proveedor (Anthropic/Claude, OpenAI, Gemini, Groq, Mistral, DeepSeek, xAI, Perplexity, Together, OpenRouter, Cerebras, Fireworks, Moonshot). Si pones **varias keys del mismo proveedor**, se usan en **round-robin**. Las credenciales quedan solo en tu equipo.
 

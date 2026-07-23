@@ -20,3 +20,7 @@ modelos/
 
 # Estado local de activación de agentes (suspender/reactivar desde el HUD)
 config/agentes_estado.json
+
+# Bases de Notion registradas por cada usuario (memoria en Notion). Trae los
+# database_id propios; se genera copiando config/notion_bases.example.json.
+config/notion_bases.json

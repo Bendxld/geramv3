@@ -1,0 +1,32 @@
+{
+  "_como_usar": [
+    "Copia este archivo a  config/notion_bases.json  y registra TUS bases de Notion.",
+    "Pasos por cada base:",
+    "  1) Crea la base (database) en tu Notion (ej. 'Resúmenes', 'Finanzas').",
+    "  2) Compártela con tu integración de Notion (la de NOTION_API_KEY): en la base,",
+    "     menú '...' -> 'Conexiones' -> agrega tu integración. Sin esto la API no la ve.",
+    "  3) Copia el database_id: son los 32 caracteres hex de la URL de la base",
+    "     (https://www.notion.so/<workspace>/<DATABASE_ID>?v=...), y pega también su url.",
+    "Puedes agregar TODAS las bases que quieras al arreglo 'bases'.",
+    "Campos: clave (id corto), nombre (como te lo dirá IRIS), database_id, url,",
+    "descripcion, y palabras_clave (para que IRIS elija la base según lo que pidas)."
+  ],
+  "bases": [
+    {
+      "clave": "resumenes",
+      "nombre": "Resúmenes",
+      "database_id": "PON_AQUI_EL_DATABASE_ID_DE_32_CARACTERES",
+      "url": "https://www.notion.so/tu-espacio/Resumenes-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "descripcion": "Resúmenes e investigaciones de búsquedas (ej. 'busca sobre Canelo').",
+      "palabras_clave": ["resumen", "resúmenes", "resumenes", "investigación", "investigacion", "investiga", "resúmeme", "resumeme"]
+    },
+    {
+      "clave": "finanzas",
+      "nombre": "Finanzas",
+      "database_id": "PON_AQUI_OTRO_DATABASE_ID_DE_32_CARACTERES",
+      "url": "https://www.notion.so/tu-espacio/Finanzas-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "descripcion": "Notas y reportes de finanzas que quieras conservar.",
+      "palabras_clave": ["finanzas", "financiero", "gasto", "gastos", "ingreso", "ingresos", "presupuesto", "dinero"]
+    }
+  ]
+}
