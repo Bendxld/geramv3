@@ -311,59 +311,59 @@
   <div class="dashboard-panel">
     <div class="dashboard-header">
       <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.agents">AGENTS AND SKILLS</span></h2>
-      <button class="dashboard-cerrar" id="dashboardCerrar" title="Close">&times;</button>
+      <button class="dashboard-cerrar" id="dashboardCerrar" title="Close" data-i18n-title="dash.close">&times;</button>
     </div>
 
     <!-- Pestañas: Agentes (mini-empleados de IRIS/A.R.E.S.) y Skills (propios). -->
     <div class="dashboard-tabs" role="tablist">
-      <button class="dashboard-tab activo" id="tabAgentes" data-tab="agentes" type="button" role="tab">Agents <b id="dashboardConteo">0/0</b></button>
-      <button class="dashboard-tab" id="tabSkills" data-tab="skills" type="button" role="tab">Skills <b id="skillsConteo">0</b></button>
+      <button class="dashboard-tab activo" id="tabAgentes" data-tab="agentes" type="button" role="tab"><span data-i18n="dash.tab.agents">Agents</span> <b id="dashboardConteo">0/0</b></button>
+      <button class="dashboard-tab" id="tabSkills" data-tab="skills" type="button" role="tab"><span data-i18n="dash.tab.skills">Skills</span> <b id="skillsConteo">0</b></button>
     </div>
 
     <!-- Panel AGENTES -->
     <div class="dashboard-tabpane activo" id="paneAgentes" role="tabpanel">
-      <p class="dashboard-hint">Every bundled and user-defined agent discovered for this local profile. “Available” means installed; “loaded” means active in this process.</p>
+      <p class="dashboard-hint" data-i18n="dash.agents.hint">Every bundled and user-defined agent discovered for this local profile. “Available” means installed; “loaded” means active in this process.</p>
       <div class="dashboard-grid" id="dashboardGrid"></div>
 
       <div class="agentes-mios">
         <div class="agentes-mios-head">
-          <span>My agents</span>
-          <button class="skills-nuevo-btn agentes-nuevo-btn" id="agentesNuevoBtn" type="button">＋ Create agent</button>
+          <span data-i18n="dash.myagents">My agents</span>
+          <button class="skills-nuevo-btn agentes-nuevo-btn" id="agentesNuevoBtn" type="button" data-i18n="dash.createagent">＋ Create agent</button>
         </div>
         <div class="agentes-mios-lista" id="agentesMiosLista"></div>
 
         <form class="skills-form" id="agentesForm" hidden autocomplete="off">
           <div class="skills-form-row">
-            <label class="skills-campo">Name
-              <input id="agenteNombre" maxlength="120" required placeholder="Email monitor">
+            <label class="skills-campo"><span data-i18n="dash.f.name">Name</span>
+              <input id="agenteNombre" maxlength="120" required placeholder="Email monitor" data-i18n-ph="dash.ph.agentname">
             </label>
-            <label class="skills-campo">ID
+            <label class="skills-campo"><span data-i18n="dash.f.id">ID</span>
               <input id="agenteId" maxlength="64" required placeholder="vigia-de-correos">
             </label>
           </div>
-          <label class="skills-campo">Profile
+          <label class="skills-campo"><span data-i18n="dash.f.profile">Profile</span>
             <select id="agentePerfil">
               <option value="iris">IRIS</option>
               <option value="ares">A.R.E.S.</option>
             </select>
           </label>
-          <label class="skills-campo">Description
-            <input id="agenteDesc" maxlength="500" placeholder="What this mini-agent does">
+          <label class="skills-campo"><span data-i18n="dash.f.desc">Description</span>
+            <input id="agenteDesc" maxlength="500" placeholder="What this mini-agent does" data-i18n-ph="dash.ph.agentdesc">
           </label>
-          <label class="skills-campo">Skills (comma-separated IDs)
+          <label class="skills-campo"><span data-i18n="dash.agent.skills">Skills (comma-separated IDs)</span>
             <input id="agenteSkills" maxlength="1000" placeholder="html-boilerplate, fastapi-endpoint">
           </label>
-          <label class="skills-campo">Integrations (comma-separated IDs)
+          <label class="skills-campo"><span data-i18n="dash.agent.integrations">Integrations (comma-separated IDs)</span>
             <input id="agenteIntegraciones" maxlength="1000" placeholder="notion, spotify, google-calendar">
           </label>
-          <label class="skills-campo">Permissions (comma-separated)
+          <label class="skills-campo"><span data-i18n="dash.agent.perms">Permissions (comma-separated)</span>
             <input id="agentePermisos" maxlength="1000" placeholder="read, notion, spotify, calendar">
           </label>
-          <small>Integrations require their matching permission. Network or mutating actions still require explicit approval.</small>
+          <small data-i18n="dash.agent.note">Integrations require their matching permission. Network or mutating actions still require explicit approval.</small>
           <p class="skills-form-estado" id="agentesFormEstado" role="status" aria-live="polite"></p>
           <div class="skills-form-actions">
-            <button type="button" id="agentesCancelar">Cancel</button>
-            <button type="submit" id="agentesGuardar">Create agent</button>
+            <button type="button" id="agentesCancelar" data-i18n="dash.cancel">Cancel</button>
+            <button type="submit" id="agentesGuardar" data-i18n="dash.createagent.btn">Create agent</button>
           </div>
         </form>
       </div>
@@ -371,36 +371,36 @@
 
     <!-- Panel SKILLS -->
     <div class="dashboard-tabpane" id="paneSkills" role="tabpanel" hidden>
-      <p class="dashboard-hint">Reusable knowledge. <b>System</b> skills are included; create <b>your own</b> to improve your experience.</p>
+      <p class="dashboard-hint" data-i18n-html="dash.skills.hint">Reusable knowledge. <b>System</b> skills are included; create <b>your own</b> to improve your experience.</p>
       <div class="skills-lista" id="skillsLista"></div>
-      <button class="skills-nuevo-btn" id="skillsNuevoBtn" type="button">＋ Create skill</button>
+      <button class="skills-nuevo-btn" id="skillsNuevoBtn" type="button" data-i18n="dash.createskill">＋ Create skill</button>
 
       <form class="skills-form" id="skillsForm" hidden autocomplete="off">
         <div class="skills-form-row">
-          <label class="skills-campo">Name
-            <input id="skillNombre" maxlength="120" required placeholder="Meeting summaries">
+          <label class="skills-campo"><span data-i18n="dash.f.name">Name</span>
+            <input id="skillNombre" maxlength="120" required placeholder="Meeting summaries" data-i18n-ph="dash.ph.skillname">
           </label>
-          <label class="skills-campo">ID
+          <label class="skills-campo"><span data-i18n="dash.f.id">ID</span>
             <input id="skillId" maxlength="64" required placeholder="meeting-summaries">
           </label>
         </div>
-        <label class="skills-campo">Profile
+        <label class="skills-campo"><span data-i18n="dash.f.profile">Profile</span>
           <select id="skillPerfil">
-            <option value="any">Both (IRIS and A.R.E.S.)</option>
-            <option value="iris">IRIS only</option>
-            <option value="ares">A.R.E.S. only</option>
+            <option value="any" data-i18n="dash.skill.both">Both (IRIS and A.R.E.S.)</option>
+            <option value="iris" data-i18n="dash.skill.irisonly">IRIS only</option>
+            <option value="ares" data-i18n="dash.skill.aresonly">A.R.E.S. only</option>
           </select>
         </label>
-        <label class="skills-campo">Description
-          <input id="skillDesc" maxlength="500" placeholder="What it does and when to use it">
+        <label class="skills-campo"><span data-i18n="dash.f.desc">Description</span>
+          <input id="skillDesc" maxlength="500" placeholder="What it does and when to use it" data-i18n-ph="dash.ph.skilldesc">
         </label>
-        <label class="skills-campo">Content (instructions / knowledge)
-          <textarea id="skillBody" rows="6" placeholder="Enter the skill's knowledge or instructions here…"></textarea>
+        <label class="skills-campo"><span data-i18n="dash.skill.content">Content (instructions / knowledge)</span>
+          <textarea id="skillBody" rows="6" placeholder="Enter the skill's knowledge or instructions here…" data-i18n-ph="dash.ph.skillbody"></textarea>
         </label>
         <p class="skills-form-estado" id="skillsFormEstado" role="status" aria-live="polite"></p>
         <div class="skills-form-actions">
-          <button type="button" id="skillsCancelar">Cancel</button>
-          <button type="submit" id="skillsGuardar">Save skill</button>
+          <button type="button" id="skillsCancelar" data-i18n="dash.cancel">Cancel</button>
+          <button type="submit" id="skillsGuardar" data-i18n="dash.saveskill">Save skill</button>
         </div>
       </form>
     </div>

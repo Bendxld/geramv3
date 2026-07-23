@@ -14,6 +14,15 @@
 
   function $(id) { return document.getElementById(id); }
 
+  // Traducción de los textos generados aquí en runtime (ver i18n.js). T() cae
+  // al inglés si el motor no cargó; Tf() rellena "{name}" para los confirms.
+  function T(key, fallback) {
+    return (window.GeramI18n && window.GeramI18n.t) ? window.GeramI18n.t(key) : fallback;
+  }
+  function Tf(key, name, fallback) {
+    return T(key, fallback).replace('{name}', name);
+  }
+
   var overlay = $('dashboardAgentes');
   if (!overlay) { return; }
 
@@ -96,11 +105,11 @@
       acciones.className = 'skill-acciones';
       var edit = document.createElement('button');
       edit.className = 'skill-editar'; edit.type = 'button';
-      edit.title = 'Editar'; edit.setAttribute('aria-label', 'Editar'); edit.textContent = '✎';
+      edit.title = T('dash.edit', 'Edit'); edit.setAttribute('aria-label', T('dash.edit', 'Edit')); edit.textContent = '✎';
       edit.addEventListener('click', onEditar);
       var del = document.createElement('button');
       del.className = 'skill-borrar'; del.type = 'button';
-      del.title = 'Borrar'; del.setAttribute('aria-label', 'Borrar'); del.textContent = '×';
+      del.title = T('dash.delete', 'Delete'); del.setAttribute('aria-label', T('dash.delete', 'Delete')); del.textContent = '×';
       del.addEventListener('click', onBorrar);
       acciones.appendChild(edit); acciones.appendChild(del);
       top.appendChild(acciones);
@@ -109,7 +118,7 @@
 
     var desc = document.createElement('p');
     desc.className = 'skill-desc';
-    desc.textContent = item.description || 'No description.';
+    desc.textContent = item.description || T('dash.nodesc', 'No description.');
     card.appendChild(desc);
     return card;
   }
@@ -126,24 +135,24 @@
 
   function cargarSkills() {
     if (!skLista) { return; }
-    mensajeLista(skLista, 'skills-cargando', 'Loading skills…');
+    mensajeLista(skLista, 'skills-cargando', T('dash.loadingskills', 'Loading skills…'));
     api('/api/gcs/skills', { method: 'GET' }).then(function (d) {
       skillsCargados = true;
       var skills = (d && d.skills) || [];
       if (skConteo) { skConteo.textContent = String(skills.length); }
       renderSkills(skills);
     }).catch(function (err) {
-      mensajeLista(skLista, 'skills-error', 'Could not load: ' + err.message);
+      mensajeLista(skLista, 'skills-error', T('dash.couldnotload', 'Could not load: ') + err.message);
     });
   }
 
   function renderSkills(skills) {
-    if (!skills.length) { mensajeLista(skLista, 'skills-vacio', 'There are no skills yet. Create your own.'); return; }
+    if (!skills.length) { mensajeLista(skLista, 'skills-vacio', T('dash.noskills', 'There are no skills yet. Create your own.')); return; }
     skLista.textContent = '';
     skills.forEach(function (s) {
       var esCustom = (s.origin || 'custom') === 'custom';
       var badges = [
-        { cls: 'skill-badge-' + (esCustom ? 'custom' : 'system'), txt: esCustom ? 'yours' : 'system' },
+        { cls: 'skill-badge-' + (esCustom ? 'custom' : 'system'), txt: esCustom ? T('dash.badge.yours', 'yours') : T('dash.badge.system', 'system') },
         { cls: 'skill-badge-perfil', txt: (s.profile || 'any').toUpperCase() }
       ];
       skLista.appendChild(tarjeta(s, badges, esCustom,
@@ -156,7 +165,7 @@
   function cerrarSkillForm() {
     if (skForm) { skForm.hidden = true; skForm.reset(); }
     if (skId) { skId.readOnly = false; }
-    if (skGuardar) { skGuardar.textContent = 'Save skill'; }
+    if (skGuardar) { skGuardar.textContent = T('dash.saveskill', 'Save skill'); }
     if (skNuevoBtn) { skNuevoBtn.hidden = false; }
     skEditando = null;
   }
@@ -169,15 +178,15 @@
       if (skPerfil) { skPerfil.value = s.profile || 'any'; }
       skDesc.value = s.description || '';
       skBody.value = s.body || '';
-      if (skGuardar) { skGuardar.textContent = 'Save changes'; }
+      if (skGuardar) { skGuardar.textContent = T('dash.savechanges', 'Save changes'); }
       abrirSkillForm();
-    }).catch(function (err) { window.alert('Could not open for editing: ' + err.message); });
+    }).catch(function (err) { window.alert(T('dash.couldnotopen', 'Could not open for editing: ') + err.message); });
   }
 
   function borrarSkill(id, nombre) {
-    if (!window.confirm('Delete the skill “' + nombre + '”?')) { return; }
+    if (!window.confirm(Tf('dash.deleteskill', nombre, 'Delete the skill “{name}”?'))) { return; }
     api('/api/gcs/skills/' + encodeURIComponent(id), { method: 'DELETE' })
-      .then(cargarSkills).catch(function (err) { window.alert('Could not delete: ' + err.message); });
+      .then(cargarSkills).catch(function (err) { window.alert(T('dash.couldnotdelete', 'Could not delete: ') + err.message); });
   }
 
   if (skNuevoBtn) { skNuevoBtn.addEventListener('click', abrirSkillForm); }
@@ -193,11 +202,11 @@
         profile: (skPerfil && skPerfil.value) || 'any',
         body: skBody.value || ''
       });
-      if (!payload.id || !payload.name) { if (skEstado) { skEstado.textContent = 'Nombre e ID son obligatorios.'; } return; }
-      if (skEstado) { skEstado.textContent = 'Saving…'; }
+      if (!payload.id || !payload.name) { if (skEstado) { skEstado.textContent = T('dash.namerequired', 'Name and ID are required.'); } return; }
+      if (skEstado) { skEstado.textContent = T('dash.saving', 'Saving…'); }
       api('/api/gcs/skills', { method: 'POST', body: JSON.stringify(payload) })
         .then(function () { cerrarSkillForm(); cargarSkills(); })
-        .catch(function (err) { if (skEstado) { skEstado.textContent = 'Could not save: ' + err.message; } });
+        .catch(function (err) { if (skEstado) { skEstado.textContent = T('dash.couldnotsave', 'Could not save: ') + err.message; } });
     });
   }
 
@@ -224,22 +233,22 @@
 
   function cargarAgentes() {
     if (!agLista) { return; }
-    mensajeLista(agLista, 'skills-cargando', 'Loading…');
+    mensajeLista(agLista, 'skills-cargando', T('dash.loading', 'Loading…'));
     api('/api/gcs/agents', { method: 'GET' }).then(function (d) {
       var propios = ((d && d.agents) || []).filter(function (a) { return (a.origin || 'custom') === 'custom'; });
       renderAgentes(propios);
     }).catch(function (err) {
-      mensajeLista(agLista, 'skills-error', 'Could not load: ' + err.message);
+      mensajeLista(agLista, 'skills-error', T('dash.couldnotload', 'Could not load: ') + err.message);
     });
   }
 
   function renderAgentes(agentes) {
-    if (!agentes.length) { mensajeLista(agLista, 'skills-vacio', 'You do not have any custom agents yet. Create one.'); return; }
+    if (!agentes.length) { mensajeLista(agLista, 'skills-vacio', T('dash.noagents', 'You do not have any custom agents yet. Create one.')); return; }
     agLista.textContent = '';
     agentes.forEach(function (a) {
       var badges = [{ cls: 'skill-badge-perfil', txt: (a.profile || 'iris').toUpperCase() }];
       if (a.skills && a.skills.length) { badges.push({ cls: 'skill-badge-skills', txt: a.skills.length + ' skill' + (a.skills.length > 1 ? 's' : '') }); }
-      if (a.integrations && a.integrations.length) { badges.push({ cls: 'skill-badge-skills', txt: a.integrations.length + ' integration' + (a.integrations.length > 1 ? 's' : '') }); }
+      if (a.integrations && a.integrations.length) { badges.push({ cls: 'skill-badge-skills', txt: a.integrations.length + ' ' + T(a.integrations.length > 1 ? 'dash.badge.integrations' : 'dash.badge.integration', a.integrations.length > 1 ? 'integrations' : 'integration') }); }
       agLista.appendChild(tarjeta(a, badges, true,
         function () { editarAgente(a); },
         function () { borrarAgente(a.id, a.name || a.id); }));
@@ -250,7 +259,7 @@
   function cerrarAgForm() {
     if (agForm) { agForm.hidden = true; agForm.reset(); }
     if (agId) { agId.readOnly = false; }
-    if (agGuardar) { agGuardar.textContent = 'Create agent'; }
+    if (agGuardar) { agGuardar.textContent = T('dash.createagent.btn', 'Create agent'); }
     if (agNuevoBtn) { agNuevoBtn.hidden = false; }
     agEditando = null;
   }
@@ -264,14 +273,14 @@
     if (agSkills) { agSkills.value = (a.skills || []).join(', '); }
     if (agIntegraciones) { agIntegraciones.value = (a.integrations || []).join(', '); }
     if (agPermisos) { agPermisos.value = (a.permissions || []).join(', '); }
-    if (agGuardar) { agGuardar.textContent = 'Save changes'; }
+    if (agGuardar) { agGuardar.textContent = T('dash.savechanges', 'Save changes'); }
     abrirAgForm();
   }
 
   function borrarAgente(id, nombre) {
-    if (!window.confirm('Delete the agent “' + nombre + '”?')) { return; }
+    if (!window.confirm(Tf('dash.deleteagent', nombre, 'Delete the agent “{name}”?'))) { return; }
     api('/api/gcs/agents/' + encodeURIComponent(id), { method: 'DELETE' })
-      .then(cargarAgentes).catch(function (err) { window.alert('Could not delete: ' + err.message); });
+      .then(cargarAgentes).catch(function (err) { window.alert(T('dash.couldnotdelete', 'Could not delete: ') + err.message); });
   }
 
   if (agNuevoBtn) { agNuevoBtn.addEventListener('click', abrirAgForm); }
@@ -289,11 +298,11 @@
         integrations: listaCsv(agIntegraciones && agIntegraciones.value),
         permissions: listaCsv(agPermisos && agPermisos.value)
       });
-      if (!payload.id || !payload.name) { if (agEstado) { agEstado.textContent = 'Nombre e ID son obligatorios.'; } return; }
-      if (agEstado) { agEstado.textContent = 'Saving…'; }
+      if (!payload.id || !payload.name) { if (agEstado) { agEstado.textContent = T('dash.namerequired', 'Name and ID are required.'); } return; }
+      if (agEstado) { agEstado.textContent = T('dash.saving', 'Saving…'); }
       api('/api/gcs/agents', { method: 'POST', body: JSON.stringify(payload) })
         .then(function () { cerrarAgForm(); cargarAgentes(); })
-        .catch(function (err) { if (agEstado) { agEstado.textContent = 'Could not save: ' + err.message; } });
+        .catch(function (err) { if (agEstado) { agEstado.textContent = T('dash.couldnotsave', 'Could not save: ') + err.message; } });
     });
   }
 
