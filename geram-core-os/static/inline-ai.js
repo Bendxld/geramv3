@@ -317,15 +317,59 @@
       }
       closeProjectModal();
       if (nombre) { nombre.value = ''; }
-      setStatus('Project "' + res.data.directory + '" (' + res.data.template + ') created. It will appear in the explorer.', false);
+      var instruction = pendingProjectInstruction;
+      pendingProjectInstruction = '';
+      setStatus(instruction
+        ? 'Project "' + res.data.directory + '" created. A.R.E.S. is preparing a proposal for your instruction…'
+        : 'Project "' + res.data.directory + '" (' + res.data.template + ') created. It will appear in the explorer.', false);
       // Refresco del árbol tras dar tiempo a la escritura de fondo.
       var controller = root.GeramWorkspaceController;
       if (controller && controller.reloadTree) { root.setTimeout(function () { controller.reloadTree(); }, 900); }
+      // Encadena la instrucción original ("...que diga hola seguidores") al
+      // flujo de propuestas sobre el archivo principal del proyecto.
+      root.setTimeout(function () {
+        chainProjectProposal(res.data.directory, res.data.template, instruction);
+      }, 1200);
     }).catch(function (err) {
       if (estado) { estado.textContent = 'Could not create: ' + err.message; estado.classList.add('error'); }
     });
   }
   function createProject(instruction) { openProjectModal(instruction); }
+
+  // Tras el scaffold, encadena la instrucción original al flujo normal de
+  // propuestas: abre el archivo principal del proyecto recién creado y pide
+  // a A.R.E.S. el diff (el usuario sigue aprobando cada cambio). Sin esto, el
+  // scaffold offline deja solo la plantilla genérica y "crea una web que diga X"
+  // nunca llega al modelo.
+  var MAIN_FILE_BY_TEMPLATE = {
+    static: 'index.html',
+    fastapi: 'main.py',
+    flask: 'app.py',
+    python: 'main.py',
+    node: 'index.js',
+    generic: 'README.md'
+  };
+  function chainProjectProposal(directory, template, instruction) {
+    var main = MAIN_FILE_BY_TEMPLATE[template];
+    if (!main || !instruction) { return; }
+    var path = directory + '/' + main;
+    var attempts = 0;
+    // El backend escribe los archivos en segundo plano: espera a que el
+    // principal exista y esté cargado en el editor antes de pedir el diff.
+    var timer = root.setInterval(function () {
+      attempts += 1;
+      var info = controller.documentInfo(path);
+      if (info && !info.modified && !busy) {
+        root.clearInterval(timer);
+        fixLoop = { round: 0, path: '', failure: '' };
+        if (fixBtn) { fixBtn.hidden = true; }
+        runProposalFlow(instruction, path, info);
+        return;
+      }
+      if (!info && controller.open) { controller.open(path); }
+      if (attempts >= 10) { root.clearInterval(timer); }
+    }, 800);
+  }
   function refreshExplorer() {
     var controller = root.GeramWorkspaceController;
     if (controller && controller.reloadTree) { controller.reloadTree(); setStatus('Explorer refreshed.', false); }
