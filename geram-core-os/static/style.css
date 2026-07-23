@@ -2591,3 +2591,38 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
   margin-top: 8px;
 }
 .ares-explica-cuerpo[hidden] { display: none; }
+
+/* ============================================================
+   Language gate — pantalla de selección de idioma (i18n.js /
+   language-gate.js). Cubre todo (z-index 300) hasta que el usuario
+   elige idioma; luego se oculta dejando la UI ya traducida.
+   ============================================================ */
+.lang-gate {
+  position: fixed; inset: 0; z-index: 300;
+  display: none; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, #14141f 0%, #08080c 70%);
+}
+.lang-gate.activo { display: flex; }
+.lang-gate-shell {
+  text-align: center; padding: 40px 32px; max-width: 480px; width: 90%;
+  border: 1px solid rgba(232, 67, 147, 0.35); border-radius: 18px;
+  background: rgba(10, 10, 15, 0.85);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.lang-gate-eyebrow {
+  display: block; letter-spacing: 0.25em; font-size: 12px;
+  color: #e84393; text-transform: uppercase; margin-bottom: 14px;
+}
+.lang-gate-title { margin: 0 0 26px; font-size: 26px; line-height: 1.25; color: #f5f5fa; }
+.lang-gate-title span { color: #9aa0b5; font-size: 20px; }
+.lang-gate-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.lang-gate-buttons button {
+  flex: 1 1 160px; min-width: 140px; padding: 16px 22px;
+  font-size: 17px; font-weight: 600; cursor: pointer;
+  color: #f5f5fa; background: rgba(232, 67, 147, 0.14);
+  border: 1px solid rgba(232, 67, 147, 0.5); border-radius: 12px;
+  transition: background 0.15s, transform 0.1s;
+}
+.lang-gate-buttons button:hover { background: rgba(232, 67, 147, 0.3); }
+.lang-gate-buttons button:active { transform: scale(0.97); }
+.lang-gate-hint { margin: 22px 0 0; font-size: 13px; color: #7f8598; }

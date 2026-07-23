@@ -91,19 +91,19 @@
       <rect x="3" y="14" width="7" height="7"/>
     </svg>
   </button>
-  <button class="toggle-workspace" id="toggleWorkspace" title="Local workspace" aria-label="Open local workspace">
+  <button class="toggle-workspace" id="toggleWorkspace" title="Local workspace" aria-label="Open local workspace" data-i18n-aria="top.workspace">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
       <path d="M8 11l-2 2 2 2M12 15h4"/>
     </svg>
   </button>
-  <button class="toggle-config" id="toggleConfig" title="Settings (AI, integrations, profile and privacy)" aria-label="Settings" aria-expanded="false">
+  <button class="toggle-config" id="toggleConfig" title="Settings (AI, integrations, profile and privacy)" aria-label="Settings" aria-expanded="false" data-i18n-title="top.settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82A1.65 1.65 0 0 0 3 13.09H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   </button>
-  <button class="toggle-iris activo" id="toggleIris" title="Switch IRIS/A.R.E.S. profile" aria-label="Active profile: A.R.E.S." data-profile="ares">
+  <button class="toggle-iris activo" id="toggleIris" title="Switch IRIS/A.R.E.S. profile" aria-label="Active profile: A.R.E.S." data-profile="ares" data-i18n-title="top.profile">
     <span class="toggle-dot"></span><span id="perfilActivo">A.R.E.S.</span>
   </button>
 </div>
@@ -840,62 +840,76 @@
   </div>
 </div>
 
+<!-- Language gate: shown before the manual/setup until the user picks a
+     language. Bilingual on purpose (no language chosen yet). -->
+<div class="lang-gate" id="langGate" role="dialog" aria-modal="true" aria-label="Choose your language / Elige tu idioma" aria-hidden="true">
+  <div class="lang-gate-shell">
+    <span class="lang-gate-eyebrow">GERAM CORE OS</span>
+    <h1 class="lang-gate-title">Choose your language<br><span>Elige tu idioma</span></h1>
+    <div class="lang-gate-buttons">
+      <button type="button" data-lang="es">Español</button>
+      <button type="button" data-lang="en">English</button>
+    </div>
+    <p class="lang-gate-hint" data-i18n="gate.hint">You can change this later in Settings.</p>
+  </div>
+</div>
+
 <!-- Portable first-run setup. Completion is stored in the OS user's data dir. -->
 <div class="setup-modal" id="setupModal" role="dialog" aria-modal="true" aria-labelledby="setupTitle" aria-hidden="true">
   <div class="setup-backdrop"></div>
   <div class="setup-shell">
     <header class="setup-header">
-      <span>GERAM CORE OS · FIRST RUN</span>
-      <h2 id="setupTitle">Welcome to GERAM CORE OS</h2>
-      <p>Everything below runs on this machine. Credentials live in Settings and are never shown here.</p>
+      <span data-i18n="setup.eyebrow">GERAM CORE OS · FIRST RUN</span>
+      <h2 id="setupTitle" data-i18n="setup.title">Welcome to GERAM CORE OS</h2>
+      <p data-i18n="setup.subtitle">Everything below runs on this machine. Credentials live in Settings and are never shown here.</p>
     </header>
     <!-- Someone opening this for the first time has no idea what the two roles
          are, so the checks below only make sense after this introduction. -->
     <section class="setup-intro">
-      <h3>What this is</h3>
-      <p>A local development environment with two assistants sharing one window.</p>
+      <h3 data-i18n="setup.whatis.h">What this is</h3>
+      <p data-i18n="setup.whatis.p">A local development environment with two assistants sharing one window.</p>
       <dl class="setup-intro-roles">
-        <div><dt>A.R.E.S.</dt><dd>Works in your workspace: Monaco editor, file explorer, terminal, source control. It proposes a diff you review and approve — it never edits on its own.</dd></div>
-        <div><dt>I.R.I.S.</dt><dd>The conversational assistant: voice, reminders, calendar, and the rest of the agents. Optional — the editor works without it.</dd></div>
+        <div><dt>A.R.E.S.</dt><dd data-i18n="setup.role.ares.d">Works in your workspace: Monaco editor, file explorer, terminal, source control. It proposes a diff you review and approve — it never edits on its own.</dd></div>
+        <div><dt>I.R.I.S.</dt><dd data-i18n="setup.role.iris.d">The conversational assistant: voice, reminders, calendar, and the rest of the agents. Optional — the editor works without it.</dd></div>
       </dl>
-      <p class="setup-intro-steps">To get going: <b>1)</b> add an AI provider key in Settings, <b>2)</b> open a folder as your workspace, <b>3)</b> press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save, like any editor. The full manual is always one click away in the top bar.</p>
+      <p class="setup-intro-steps" data-i18n-html="setup.steps">To get going: <b>1)</b> add an AI provider key in Settings, <b>2)</b> open a folder as your workspace, <b>3)</b> press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save, like any editor. The full manual is always one click away in the top bar.</p>
     </section>
     <div class="setup-grid">
       <section>
-        <span class="manual-step">01</span><h3>Your local profile</h3>
-        <label for="setupName">Display name</label>
-        <input id="setupName" maxlength="120" autocomplete="name" placeholder="Local user">
-        <p>This profile and the runtime switches belong only to the current operating-system user.</p>
+        <span class="manual-step">01</span><h3 data-i18n="setup.s1.h">Your local profile</h3>
+        <label for="setupName" data-i18n="setup.name.label">Display name</label>
+        <input id="setupName" maxlength="120" autocomplete="name" placeholder="Local user" data-i18n-ph="setup.name.ph">
+        <p data-i18n="setup.s1.p">This profile and the runtime switches belong only to the current operating-system user.</p>
       </section>
       <section>
-        <span class="manual-step">02</span><h3>System readiness</h3>
+        <span class="manual-step">02</span><h3 data-i18n="setup.s2.h">System readiness</h3>
         <dl class="setup-status-list">
-          <div><dt>Platform</dt><dd id="setupPlatform">Checking…</dd></div>
-          <div><dt>Secure runner</dt><dd id="setupSandbox">Checking…</dd></div>
-          <div><dt>I.R.I.S.</dt><dd id="setupIris">Checking…</dd></div>
-          <div><dt>A.R.E.S.</dt><dd id="setupAres">Checking…</dd></div>
-          <div><dt>Ollama</dt><dd id="setupOllama">Checking…</dd></div>
-          <div><dt>PDF reader</dt><dd id="setupPdf">Checking…</dd></div>
+          <div><dt data-i18n="setup.platform">Platform</dt><dd id="setupPlatform" data-i18n="setup.checking">Checking…</dd></div>
+          <div><dt data-i18n="setup.runner">Secure runner</dt><dd id="setupSandbox" data-i18n="setup.checking">Checking…</dd></div>
+          <div><dt>I.R.I.S.</dt><dd id="setupIris" data-i18n="setup.checking">Checking…</dd></div>
+          <div><dt>A.R.E.S.</dt><dd id="setupAres" data-i18n="setup.checking">Checking…</dd></div>
+          <div><dt>Ollama</dt><dd id="setupOllama" data-i18n="setup.checking">Checking…</dd></div>
+          <div><dt data-i18n="setup.pdf">PDF reader</dt><dd id="setupPdf" data-i18n="setup.checking">Checking…</dd></div>
         </dl>
         <div class="setup-actions">
-          <button id="setupRefresh" type="button">Check again</button>
-          <button id="setupSettings" type="button">Open provider settings</button>
+          <button id="setupRefresh" type="button" data-i18n="setup.checkagain">Check again</button>
+          <button id="setupSettings" type="button" data-i18n="setup.openprovider">Open provider settings</button>
         </div>
       </section>
       <section>
-        <span class="manual-step">03</span><h3>Optional local permissions</h3>
-        <p>Permission is requested only when you press a test button. The stream is stopped immediately.</p>
+        <span class="manual-step">03</span><h3 data-i18n="setup.s3.h">Optional local permissions</h3>
+        <p data-i18n="setup.s3.p">Permission is requested only when you press a test button. The stream is stopped immediately.</p>
         <div class="setup-actions">
-          <button id="setupTestMic" type="button">Test microphone</button>
-          <button id="setupTestCamera" type="button">Test camera</button>
+          <button id="setupTestMic" type="button" data-i18n="setup.testmic">Test microphone</button>
+          <button id="setupTestCamera" type="button" data-i18n="setup.testcam">Test camera</button>
         </div>
-        <p id="setupMediaStatus" role="status" aria-live="polite">Not tested.</p>
+        <p id="setupMediaStatus" role="status" aria-live="polite" data-i18n="setup.nottested">Not tested.</p>
       </section>
     </div>
     <footer class="setup-footer">
-      <button id="setupLater" type="button">Later</button>
+      <button id="setupLater" type="button" data-i18n="setup.later">Later</button>
       <span id="setupSaveStatus" role="status" aria-live="polite"></span>
-      <button id="setupFinish" type="button">Save and start</button>
+      <button id="setupFinish" type="button" data-i18n="setup.saveandstart">Save and start</button>
     </footer>
   </div>
 </div>
@@ -907,31 +921,31 @@
   <div class="manual-shell">
     <header class="manual-header">
       <div>
-        <span class="manual-eyebrow" id="manualEyebrow">I.R.I.S. · ADAPTED USER MANUAL</span>
-        <h2 id="manualTitle">Everything you can ask I.R.I.S. to do</h2>
+        <span class="manual-eyebrow" id="manualEyebrow" data-i18n="manual.eyebrow">I.R.I.S. · ADAPTED USER MANUAL</span>
+        <h2 id="manualTitle" data-i18n="manual.title">Everything you can ask I.R.I.S. to do</h2>
       </div>
-      <button class="manual-close" id="manualClose" type="button" aria-label="Close manual">&times;</button>
+      <button class="manual-close" id="manualClose" type="button" aria-label="Close manual" data-i18n-aria="manual.close">&times;</button>
     </header>
     <div class="manual-role-tabs" role="tablist" aria-label="Choose assistant manual">
-      <button class="activo" id="manualRoleIris" type="button" role="tab" aria-selected="true" data-manual-role="iris">I.R.I.S. Manual</button>
-      <button id="manualRoleAres" type="button" role="tab" aria-selected="false" data-manual-role="ares">A.R.E.S. Manual</button>
+      <button class="activo" id="manualRoleIris" type="button" role="tab" aria-selected="true" data-manual-role="iris" data-i18n="manual.tab.iris">I.R.I.S. Manual</button>
+      <button id="manualRoleAres" type="button" role="tab" aria-selected="false" data-manual-role="ares" data-i18n="manual.tab.ares">A.R.E.S. Manual</button>
     </div>
     <div class="manual-panel" data-manual-panel="iris">
       <div class="manual-layout">
       <nav class="manual-nav" aria-label="Manual chapters">
-        <button type="button" data-manual-target="manualStart">Meet I.R.I.S.</button>
-        <button type="button" data-manual-target="manualChat">Chat and help</button>
-        <button type="button" data-manual-target="manualControl">Voice and camera</button>
-        <button type="button" data-manual-target="manualFiles">Files and agents</button>
-        <button type="button" data-manual-target="manualEditor">Developer workspace</button>
-        <button type="button" data-manual-target="manualConnections">Plans and connections</button>
-        <button type="button" data-manual-target="manualSafety">Security and offline</button>
+        <button type="button" data-manual-target="manualStart" data-i18n="manual.nav.start">Meet I.R.I.S.</button>
+        <button type="button" data-manual-target="manualChat" data-i18n="manual.nav.chat">Chat and help</button>
+        <button type="button" data-manual-target="manualControl" data-i18n="manual.nav.control">Voice and camera</button>
+        <button type="button" data-manual-target="manualFiles" data-i18n="manual.nav.files">Files and agents</button>
+        <button type="button" data-manual-target="manualEditor" data-i18n="manual.nav.editor">Developer workspace</button>
+        <button type="button" data-manual-target="manualConnections" data-i18n="manual.nav.connections">Plans and connections</button>
+        <button type="button" data-manual-target="manualSafety" data-i18n="manual.nav.safety">Security and offline</button>
       </nav>
       <main class="manual-content" id="manualContent" tabindex="0">
         <section id="manualStart">
-          <span class="manual-step">01</span><h3>Meet I.R.I.S.</h3>
-          <p>I.R.I.S. is GERAM's conversational assistant: direct, witty, and built for everyday help. A.R.E.S. is the professional coding role. Both now live inside GERAM CORE OS and can use the AI provider you choose in Settings.</p>
-          <div class="manual-callout"><strong>Talk naturally</strong><span>Ask a question or say “system status.” I.R.I.S. answers in the language you use and receives real CPU/RAM data for hardware-status questions.</span></div>
+          <span class="manual-step">01</span><h3 data-i18n="manual.start.h">Meet I.R.I.S.</h3>
+          <p data-i18n="manual.start.p">I.R.I.S. is GERAM's conversational assistant: direct, witty, and built for everyday help. A.R.E.S. is the professional coding role. Both now live inside GERAM CORE OS and can use the AI provider you choose in Settings.</p>
+          <div class="manual-callout"><strong data-i18n="manual.start.callout.t">Talk naturally</strong><span data-i18n="manual.start.callout.d">Ask a question or say “system status.” I.R.I.S. answers in the language you use and receives real CPU/RAM data for hardware-status questions.</span></div>
         </section>
         <section id="manualChat">
           <span class="manual-step">02</span><h3>Chat, help, and daily status</h3>
@@ -1024,6 +1038,8 @@
   </div>
 </div>
 
+<script src="i18n.js"></script>
+<script src="language-gate.js"></script>
 <script src="/vendor/monaco/vs/loader.js"></script>
 <script src="/vendor/emmet/emmet-monaco.min.js"></script>
 <script src="monaco-editor.js"></script>

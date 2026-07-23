@@ -1,0 +1,242 @@
+// ============================================================
+// GERAM CORE OS · i18n.js
+// Motor de traducción de la interfaz. La elección de idioma se hace en la
+// pantalla de arranque (language-gate.js) ANTES del manual, se guarda en
+// localStorage ("geram-ui-lang") para el arranque inmediato, y se sincroniza
+// con el perfil del usuario (user_profile.language) para que el ASISTENTE
+// (IRIS/A.R.E.S.) responda en el mismo idioma.
+//
+// Uso en el HTML (atributos):
+//   data-i18n="clave"        -> textContent
+//   data-i18n-html="clave"   -> innerHTML (para textos con <b>/<kbd>)
+//   data-i18n-title="clave"  -> title
+//   data-i18n-ph="clave"     -> placeholder
+//   data-i18n-aria="clave"   -> aria-label
+// Uso en JS:  window.GeramI18n.t('clave')
+//
+// Este primer paso cubre el selector, el setup de primer arranque y el
+// mensaje de roles A.R.E.S./I.R.I.S. del manual; el resto de la UI se traduce
+// por tandas. Sin traducción para una clave, cae al inglés (idioma base).
+// ============================================================
+(function (root) {
+  'use strict';
+
+  var STORAGE_KEY = 'geram-ui-lang';
+  var DEFAULT = 'en';
+  var current = DEFAULT;
+
+  var DICT = {
+    en: {
+      // --- Language gate (bilingual by nature; shown before any choice) ---
+      'gate.hint': 'You can change this later in Settings.',
+      // --- Top bar ---
+      'top.explorer': 'Toggle file explorer',
+      'top.workspace': 'Open local workspace',
+      'top.settings': 'Settings (AI, integrations, profile and privacy)',
+      'top.profile': 'Switch IRIS/A.R.E.S. profile',
+      // --- First-run setup ---
+      'setup.eyebrow': 'GERAM CORE OS · FIRST RUN',
+      'setup.title': 'Welcome to GERAM CORE OS',
+      'setup.subtitle': 'Everything below runs on this machine. Credentials live in Settings and are never shown here.',
+      'setup.whatis.h': 'What this is',
+      'setup.whatis.p': 'A local development environment with two assistants sharing one window.',
+      'setup.role.ares.d': 'Works in your workspace: Monaco editor, file explorer, terminal, source control. It proposes a diff you review and approve — it never edits on its own.',
+      'setup.role.iris.d': 'The conversational assistant: voice, reminders, calendar, and the rest of the agents. Optional — the editor works without it.',
+      'setup.steps': 'To get going: <b>1)</b> add an AI provider key in Settings, <b>2)</b> open a folder as your workspace, <b>3)</b> press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save, like any editor. The full manual is always one click away in the top bar.',
+      'setup.s1.h': 'Your local profile',
+      'setup.name.label': 'Display name',
+      'setup.name.ph': 'Local user',
+      'setup.s1.p': 'This profile and the runtime switches belong only to the current operating-system user.',
+      'setup.s2.h': 'System readiness',
+      'setup.platform': 'Platform',
+      'setup.runner': 'Secure runner',
+      'setup.pdf': 'PDF reader',
+      'setup.checkagain': 'Check again',
+      'setup.openprovider': 'Open provider settings',
+      'setup.s3.h': 'Optional local permissions',
+      'setup.s3.p': 'Permission is requested only when you press a test button. The stream is stopped immediately.',
+      'setup.testmic': 'Test microphone',
+      'setup.testcam': 'Test camera',
+      'setup.nottested': 'Not tested.',
+      'setup.later': 'Later',
+      'setup.saveandstart': 'Save and start',
+      // setup dynamic (onboarding.js)
+      'setup.checking': 'Checking…',
+      'setup.ready': 'READY',
+      'setup.notready': 'NOT READY',
+      'setup.unavailable': 'UNAVAILABLE',
+      'setup.saving': 'Saving local setup…',
+      'setup.savefail': 'Setup could not be saved.',
+      'setup.media.unavailable': 'Media devices are unavailable in this environment.',
+      'setup.media.requesting.mic': 'Requesting microphone permission…',
+      'setup.media.requesting.cam': 'Requesting camera permission…',
+      'setup.media.ready.mic': 'microphone is ready; the test stream was stopped.',
+      'setup.media.ready.cam': 'camera is ready; the test stream was stopped.',
+      'setup.media.denied.mic': 'microphone permission was not granted or no device is available.',
+      'setup.media.denied.cam': 'camera permission was not granted or no device is available.',
+      // --- Manual (header, tabs, nav, role intro) ---
+      'manual.eyebrow': 'I.R.I.S. · ADAPTED USER MANUAL',
+      'manual.title': 'Everything you can ask I.R.I.S. to do',
+      'manual.close': 'Close manual',
+      'manual.tab.iris': 'I.R.I.S. Manual',
+      'manual.tab.ares': 'A.R.E.S. Manual',
+      'manual.nav.start': 'Meet I.R.I.S.',
+      'manual.nav.chat': 'Chat and help',
+      'manual.nav.control': 'Voice and camera',
+      'manual.nav.files': 'Files and agents',
+      'manual.nav.editor': 'Developer workspace',
+      'manual.nav.connections': 'Plans and connections',
+      'manual.nav.safety': 'Security and offline',
+      'manual.start.h': 'Meet I.R.I.S.',
+      'manual.start.p': "I.R.I.S. is GERAM's conversational assistant: direct, witty, and built for everyday help. A.R.E.S. is the professional coding role. Both now live inside GERAM CORE OS and can use the AI provider you choose in Settings.",
+      'manual.start.callout.t': 'Talk naturally',
+      'manual.start.callout.d': 'Ask a question or say “system status.” I.R.I.S. answers in the language you use and receives real CPU/RAM data for hardware-status questions.'
+    },
+    es: {
+      'gate.hint': 'Puedes cambiarlo luego en Settings.',
+      'top.explorer': 'Mostrar/ocultar el explorador de archivos',
+      'top.workspace': 'Abrir workspace local',
+      'top.settings': 'Ajustes (IA, integraciones, perfil y privacidad)',
+      'top.profile': 'Cambiar perfil IRIS/A.R.E.S.',
+      'setup.eyebrow': 'GERAM CORE OS · PRIMER ARRANQUE',
+      'setup.title': 'Bienvenido a GERAM CORE OS',
+      'setup.subtitle': 'Todo lo de abajo corre en esta máquina. Las credenciales viven en Ajustes y nunca se muestran aquí.',
+      'setup.whatis.h': 'Qué es esto',
+      'setup.whatis.p': 'Un entorno de desarrollo local con dos asistentes compartiendo una ventana.',
+      'setup.role.ares.d': 'Trabaja en tu workspace: editor Monaco, explorador de archivos, terminal, control de versiones. Propone un diff que revisas y apruebas — nunca edita por su cuenta.',
+      'setup.role.iris.d': 'El asistente conversacional: voz, recordatorios, calendario y el resto de los agentes. Opcional — el editor funciona sin él.',
+      'setup.steps': 'Para empezar: <b>1)</b> agrega una clave de proveedor de IA en Ajustes, <b>2)</b> abre una carpeta como tu workspace, <b>3)</b> presiona <kbd>Ctrl</kbd>+<kbd>S</kbd> para guardar, como cualquier editor. El manual completo está siempre a un clic en la barra superior.',
+      'setup.s1.h': 'Tu perfil local',
+      'setup.name.label': 'Nombre para mostrar',
+      'setup.name.ph': 'Usuario local',
+      'setup.s1.p': 'Este perfil y los interruptores de runtime pertenecen solo al usuario actual del sistema operativo.',
+      'setup.s2.h': 'Estado del sistema',
+      'setup.platform': 'Plataforma',
+      'setup.runner': 'Runner seguro',
+      'setup.pdf': 'Lector de PDF',
+      'setup.checkagain': 'Comprobar de nuevo',
+      'setup.openprovider': 'Abrir ajustes de proveedores',
+      'setup.s3.h': 'Permisos locales opcionales',
+      'setup.s3.p': 'El permiso se pide solo cuando presionas un botón de prueba. El stream se detiene de inmediato.',
+      'setup.testmic': 'Probar micrófono',
+      'setup.testcam': 'Probar cámara',
+      'setup.nottested': 'Sin probar.',
+      'setup.later': 'Más tarde',
+      'setup.saveandstart': 'Guardar y empezar',
+      'setup.checking': 'Comprobando…',
+      'setup.ready': 'LISTO',
+      'setup.notready': 'NO LISTO',
+      'setup.unavailable': 'NO DISPONIBLE',
+      'setup.saving': 'Guardando setup local…',
+      'setup.savefail': 'No se pudo guardar el setup.',
+      'setup.media.unavailable': 'Los dispositivos multimedia no están disponibles en este entorno.',
+      'setup.media.requesting.mic': 'Pidiendo permiso de micrófono…',
+      'setup.media.requesting.cam': 'Pidiendo permiso de cámara…',
+      'setup.media.ready.mic': 'el micrófono está listo; el stream de prueba se detuvo.',
+      'setup.media.ready.cam': 'la cámara está lista; el stream de prueba se detuvo.',
+      'setup.media.denied.mic': 'no se concedió el permiso de micrófono o no hay dispositivo disponible.',
+      'setup.media.denied.cam': 'no se concedió el permiso de cámara o no hay dispositivo disponible.',
+      'manual.eyebrow': 'I.R.I.S. · MANUAL DE USUARIO ADAPTADO',
+      'manual.title': 'Todo lo que puedes pedirle a I.R.I.S.',
+      'manual.close': 'Cerrar manual',
+      'manual.tab.iris': 'Manual de I.R.I.S.',
+      'manual.tab.ares': 'Manual de A.R.E.S.',
+      'manual.nav.start': 'Conoce a I.R.I.S.',
+      'manual.nav.chat': 'Chat y ayuda',
+      'manual.nav.control': 'Voz y cámara',
+      'manual.nav.files': 'Archivos y agentes',
+      'manual.nav.editor': 'Workspace de desarrollo',
+      'manual.nav.connections': 'Planes y conexiones',
+      'manual.nav.safety': 'Seguridad y offline',
+      'manual.start.h': 'Conoce a I.R.I.S.',
+      'manual.start.p': 'I.R.I.S. es el asistente conversacional de GERAM: directo, con chispa y hecho para la ayuda del día a día. A.R.E.S. es el rol profesional de programación. Ambos viven ahora dentro de GERAM CORE OS y pueden usar el proveedor de IA que elijas en Ajustes.',
+      'manual.start.callout.t': 'Habla con naturalidad',
+      'manual.start.callout.d': 'Haz una pregunta o di “estado del sistema”. I.R.I.S. responde en el idioma que uses y recibe datos reales de CPU/RAM para las preguntas de hardware.'
+    }
+  };
+
+  function normalize(lang) {
+    return (lang === 'es' || lang === 'en') ? lang : null;
+  }
+
+  function getStored() {
+    try { return normalize(root.localStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
+  }
+
+  function setStored(lang) {
+    try { root.localStorage.setItem(STORAGE_KEY, lang); } catch (e) { /* private mode */ }
+  }
+
+  function t(key) {
+    var table = DICT[current] || DICT[DEFAULT];
+    if (table && Object.prototype.hasOwnProperty.call(table, key)) { return table[key]; }
+    var base = DICT[DEFAULT];
+    return (base && base[key] !== undefined) ? base[key] : key;
+  }
+
+  function applyAttr(scope, attr, setter) {
+    var nodes = scope.querySelectorAll('[' + attr + ']');
+    Array.prototype.forEach.call(nodes, function (node) {
+      setter(node, t(node.getAttribute(attr)));
+    });
+  }
+
+  function apply(scopeNode) {
+    var scope = scopeNode || root.document;
+    applyAttr(scope, 'data-i18n', function (n, v) { n.textContent = v; });
+    applyAttr(scope, 'data-i18n-html', function (n, v) { n.innerHTML = v; });
+    applyAttr(scope, 'data-i18n-title', function (n, v) { n.setAttribute('title', v); });
+    applyAttr(scope, 'data-i18n-ph', function (n, v) { n.setAttribute('placeholder', v); });
+    applyAttr(scope, 'data-i18n-aria', function (n, v) { n.setAttribute('aria-label', v); });
+  }
+
+  // Sincroniza la elección con el perfil del usuario para que el ASISTENTE
+  // responda en el mismo idioma (best-effort; si falla, la UI ya quedó bien).
+  function syncServer(lang) {
+    if (!root.fetch) { return; }
+    root.fetch('/api/config', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) { throw new Error('config'); } return r.json(); })
+      .then(function (config) {
+        if (!config.user_profile) { config.user_profile = {}; }
+        if (config.user_profile.language === lang) { return null; }
+        config.user_profile.language = lang;
+        return root.fetch('/api/config', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+      })
+      .catch(function () { /* la UI ya está en el idioma elegido */ });
+  }
+
+  function setLanguage(lang, options) {
+    var norm = normalize(lang) || DEFAULT;
+    current = norm;
+    setStored(norm);
+    root.document.documentElement.setAttribute('lang', norm);
+    apply(root.document);
+    if (!options || options.sync !== false) { syncServer(norm); }
+  }
+
+  function hasChoice() { return getStored() !== null; }
+
+  function init() {
+    var stored = getStored();
+    current = stored || DEFAULT;
+    root.document.documentElement.setAttribute('lang', current);
+    apply(root.document);
+  }
+
+  root.GeramI18n = {
+    t: t,
+    apply: apply,
+    setLanguage: setLanguage,
+    hasChoice: hasChoice,
+    current: function () { return current; }
+  };
+
+  if (root.document.readyState === 'loading') {
+    root.document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(window);

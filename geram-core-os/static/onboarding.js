@@ -9,6 +9,10 @@
 
   function byId(id) { return documentObject.getElementById(id); }
   function setText(id, value) { var node = byId(id); if (node) { node.textContent = value; } }
+  // Traducción de los textos generados en JS (los estáticos van por data-i18n).
+  function T(key, fallback) {
+    return (root.GeramI18n && root.GeramI18n.t) ? root.GeramI18n.t(key) : fallback;
+  }
   function shouldOpen(config) {
     var seen = config && config.onboarding && Number(config.onboarding.setup_version_seen || 0);
     return seen < SETUP_VERSION;
@@ -25,7 +29,7 @@
     modal.classList.remove('activo');
     modal.setAttribute('aria-hidden', 'true');
   }
-  function ready(value) { return value ? 'READY' : 'NOT READY'; }
+  function ready(value) { return value ? T('setup.ready', 'READY') : T('setup.notready', 'NOT READY'); }
   function applyStatus(status) {
     var platform = status.platform || {};
     var dependencies = platform.dependencies || {};
@@ -44,24 +48,25 @@
       .then(applyStatus)
       .catch(function () {
         ['setupPlatform', 'setupSandbox', 'setupIris', 'setupAres', 'setupOllama', 'setupPdf']
-          .forEach(function (id) { setText(id, 'UNAVAILABLE'); });
+          .forEach(function (id) { setText(id, T('setup.unavailable', 'UNAVAILABLE')); });
       });
   }
   function testMedia(kind) {
+    var sufijo = kind === 'microphone' ? 'mic' : 'cam';
     if (!root.navigator.mediaDevices || !root.navigator.mediaDevices.getUserMedia) {
-      setText('setupMediaStatus', 'Media devices are unavailable in this environment.');
+      setText('setupMediaStatus', T('setup.media.unavailable', 'Media devices are unavailable in this environment.'));
       return Promise.resolve(false);
     }
-    setText('setupMediaStatus', 'Requesting ' + kind + ' permission…');
+    setText('setupMediaStatus', T('setup.media.requesting.' + sufijo, 'Requesting ' + kind + ' permission…'));
     var constraints = kind === 'microphone' ? { audio: true } : { video: true };
     return root.navigator.mediaDevices.getUserMedia(constraints)
       .then(function (stream) {
         stream.getTracks().forEach(function (track) { track.stop(); });
-        setText('setupMediaStatus', kind + ' is ready; the test stream was stopped.');
+        setText('setupMediaStatus', T('setup.media.ready.' + sufijo, kind + ' is ready; the test stream was stopped.'));
         return true;
       })
       .catch(function () {
-        setText('setupMediaStatus', kind + ' permission was not granted or no device is available.');
+        setText('setupMediaStatus', T('setup.media.denied.' + sufijo, kind + ' permission was not granted or no device is available.'));
         return false;
       });
   }
@@ -69,7 +74,12 @@
     if (!currentConfig) { return; }
     var name = String((byId('setupName') && byId('setupName').value) || '').trim();
     if (name) { currentConfig.user_profile.name = name; }
-    setText('setupSaveStatus', 'Saving local setup…');
+    // currentConfig se leyó al arrancar, ANTES de que el selector de idioma
+    // guardara la elección; sin esto, este POST la pisaría con el valor viejo.
+    if (root.GeramI18n && root.GeramI18n.hasChoice && root.GeramI18n.hasChoice()) {
+      currentConfig.user_profile.language = root.GeramI18n.current();
+    }
+    setText('setupSaveStatus', T('setup.saving', 'Saving local setup…'));
     root.fetch('/api/config', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(currentConfig),
@@ -83,7 +93,7 @@
       if (!response.ok) { throw new Error('setup'); }
       hide();
       if (root.GeramRuntimeStatus) { root.GeramRuntimeStatus.refresh(); }
-    }).catch(function () { setText('setupSaveStatus', 'Setup could not be saved.'); });
+    }).catch(function () { setText('setupSaveStatus', T('setup.savefail', 'Setup could not be saved.')); });
   }
   function bind() {
     var refresh = byId('setupRefresh');
