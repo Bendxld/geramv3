@@ -35,14 +35,14 @@
      developer mode (the editor view). -->
 <div class="vscode-menubar" id="vscodeMenubar" role="menubar" aria-label="Main menu">
   <span class="vscode-menubar-brand">GERAM<span>OS</span></span>
-  <button class="vscode-menu" data-menu="file" type="button">File</button>
-  <button class="vscode-menu" data-menu="edit" type="button">Edit</button>
-  <button class="vscode-menu" data-menu="selection" type="button">Selection</button>
-  <button class="vscode-menu" data-menu="view" type="button">View</button>
-  <button class="vscode-menu" data-menu="go" type="button">Go</button>
-  <button class="vscode-menu" data-menu="run" type="button">Run</button>
-  <button class="vscode-menu" data-menu="terminal" type="button">Terminal</button>
-  <button class="vscode-menu" data-menu="help" type="button">Help</button>
+  <button class="vscode-menu" data-menu="file" type="button" data-i18n="menu.file">File</button>
+  <button class="vscode-menu" data-menu="edit" type="button" data-i18n="menu.edit">Edit</button>
+  <button class="vscode-menu" data-menu="selection" type="button" data-i18n="menu.selection">Selection</button>
+  <button class="vscode-menu" data-menu="view" type="button" data-i18n="menu.view">View</button>
+  <button class="vscode-menu" data-menu="go" type="button" data-i18n="menu.go">Go</button>
+  <button class="vscode-menu" data-menu="run" type="button" data-i18n="menu.run">Run</button>
+  <button class="vscode-menu" data-menu="terminal" type="button" data-i18n="menu.terminal">Terminal</button>
+  <button class="vscode-menu" data-menu="help" type="button" data-i18n="menu.help">Help</button>
 </div>
 
 <!-- Activity Bar (left): neon icons with badges. The toggles and badges are
@@ -182,17 +182,17 @@
   <!-- Botón "volver": solo visible en modo hablando (ver style.css
        "MODO HABLANDO" y script.js sección 15/19) — corta la voz de
        IRIS a la mitad y regresa al HUD normal. -->
-  <button class="btn-volver-normal" id="btnVolverNormal" title="Return to normal view">
+  <button class="btn-volver-normal" id="btnVolverNormal" title="Return to normal view" data-i18n-title="hud.back.title">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <line x1="19" y1="12" x2="5" y2="12"/>
       <polyline points="12 19 5 12 12 5"/>
     </svg>
-    <span>BACK</span>
+    <span data-i18n="hud.back">BACK</span>
   </button>
 
   <!-- ====== BOTONES DE SENTIDOS (NUEVO) ====== -->
   <div class="sentidos" id="sentidos">
-    <button class="sentido activo" id="btn-mic" data-sentido="mic" title="Microphone">
+    <button class="sentido activo" id="btn-mic" data-sentido="mic" title="Microphone" data-i18n-title="hud.mic.title">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -200,20 +200,20 @@
       </svg>
       <span>MIC</span>
     </button>
-    <button class="sentido activo" id="btn-voz" data-sentido="voz" title="Voice output">
+    <button class="sentido activo" id="btn-voz" data-sentido="voz" title="Voice output" data-i18n-title="hud.voice.title">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
         <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
         <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
       </svg>
-      <span>VOICE</span>
+      <span data-i18n="hud.voice">VOICE</span>
     </button>
-    <button class="sentido" id="btn-vista" data-sentido="vista" title="Camera / Vision">
+    <button class="sentido" id="btn-vista" data-sentido="vista" title="Camera / Vision" data-i18n-title="hud.vision.title">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
         <circle cx="12" cy="12" r="3"/>
       </svg>
-      <span>VISION</span>
+      <span data-i18n="hud.vision">VISION</span>
     </button>
   </div>
 
@@ -225,7 +225,7 @@
       <line class="g-aguja" id="aEner" x1="60" y1="64" x2="60" y2="26"/>
       <circle class="g-centro" cx="60" cy="64" r="2.5"/>
       <text class="g-num" id="nEner" x="60" y="50" text-anchor="middle">98%</text>
-      <text class="g-label" x="60" y="78" text-anchor="middle">ENERGY</text>
+      <text class="g-label" x="60" y="78" text-anchor="middle" data-i18n="hud.energy">ENERGY</text>
     </svg>
   </div>
 
@@ -235,10 +235,10 @@
       <h2 class="panel-titulo"><span class="dot"></span><span data-i18n="panel.systemstatus">SYSTEM STATUS</span></h2>
       <div class="stat"><label>CPU</label><div class="barra"><i id="bCpu"></i></div><b id="vCpu">34%</b></div>
       <div class="stat"><label>RAM</label><div class="barra"><i id="bRam"></i></div><b id="vRam">68%</b></div>
-      <div class="stat"><label>NETWORK</label><div class="barra"><i id="bRed"></i></div><b id="vRed">120 KB/s</b></div>
-      <div class="kv"><span>CORE TEMP</span><b id="vTemp">42°C</b></div>
-      <div class="kv"><span>UPTIME</span><b id="vUp">00:00:00</b></div>
-      <div class="kv"><span>STATUS</span><b class="ok">NOMINAL</b></div>
+      <div class="stat"><label data-i18n="hud.network">NETWORK</label><div class="barra"><i id="bRed"></i></div><b id="vRed">120 KB/s</b></div>
+      <div class="kv"><span data-i18n="hud.coretemp">CORE TEMP</span><b id="vTemp">42°C</b></div>
+      <div class="kv"><span data-i18n="hud.uptime">UPTIME</span><b id="vUp">00:00:00</b></div>
+      <div class="kv"><span data-i18n="hud.status">STATUS</span><b class="ok">NOMINAL</b></div>
     </section>
 
     <section class="panel consola">
@@ -434,30 +434,30 @@
             <button class="workspace-explorador-btn" id="workspaceRefrescar" type="button" title="Refresh explorer" aria-label="Refresh explorer">↻</button>
           </div>
         </div>
-        <p class="workspace-carga" id="workspaceCarga" role="status" aria-live="polite">Waiting to load.</p>
+        <p class="workspace-carga" id="workspaceCarga" role="status" aria-live="polite" data-i18n="ws.waiting">Waiting to load.</p>
         <div class="workspace-arbol" id="workspaceArbol" role="tree" aria-label="Local file tree"></div>
       </aside>
       <section class="workspace-editor" aria-labelledby="workspaceRuta">
         <div class="workspace-editor-barra">
-          <span class="workspace-ruta" id="workspaceRuta">No file open</span>
+          <span class="workspace-ruta" id="workspaceRuta" data-i18n="ws.nofile">No file open</span>
           <span class="workspace-modificado" id="workspaceModificado" aria-live="polite"></span>
-          <button class="live-preview-btn" id="livePreviewBtn" type="button" title="Live preview (Go Live)" aria-pressed="false">◱ Go Live</button>
-          <button class="share-btn" id="shareBtn" type="button" title="Share this page" aria-haspopup="dialog">⇪ Share</button>
+          <button class="live-preview-btn" id="livePreviewBtn" type="button" title="Live preview (Go Live)" aria-pressed="false" data-i18n="ws.golive" data-i18n-title="ws.golive.title">◱ Go Live</button>
+          <button class="share-btn" id="shareBtn" type="button" title="Share this page" aria-haspopup="dialog" data-i18n="ws.share" data-i18n-title="ws.share.title">⇪ Share</button>
         </div>
         <div class="workspace-editor-superficie" id="workspaceEditorSuperficie" aria-busy="false">
-          <p class="workspace-editor-carga" id="workspaceEditorCarga" role="status">Initializing local Monaco Editor...</p>
+          <p class="workspace-editor-carga" id="workspaceEditorCarga" role="status" data-i18n="ws.initmonaco">Initializing local Monaco Editor...</p>
           <div id="workspaceMonaco" class="workspace-monaco" role="region" aria-label="Workspace code editor"></div>
-          <label class="solo-lectores" for="workspaceTexto">Fallback editor for the active file</label>
+          <label class="solo-lectores" for="workspaceTexto" data-i18n="ws.fallback">Fallback editor for the active file</label>
           <textarea id="workspaceTexto" class="workspace-textarea" spellcheck="false" disabled hidden></textarea>
 
           <!-- Vista previa en vivo (v3): iframe sandbox que renderiza el
                archivo web GUARDADO (/preview/...). Hot-reload al guardar. -->
           <div class="live-preview" id="livePreview" hidden>
             <div class="live-preview-head">
-              <span class="live-preview-titulo" id="livePreviewTitulo">Preview</span>
+              <span class="live-preview-titulo" id="livePreviewTitulo" data-i18n="ws.preview">Preview</span>
               <div class="live-preview-actions">
-                <button class="live-preview-reload" id="livePreviewReload" type="button" title="Reload">↻</button>
-                <button class="live-preview-cerrar" id="livePreviewCerrar" type="button" title="Close preview" aria-label="Close preview">&times;</button>
+                <button class="live-preview-reload" id="livePreviewReload" type="button" title="Reload" data-i18n-title="ws.reload.title">↻</button>
+                <button class="live-preview-cerrar" id="livePreviewCerrar" type="button" title="Close preview" aria-label="Close preview" data-i18n-title="ws.closepreview" data-i18n-aria="ws.closepreview">&times;</button>
               </div>
             </div>
             <iframe class="live-preview-frame" id="livePreviewFrame" title="Live preview" sandbox="allow-scripts"></iframe>
@@ -469,11 +469,11 @@
                Lo maneja inline-ai.js; el <pre> es el respaldo si Monaco no cargó. -->
           <div class="inline-ai-diff" id="inlineAiDiff" hidden aria-label="Diff proposed by A.R.E.S.">
             <div class="inline-ai-diff-barra">
-              <span class="inline-ai-diff-titulo">A.R.E.S. · PROPOSAL</span>
+              <span class="inline-ai-diff-titulo" data-i18n="ws.proposal">A.R.E.S. · PROPOSAL</span>
               <span class="inline-ai-diff-summary" id="inlineAiSummary"></span>
               <div class="inline-ai-diff-controles">
-                <button class="inline-ai-accept" id="inlineAiAccept" type="button" title="Accept (Ctrl+Enter)">Accept</button>
-                <button class="inline-ai-reject" id="inlineAiReject" type="button" title="Reject (Esc)">Reject</button>
+                <button class="inline-ai-accept" id="inlineAiAccept" type="button" title="Accept (Ctrl+Enter)" data-i18n="ws.accept" data-i18n-title="ws.accept.title">Accept</button>
+                <button class="inline-ai-reject" id="inlineAiReject" type="button" title="Reject (Esc)" data-i18n="ws.reject" data-i18n-title="ws.reject.title">Reject</button>
               </div>
             </div>
             <ul class="inline-ai-warnings" id="inlineAiWarnings"></ul>
@@ -483,8 +483,8 @@
         </div>
         <div class="workspace-editor-footer">
           <span class="workspace-estado" id="workspaceEstado" role="status" aria-live="polite"></span>
-          <button class="workspace-problems-toggle" id="workspaceProblemsToggle" type="button" aria-expanded="false" aria-controls="workspaceProblems">Problems <span id="workspaceProblemsCount">0</span></button>
-          <button class="workspace-guardar" id="workspaceGuardar" type="button" disabled>Save</button>
+          <button class="workspace-problems-toggle" id="workspaceProblemsToggle" type="button" aria-expanded="false" aria-controls="workspaceProblems"><span data-i18n="ws.problems">Problems</span> <span id="workspaceProblemsCount">0</span></button>
+          <button class="workspace-guardar" id="workspaceGuardar" type="button" disabled data-i18n="ws.save">Save</button>
         </div>
         <section class="workspace-problems" id="workspaceProblems" hidden aria-labelledby="workspaceProblemsTitle">
           <div class="workspace-problems-header">

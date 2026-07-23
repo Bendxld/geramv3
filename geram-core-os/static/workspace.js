@@ -260,8 +260,18 @@
     var editorAdapter = null;
     var editorModule = windowObject.GeramMonacoEditor;
     var state = new TemporaryEditorState(function() {
-      return windowObject.confirm('There are unsaved changes. Switch files and keep them pending?');
+      return windowObject.confirm(
+        (windowObject.GeramI18n && windowObject.GeramI18n.t)
+          ? windowObject.GeramI18n.t('ws.confirmswitch')
+          : 'There are unsaved changes. Switch files and keep them pending?'
+      );
     });
+
+    // Traducción de los textos generados aquí (los estáticos van por data-i18n
+    // en index.html; estos se re-escriben en runtime y revertirían el idioma).
+    function T(key, fallback) {
+      return (windowObject.GeramI18n && windowObject.GeramI18n.t) ? windowObject.GeramI18n.t(key) : fallback;
+    }
 
     function setStatus(message, isError) {
       statusElement.textContent = message || '';
@@ -269,8 +279,8 @@
     }
 
     function renderState() {
-      pathElement.textContent = state.activePath || 'No file open';
-      modifiedElement.textContent = state.modified ? 'UNSAVED CHANGES' : '';
+      pathElement.textContent = state.activePath || T('ws.nofile', 'No file open');
+      modifiedElement.textContent = state.modified ? T('ws.unsaved', 'UNSAVED CHANGES') : '';
       saveButton.disabled = !state.activePath || !state.modified || state.saving;
       editorSurface.setAttribute('aria-busy', state.saving ? 'true' : 'false');
       if (editorAdapter) {
