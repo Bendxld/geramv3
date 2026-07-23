@@ -21,6 +21,7 @@
 # puros, para que server.py arme JSON con ellos).
 # ============================================================
 
+import difflib
 import json
 import logging
 import os
@@ -1012,6 +1013,117 @@ def abrir_archivo(ruta):
     if resultado.returncode != 0:
         return f"No pude abrir '{ruta}': {resultado.stderr.strip()[:200] or 'xdg-open devolvió un error.'}"
     return f"Abrí {ruta}."
+
+
+# Región para tiendas locales (Amazon/MercadoLibre): configurable por la
+# variable de entorno GERAM_TLD para que funcione fuera de México sin editar
+# código. Ejemplos: "com.mx" (default), "com" (EE.UU.), "es" (España),
+# "com.ar", "com.co". Se limpia un "." inicial por si lo escriben como ".mx".
+TLD_TIENDAS = os.getenv("GERAM_TLD", "com.mx").strip().lstrip(".") or "com.mx"
+
+# Plantillas de búsqueda por sitio para "búscalo en google/amazon/github".
+# TODAS abren el navegador (a diferencia de web_agent.buscar_web, que trae
+# texto resumido al chat sin abrir nada). {q} se rellena con la búsqueda ya
+# url-encodeada (por eso los {{q}} en las f-strings quedan como {q} literal).
+BUSQUEDAS_SITIO = {
+    "google": "https://www.google.com/search?q={q}",
+    "youtube": "https://www.youtube.com/results?search_query={q}",
+    "amazon": f"https://www.amazon.{TLD_TIENDAS}/s?k={{q}}",
+    "github": "https://github.com/search?q={q}&type=repositories",
+    "mercadolibre": f"https://listado.mercadolibre.{TLD_TIENDAS}/{{q}}",
+    "wikipedia": "https://es.wikipedia.org/w/index.php?search={q}",
+    "maps": "https://www.google.com/maps/search/{q}",
+    "bing": "https://www.bing.com/search?q={q}",
+    "duckduckgo": "https://duckduckgo.com/?q={q}",
+    "spotify": "https://open.spotify.com/search/{q}",
+}
+
+
+def buscar_en_navegador(busqueda, sitio="google"):
+    """Abre el navegador con `busqueda` en `sitio` (ver BUSQUEDAS_SITIO;
+    cae a Google si el sitio no está en el mapa). CERO tokens. Devuelve
+    un string listo para voz/texto — a diferencia de web_agent.buscar_web,
+    que devuelve resultados en texto SIN abrir el navegador."""
+    busqueda = (busqueda or "").strip()
+    if not busqueda:
+        return f"¿Qué busco en {sitio}, jefe?"
+    clave = (sitio or "google").lower()
+    plantilla = BUSQUEDAS_SITIO.get(clave, BUSQUEDAS_SITIO["google"])
+    nombre_sitio = clave.capitalize() if clave in BUSQUEDAS_SITIO else "Google"
+    url = plantilla.format(q=quote(busqueda))
+    return (
+        f"Buscando '{busqueda}' en {nombre_sitio}."
+        if abrir_url(url)
+        else f"No pude abrir {nombre_sitio}, jefe."
+    )
+
+
+# Raíz del repo (…/geramv3) — para abrir_proyecto y abrir_repositorio.
+_REPO_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CARPETA_PROYECTOS = os.path.join(_REPO_RAIZ, "proyectos")
+
+
+def _url_repositorio():
+    """Deduce la URL https del repo desde el remote real de git; si git
+    falla o no hay remote, cae al repo conocido del proyecto."""
+    try:
+        salida = subprocess.run(
+            ["git", "-C", _REPO_RAIZ, "remote", "get-url", "origin"],
+            capture_output=True, text=True, timeout=5,
+        )
+        url = salida.stdout.strip()
+    except Exception:
+        url = ""
+    if not url:
+        return "https://github.com/Bendxld/geramv3"
+    # git@github.com:usuario/repo.git -> https://github.com/usuario/repo
+    if url.startswith("git@"):
+        url = url.replace(":", "/", 1).replace("git@", "https://", 1)
+    if url.endswith(".git"):
+        url = url[:-4]
+    return url
+
+
+def abrir_repositorio():
+    """Abre el repositorio del proyecto en GitHub (lee el remote real de
+    git, no lo hardcodea). CERO tokens."""
+    url = _url_repositorio()
+    return f"Abriendo el repositorio: {url}" if abrir_url(url) else "No pude abrir el repositorio, jefe."
+
+
+def abrir_proyecto(nombre):
+    """Abre la carpeta de un proyecto de código (proyectos/<nombre>) en el
+    gestor de archivos. Tolera nombres aproximados: match exacto, luego
+    parcial (substring), luego el más parecido con difflib — para cubrir
+    typos de voz/texto. CERO tokens."""
+    nombre = (nombre or "").strip()
+    if not nombre:
+        return "¿Qué proyecto abro, jefe?"
+    if not os.path.isdir(CARPETA_PROYECTOS):
+        return "Todavía no tienes proyectos guardados, jefe."
+    try:
+        carpetas = [
+            d for d in os.listdir(CARPETA_PROYECTOS)
+            if os.path.isdir(os.path.join(CARPETA_PROYECTOS, d))
+        ]
+    except OSError as e:
+        return f"No pude leer la carpeta de proyectos: {e}"
+    if not carpetas:
+        return "Todavía no tienes proyectos guardados, jefe."
+
+    clave = nombre.lower()
+    elegida = next((d for d in carpetas if d.lower() == clave), None)
+    if not elegida:
+        elegida = next((d for d in carpetas if clave in d.lower()), None)
+    if not elegida:
+        aproximados = difflib.get_close_matches(clave, [d.lower() for d in carpetas], n=1, cutoff=0.6)
+        if aproximados:
+            elegida = next(d for d in carpetas if d.lower() == aproximados[0])
+    if not elegida:
+        disponibles = ", ".join(sorted(carpetas)[:8])
+        return f"No encontré el proyecto '{nombre}', jefe. Tienes: {disponibles}."
+
+    return abrir_archivo(os.path.join(CARPETA_PROYECTOS, elegida))
 
 
 # ============================================================

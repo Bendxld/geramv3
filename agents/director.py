@@ -180,6 +180,24 @@ PALABRAS_WEB = ("busca", "búscame", "buscame", "encuentra", "googlea", "búscal
 # de descargas" vs. "busca quién ganó el mundial".
 _PISTAS_ARCHIVO = ("archivo", "archivos", "carpeta", "documentos", "descargas", "escritorio")
 
+# Cuando la búsqueda va dirigida a un sitio concreto ("búscalo en google",
+# "en amazon", "googlea X"), IRIS ABRE EL NAVEGADOR en ese sitio (ver
+# control_agent.buscar_en_navegador) en vez de traer un resumen de texto al
+# chat (web_agent.buscar_web, el comportamiento de "búscame X" a secas).
+# YouTube NO está aquí: "en youtube" ya lo captura control_remoto antes
+# (PALABRAS_YOUTUBE_PON -> control_agent.abrir_en_youtube). El orden importa:
+# el primer sitio cuyo disparador aparezca gana (ver _detectar_sitio_busqueda).
+_SITIOS_BUSQUEDA_NAVEGADOR = {
+    "amazon": ("en amazon",),
+    "github": ("en github", "en git hub"),
+    "wikipedia": ("en wikipedia", "en la wikipedia"),
+    "maps": ("en google maps", "en maps", "en mapas"),
+    "mercadolibre": ("en mercado libre", "en mercadolibre"),
+    "bing": ("en bing",),
+    "spotify": ("en spotify",),
+    "google": ("en google", "googlea", "en el navegador", "en internet", "en la web"),
+}
+
 # Respuestas cortas que cuentan como "sí" a la oferta de armar el
 # documento en Notion. Se compara por token (no por substring) para
 # que "va" no matchee dentro de otra palabra (ej. "nova").
@@ -598,6 +616,27 @@ PALABRAS_ABRIR = ("abre", "abrí", "abrir", "ábreme")
 # de otro modo "pon" es demasiado genérico (ej. "pon un pendiente").
 _SITIOS_PARA_PON = ("netflix", "spotify", "gmail", "github", "drive", "notion", "youtube", "instagram")
 
+# "abre el repositorio" / "abre el repo": abre el repo del proyecto en
+# GitHub (control_agent.abrir_repositorio, lee el remote real de git). Va
+# ANTES que PALABRAS_ABRIR en _detectar_intencion porque contiene "abre" y
+# si no caería a _procesar_abrir intentando abrir una app llamada
+# "el repositorio". "repo"/"repositorio" a secas NO están para no pisar
+# menciones casuales de la palabra.
+PALABRAS_REPOSITORIO = (
+    "abre el repositorio", "abre mi repositorio", "abrir repositorio", "abre repositorio",
+    "abre el repo", "abre mi repo", "abrir repo", "abre repo", "ábreme el repositorio",
+    "abre el repositorio en github", "abre el proyecto en github", "abre github del proyecto",
+)
+
+# "abre el proyecto X": abre la carpeta proyectos/X (control_agent.
+# abrir_proyecto). Va ANTES que PALABRAS_PROYECTOS (tracker Notion) en
+# _detectar_intencion porque "proyecto" también dispara ese dominio, y
+# antes que PALABRAS_ABRIR genérico porque "proyecto" no es una app.
+PALABRAS_ABRIR_PROYECTO = (
+    "abre el proyecto", "abre mi proyecto", "abre proyecto", "abrir proyecto",
+    "ábreme el proyecto", "abreme el proyecto", "abre la carpeta del proyecto",
+)
+
 # Preguntas de ESTADÍSTICAS sobre proyectos/cerebro_archivos ("cuántos
 # archivos tengo en total/en Descargas"). Van DESPUÉS de PALABRAS_ABRIR
 # en _detectar_intencion a propósito: "abrí el cerebro de archivos"
@@ -782,6 +821,15 @@ def _detectar_intencion(texto):
         return "finanzas"
     if any(p in texto_bajo for p in PALABRAS_PENDIENTES):
         return "pendientes"
+    # "abre el repositorio" y "abre el proyecto X" van ANTES que
+    # PALABRAS_PROYECTOS (tracker Notion, que tiene "proyecto") y que
+    # PALABRAS_ABRIR genérico. Repositorio primero: su variante "abre el
+    # proyecto en github" contiene "abre el proyecto" y no debe caer en
+    # abrir_proyecto.
+    if any(p in texto_bajo for p in PALABRAS_REPOSITORIO):
+        return "repositorio"
+    if any(p in texto_bajo for p in PALABRAS_ABRIR_PROYECTO):
+        return "abrir_proyecto"
     if any(p in texto_bajo for p in PALABRAS_PROYECTOS):
         return "proyectos"
     # "ábrelo"/"abre ese archivo"/"abre el archivo que creaste" van ANTES
@@ -992,7 +1040,36 @@ def _procesar_control(texto_usuario):
     return resultado["mensaje"]
 
 
+def _detectar_sitio_busqueda(texto_bajo):
+    """Devuelve el sitio (clave de _SITIOS_BUSQUEDA_NAVEGADOR) al que va
+    dirigida la búsqueda si el mensaje trae "en google"/"en amazon"/
+    "googlea"/etc, o None si es una búsqueda genérica (resumen al chat)."""
+    for sitio, disparadores in _SITIOS_BUSQUEDA_NAVEGADOR.items():
+        if any(d in texto_bajo for d in disparadores):
+            return sitio
+    return None
+
+
+def _extraer_busqueda_sitio(texto, sitio):
+    """Quita el "en <sitio>"/"googlea" y el verbo de búsqueda para
+    quedarse solo con lo que hay que buscar en el navegador."""
+    limpio = texto
+    for disparador in _SITIOS_BUSQUEDA_NAVEGADOR[sitio]:
+        limpio = re.sub(r"(?i)\b" + re.escape(disparador) + r"\b", " ", limpio)
+    return _quitar_palabra_clave(limpio, PALABRAS_WEB).strip(" :,.-")
+
+
 def _procesar_web(texto_usuario):
+    # ¿La búsqueda va dirigida a un sitio concreto ("en google"/"en amazon"/
+    # "googlea X")? Entonces se ABRE el navegador ahí (control_agent), no se
+    # trae un resumen de texto (web_agent.buscar_web).
+    sitio = _detectar_sitio_busqueda(texto_usuario.lower())
+    if sitio:
+        query = _extraer_busqueda_sitio(texto_usuario, sitio)
+        if not query:
+            return "¿Qué quieres que busque, jefe?"
+        return control_agent.buscar_en_navegador(query, sitio)
+
     query = _quitar_palabra_clave(texto_usuario, PALABRAS_WEB)
     if not query:
         return "¿Qué quieres que busque, jefe?"
@@ -2094,6 +2171,14 @@ def _procesar_abrir(texto_usuario):
     return control_agent.abrir_app(objetivo)
 
 
+def _procesar_abrir_proyecto(texto_usuario):
+    """"Abre el proyecto X" -> control_agent.abrir_proyecto(X): abre la
+    carpeta proyectos/X en el gestor de archivos. Quita la frase de
+    apertura para quedarse solo con el nombre del proyecto."""
+    nombre = _quitar_palabra_clave(texto_usuario, PALABRAS_ABRIR_PROYECTO)
+    return control_agent.abrir_proyecto(nombre)
+
+
 # Acciones "sin argumento" del grupo control remoto: se revisan en
 # ESTE orden (la primera frase que matchee gana) — ver _procesar_control_remoto,
 # que maneja aparte las que sí necesitan argumento (YouTube, escribir_especial,
@@ -2684,6 +2769,10 @@ def _rutear_por_intencion(texto_usuario, historial, system_prompt):
         return _procesar_control_remoto(texto_usuario)
     if intencion == "abrir":
         return _procesar_abrir(texto_usuario)
+    if intencion == "repositorio":
+        return control_agent.abrir_repositorio()
+    if intencion == "abrir_proyecto":
+        return _procesar_abrir_proyecto(texto_usuario)
     if intencion == "briefing":
         return _procesar_briefing(texto_usuario)
     if intencion == "conocimiento":

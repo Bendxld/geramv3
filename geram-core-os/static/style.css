@@ -2121,8 +2121,16 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
 }
 .setup-header span { color: var(--principal); font: 700 11px/1.2 monospace; letter-spacing: .15em; }
 .setup-header h2 { margin: 8px 0; font-size: 27px; }
-.setup-header p, .setup-grid p { color: var(--texto-dim); }
-.setup-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 22px; }
+.setup-header p, .setup-grid p, .setup-intro p { color: var(--texto-dim); }
+.setup-intro { border: 1px solid var(--borde); border-left: 2px solid var(--principal); background: rgba(255,255,255,.025); padding: 18px; margin-top: 22px; }
+.setup-intro h3 { margin: 0 0 6px; }
+.setup-intro-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.setup-intro-roles div { border-top: 1px solid var(--borde); padding-top: 9px; }
+.setup-intro-roles dt { color: var(--principal); font: 700 11px/1.2 monospace; letter-spacing: .15em; }
+.setup-intro-roles dd { margin: 6px 0 0; color: var(--texto-dim); }
+.setup-intro-steps { margin-bottom: 0; }
+.setup-intro-steps kbd { border: 1px solid var(--borde); border-radius: 3px; padding: 1px 5px; font: 600 11px/1.4 monospace; }
+.setup-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .setup-grid section { border: 1px solid var(--borde); background: rgba(255,255,255,.025); padding: 18px; }
 .setup-grid h3 { display: inline; margin-left: 8px; }
 .setup-grid label { display: block; margin: 18px 0 7px; color: var(--texto-dim); }
@@ -2136,7 +2144,7 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
 .setup-footer { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
 .setup-footer span { flex: 1; color: var(--texto-dim); }
 #setupFinish { background: var(--principal); color: #07070b; border-color: var(--principal); font-weight: 800; }
-@media (max-width: 850px) { .setup-grid { grid-template-columns: 1fr; } }
+@media (max-width: 850px) { .setup-grid, .setup-intro-roles { grid-template-columns: 1fr; } }
 .gs-maintenance-status { max-height: 170px; overflow: auto; white-space: pre-wrap; color: var(--texto-dim); }
 #gsBackupList { width: 100%; margin: 10px 0; }
 .manual-modal {

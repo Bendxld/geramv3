@@ -134,7 +134,9 @@
       var messages = {
         invalid_name: 'The name is invalid.', name_collision: 'An item with that name already exists.',
         circular_move: 'A folder cannot be moved inside itself.', protected_path: 'The path is protected.',
-        operation_conflict: 'The item changed; try again.', symlink_not_allowed: 'Symbolic links are not allowed.'
+        operation_conflict: 'The item changed; try again.', symlink_not_allowed: 'Symbolic links are not allowed.',
+        not_found: 'That location no longer exists; pick a folder in the tree and try again.',
+        depth_limit: 'The folder is nested too deep.'
       };
       windowObject.alert(messages[error.code] || 'The operation could not be completed.');
     }
@@ -143,15 +145,21 @@
       var parent = selectedParent();
       promptForm({ title: type === 'file' ? 'CREATE FILE' : 'CREATE FOLDER', message: 'Location: ' + (parent || '/'), name: true, confirm: 'Create' }).then(function(value) {
         if (!value) { return; }
-        return request('/api/workspace/operations/create', { parent: parent, name: value.name, type: type }).then(function(result) {
+        // El backend rechaza nombres con espacios al borde; recortarlos aquí
+        // evita un 422 por algo que el usuario no ve al teclear.
+        var name = String(value.name || '').trim();
+        if (!name) { return; }
+        return request('/api/workspace/operations/create', { parent: parent, name: name, type: type }).then(function(result) {
           notifyChanged({ created: [result] });
           if (type === 'file') { return controller.api.read(result.path).then(function(file) { controller.state.load(file); return controller.navigate(result.path, 1, 1); }); }
         });
       }).catch(errorMessage);
     }
 
-    function renameTo(name) {
+    function renameTo(rawName) {
       if (!selection) { return; }
+      var name = String(rawName || '').trim();
+      if (!name) { controller.reloadTree(); return; }
       ensureClean(selection.path, selection.type).then(function(ok) {
         if (!ok) { return; }
         return request('/api/workspace/operations/move/preview', { source: selection.path, destination_parent: parentPath(selection.path), name: name }).then(function(preview) {

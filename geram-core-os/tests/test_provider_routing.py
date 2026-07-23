@@ -507,7 +507,10 @@ class OrchestratorProviderIntegrationTests(unittest.TestCase):
                 "fallback_used": False,
             },
         )
+        # IRIS unreachable -> the HUD bridge yields and the provider path runs.
         with patch.object(
+            orchestrator, "_forward_to_iris", new=AsyncMock(return_value=None)
+        ), patch.object(
             orchestrator.provider_registry,
             "generate_for_role",
             new=AsyncMock(return_value=dispatch),
@@ -527,6 +530,32 @@ class OrchestratorProviderIntegrationTests(unittest.TestCase):
         self.assertEqual(response.metadata["source"], "hud_local")
         self.assertEqual(response.metadata["provider"], "gemini")
         self.assertFalse(response.metadata["fallback_used"])
+
+    def test_hud_iris_prompt_is_bridged_to_the_iris_director(self):
+        # A local HUD prompt in IRIS mode must reach the real IRIS director
+        # (server.py :8010) so its deterministic agents run — NOT the provider
+        # LLM. The provider mock must stay untouched.
+        provider = AsyncMock()
+        with patch.object(
+            orchestrator, "_forward_to_iris",
+            new=AsyncMock(return_value="Abriendo Spotify."),
+        ), patch.object(
+            orchestrator.provider_registry, "generate_for_role", new=provider
+        ):
+            response = asyncio.run(
+                orchestrator.procesar_orquestacion(
+                    "abre spotify",
+                    "hud_local",
+                    force_mode="iris",
+                    session_id="unit-test-session",
+                )
+            )
+
+        self.assertEqual(response.mode, "iris")
+        self.assertEqual(response.result, {"text": "Abriendo Spotify."})
+        self.assertEqual(response.metadata["provider"], "iris")
+        self.assertFalse(response.metadata["fallback_used"])
+        provider.assert_not_awaited()
 
     def test_route_uses_session_id_set_by_session_middleware(self):
         dispatch = ProviderDispatchResult(

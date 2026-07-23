@@ -1,7 +1,9 @@
 (function (root) {
   'use strict';
 
-  var SETUP_VERSION = 1;
+  // 2: the first run now introduces the two roles before the readiness checks,
+  // so installations that only saw the checks get it once more.
+  var SETUP_VERSION = 2;
   var documentObject = root.document;
   var currentConfig = null;
 

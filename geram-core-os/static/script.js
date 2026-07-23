@@ -621,6 +621,21 @@ function extraerRutaImagen(texto) {
 // párrafo largo de IRIS no se sienta apretado.
 var LIMITE_MENSAJE_LARGO = 500;
 
+// El alto del historial y el tamaño de la letra cambian DESPUÉS de agregar el
+// mensaje: al entrar/salir de 'expandido' u 'hablando' la letra crece de 12px
+// a 16.5px con una transición de 0.6s (ver style.css). Un solo scrollTop se
+// calcula con el layout viejo y la respuesta se queda debajo del área visible,
+// mirando todavía los mensajes anteriores — hay que volver a pegarse al fondo
+// cuando ese cambio termina.
+function pegarAlFondo() {
+  chatHistorial.scrollTop = chatHistorial.scrollHeight;
+}
+
+// transitionend burbujea desde cada .chat-msg, así que un solo listener en el
+// contenedor cubre todas las transiciones de tamaño, incluidas las que
+// disparan clases que se agregan mucho después de la respuesta.
+chatHistorial.addEventListener('transitionend', pegarAlFondo);
+
 function agregarMensaje(texto, quien, esConfirmacion) {
   var div = document.createElement('div');
   div.className = 'chat-msg ' + quien;
@@ -648,9 +663,7 @@ function agregarMensaje(texto, quien, esConfirmacion) {
     // La imagen carga async y cambia el alto del historial DESPUÉS del
     // scroll de abajo (calculado con el alto de ANTES de que cargara)
     // — sin esto, una imagen puede quedar cortada arriba del scroll.
-    img.addEventListener('load', function() {
-      chatHistorial.scrollTop = chatHistorial.scrollHeight;
-    });
+    img.addEventListener('load', pegarAlFondo);
     spanTexto.appendChild(document.createElement('br'));
     spanTexto.appendChild(img);
   }
@@ -666,14 +679,19 @@ function agregarMensaje(texto, quien, esConfirmacion) {
   div.appendChild(spanTexto);
   chatHistorial.appendChild(div);
 
-  // Auto-scroll al último mensaje (scroll-behavior:smooth en CSS lo
-  // anima en vez de saltar en seco).
-  chatHistorial.scrollTop = chatHistorial.scrollHeight;
-
-  // Mantener solo los últimos 20 mensajes en pantalla
+  // Mantener solo los últimos 20 mensajes en pantalla. Va ANTES del scroll:
+  // quitar mensajes de arriba cambia scrollHeight, y calcularlo después deja
+  // el destino corto.
   while (chatHistorial.children.length > 20) {
     chatHistorial.removeChild(chatHistorial.firstChild);
   }
+
+  // Auto-scroll al último mensaje (scroll-behavior:smooth en CSS lo
+  // anima en vez de saltar en seco).
+  pegarAlFondo();
+  // El texto envuelve y el mensaje toma su alto real hasta el siguiente
+  // frame; sin esto, un párrafo largo de IRIS aparece a medias.
+  window.requestAnimationFrame(pegarAlFondo);
 }
 
 function hablarConVozDelNavegador(texto) {

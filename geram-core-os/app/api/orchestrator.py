@@ -16,6 +16,8 @@ import uuid
 
 from enum import Enum
 from typing import Literal
+
+import httpx
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -121,6 +123,33 @@ def classify_mode(prompt: str, source: str, force_mode: str | None) -> str:
     return "iris"
 
 
+# The real IRIS lives in server.py (:8010). Its director.procesar_mensaje
+# already turns natural language into DETERMINISTIC actions — open apps,
+# URLs, files and projects, browser/Google searches, reminders, the whole
+# agent roster. The HUD's own "iris" chat used to go straight to a provider
+# LLM, so those commands never ran. _forward_to_iris bridges the HUD to that
+# director so both surfaces share one brain; if IRIS is down we fall back to
+# the provider LLM for best-effort conversation.
+IRIS_BASE_URL = "http://127.0.0.1:8010"
+# Generous: director may itself call an LLM (web-search summaries, chat).
+_IRIS_TIMEOUT = 60.0
+
+
+async def _forward_to_iris(prompt: str) -> str | None:
+    """POST a plain-text prompt to IRIS's /chat and return the director's
+    reply. Returns None if IRIS is unreachable, errors, or replies with an
+    empty body, so the caller can fall back to the provider LLM."""
+    try:
+        async with httpx.AsyncClient(timeout=_IRIS_TIMEOUT) as client:
+            response = await client.post(f"{IRIS_BASE_URL}/chat", json={"mensaje": prompt})
+            response.raise_for_status()
+            data = response.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    reply = data.get("respuesta") if isinstance(data, dict) else None
+    return reply if isinstance(reply, str) and reply.strip() else None
+
+
 class SourceChannel(str, Enum):
     HUD_LOCAL = "hud_local"
     TELEGRAM = "telegram"
@@ -211,6 +240,22 @@ async def procesar_orquestacion(
                     "skill_used": skill.id,
                     "fallback_used": False,
                 },
+            )
+
+    # Bridge the local HUD's IRIS chat to the real IRIS director (:8010) so it
+    # gains the deterministic agents — open apps/URLs/projects, browser and
+    # Google searches, reminders, etc. Only for HUD_LOCAL text (Telegram/GCS
+    # keep their own routing) and only when there is no attachment, since the
+    # director consumes attachments through its own /adjuntar surface, not
+    # this prompt. If IRIS is unreachable, fall through to the provider LLM.
+    if mode == "iris" and source == SourceChannel.HUD_LOCAL.value and not attachments:
+        iris_reply = await _forward_to_iris(prompt)
+        if iris_reply is not None:
+            return OrchestratorResponse(
+                mode="iris",
+                session_id=session_id,
+                result={"text": iris_reply},
+                metadata={"source": source, "provider": "iris", "fallback_used": False},
             )
 
     provider_prompt = prompt

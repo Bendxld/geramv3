@@ -18,9 +18,12 @@ test('first-run setup is versioned, local, and never stores credentials', async 
   context.window = context;
   vm.runInNewContext(source, context, { filename: 'onboarding.js' });
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(context.GeramOnboarding.shouldOpen({ onboarding: { setup_version_seen: 0 } }), true);
-  assert.equal(context.GeramOnboarding.shouldOpen({ onboarding: { setup_version_seen: 1 } }), false);
+  const current = context.GeramOnboarding.version;
+  assert.equal(context.GeramOnboarding.shouldOpen({ onboarding: { setup_version_seen: current - 1 } }), true);
+  assert.equal(context.GeramOnboarding.shouldOpen({ onboarding: { setup_version_seen: current } }), false);
   assert.match(html, /id="setupModal"[^>]+role="dialog"/);
+  // A new user needs to know what the two roles are before the checks mean anything.
+  assert.match(html, /class="setup-intro"/);
   assert.match(source, /\/api\/config\/setup-complete/);
   assert.doesNotMatch(source, /API_KEY|ACCESS_TOKEN|localStorage|sessionStorage/);
 });

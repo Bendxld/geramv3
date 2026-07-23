@@ -98,16 +98,9 @@
       body: JSON.stringify({ path: currentPath })
     }).then(function (datos) {
       cerrar();
-      avisar('Workspace: ' + (datos.path || currentPath));
-      // El árbol y los documentos abiertos pertenecían a la carpeta anterior:
-      // recargamos el explorador y soltamos lo que ya no existe aquí.
-      var controlador = root.GeramWorkspaceController;
-      if (controlador && typeof controlador.reloadTree === 'function') {
-        controlador.reloadTree();
-        if (typeof controlador.refreshState === 'function') { controlador.refreshState(); }
-      } else {
-        root.location.reload();
-      }
+      // El árbol, la selección y los documentos abiertos pertenecían a la
+      // carpeta anterior: se sueltan igual que al elegir por el diálogo nativo.
+      aplicarCarpeta(datos.path || currentPath);
     }).catch(function (error) {
       openButton.disabled = false;
       noteElement.textContent = error.message || 'The folder could not be opened';
@@ -189,6 +182,9 @@
   // ---- Aplicar una carpeta ya elegida (por el diálogo nativo) ----
   function aplicarCarpeta(ruta) {
     avisar('Workspace: ' + ruta);
+    // La selección del árbol apunta al workspace anterior: si sobrevive, el
+    // siguiente "crear carpeta" la manda como padre y el backend responde 404.
+    root.dispatchEvent(new root.CustomEvent('geram:workspace-selection', { detail: null }));
     var controlador = root.GeramWorkspaceController;
     if (controlador && typeof controlador.reloadTree === 'function') {
       controlador.reloadTree();

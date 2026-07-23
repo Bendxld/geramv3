@@ -840,9 +840,20 @@
   <div class="setup-shell">
     <header class="setup-header">
       <span>GERAM CORE OS · FIRST RUN</span>
-      <h2 id="setupTitle">Prepare this installation</h2>
-      <p>Checks are local. Credentials remain in Settings and are never shown here.</p>
+      <h2 id="setupTitle">Welcome to GERAM CORE OS</h2>
+      <p>Everything below runs on this machine. Credentials live in Settings and are never shown here.</p>
     </header>
+    <!-- Someone opening this for the first time has no idea what the two roles
+         are, so the checks below only make sense after this introduction. -->
+    <section class="setup-intro">
+      <h3>What this is</h3>
+      <p>A local development environment with two assistants sharing one window.</p>
+      <dl class="setup-intro-roles">
+        <div><dt>A.R.E.S.</dt><dd>Works in your workspace: Monaco editor, file explorer, terminal, source control. It proposes a diff you review and approve — it never edits on its own.</dd></div>
+        <div><dt>I.R.I.S.</dt><dd>The conversational assistant: voice, reminders, calendar, and the rest of the agents. Optional — the editor works without it.</dd></div>
+      </dl>
+      <p class="setup-intro-steps">To get going: <b>1)</b> add an AI provider key in Settings, <b>2)</b> open a folder as your workspace, <b>3)</b> press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save, like any editor. The full manual is always one click away in the top bar.</p>
+    </section>
     <div class="setup-grid">
       <section>
         <span class="manual-step">01</span><h3>Your local profile</h3>
