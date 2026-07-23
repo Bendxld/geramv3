@@ -44,15 +44,16 @@ guardado alternativa, aún no escrita/probada.
 - **Python 3.11+**
 - **Node.js 18+** y **npm** (para la ventana Electron y sus assets de Monaco; en Windows en navegador no hace falta Electron)
 - Opcionales, según qué features uses:
-  - **[Ollama](https://ollama.com)** — para modelos de IA locales (sin API key).
+  - **[Ollama](https://ollama.com)** — para modelos de IA locales (sin API key). Con Ollama, el asistente **chatea 100% local, gratis y sin internet** — `setup.sh`/`setup.ps1` te ofrecen instalarlo (o actualizarlo) y bajar el modelo chico (`llama3.2:1b`).
   - **`poppler-utils`** — para adjuntar PDFs al chat (aporta `pdftotext`).
   - **`bubblewrap`** (Linux) — sandbox del runner de código y de la terminal.
   - `xclip`/`xsel` (Linux) — historial de portapapeles de IRIS.
   - Cuentas/API keys de los proveedores e integraciones que quieras (todo opcional).
 
-`setup.sh` detecta si faltan `poppler-utils` y `bubblewrap`, y te ofrece
-instalarlos (te pregunta antes; nunca ejecuta `sudo` por su cuenta). Si prefieres
-hacerlo a mano, en Debian/Ubuntu/Mint:
+`setup.sh` detecta si faltan `poppler-utils`, `bubblewrap` y **Ollama**, y te
+ofrece instalarlos (te pregunta antes; nunca ejecuta `sudo` por su cuenta). Con
+Ollama, además, te ofrece bajar/actualizar el modelo local para chatear sin
+ninguna API key. Si prefieres hacerlo a mano, en Debian/Ubuntu/Mint:
 
 ```bash
 sudo apt-get install -y poppler-utils bubblewrap

@@ -16,12 +16,12 @@ if (-not $py) { $py = Get-Command python3 -ErrorAction SilentlyContinue }
 if (-not $py) { Write-Error "No encuentro python. Instala Python 3.11+ y reintenta."; exit 1 }
 Write-Host "==> Python: $(& $py.Source --version)"
 
-Write-Host "==> [1/3] GERAM CORE OS (:8000) — venv + dependencias"
+Write-Host "==> [1/4] GERAM CORE OS (:8000) — venv + dependencias"
 & $py.Source -m venv geram-core-os\venv
 & geram-core-os\venv\Scripts\python.exe -m pip install --upgrade pip | Out-Null
 & geram-core-os\venv\Scripts\python.exe -m pip install -r geram-core-os\requirements.txt
 
-Write-Host "==> [2/3] Configuracion"
+Write-Host "==> [2/4] Configuracion"
 if (Test-Path .env) {
   Write-Host "    .env ya existe — lo dejo como esta."
 } else {
@@ -32,7 +32,7 @@ if (Test-Path .env) {
 # pdftotext (poppler) habilita adjuntar PDFs al chat. bubblewrap no aplica en
 # Windows: el sandbox del runner es de Linux. Solo informamos; no instalamos
 # nada por tu cuenta.
-Write-Host "==> [3/3] Paquetes del sistema (PDFs)"
+Write-Host "==> [3/4] Paquetes del sistema (PDFs)"
 if (Get-Command pdftotext -ErrorAction SilentlyContinue) {
   Write-Host "    OK pdftotext ya esta instalado."
 } else {
@@ -47,6 +47,39 @@ if (Get-Command pdftotext -ErrorAction SilentlyContinue) {
     Write-Host "    agrega su carpeta bin al PATH."
   }
   Write-Host "    (Opcional: el resto de la app funciona sin el.)"
+}
+
+# Ollama: chat local sin API key (opcional). Con tus keys no hace falta.
+# 'ollama pull' trae la ultima version del modelo, asi que tambien lo actualiza.
+Write-Host "==> [4/4] Ollama (chat local, sin API key — opcional)"
+$modelo = "llama3.2:1b"
+$envLine = Select-String -Path .env -Pattern '^OLLAMA_MODEL=(.+)$' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($envLine) { $modelo = $envLine.Matches[0].Groups[1].Value.Trim() }
+
+if (Get-Command ollama -ErrorAction SilentlyContinue) {
+  Write-Host "    OK Ollama ya esta instalado."
+  $r = Read-Host "    Bajo/actualizo el modelo '$modelo' (~1.3 GB)? [s/N]"
+  if ($r -match '^[sSyY]') {
+    try { ollama pull $modelo } catch { Write-Host "    No se pudo bajar el modelo. Luego: ollama pull $modelo" }
+  } else {
+    Write-Host "    Saltado. Para bajarlo luego: ollama pull $modelo"
+  }
+} else {
+  Write-Host "    Ollama no esta instalado. Sin el, para chatear necesitas una API key (Gemini/Groq gratis)."
+  if (Get-Command winget -ErrorAction SilentlyContinue) {
+    $r = Read-Host "    Instalo Ollama ahora con winget? [s/N]"
+    if ($r -match '^[sSyY]') {
+      try {
+        winget install --id Ollama.Ollama -e --source winget
+        Write-Host "    Instalado. Reabri la terminal y corre:  ollama pull $modelo"
+      } catch { Write-Host "    No se pudo instalar. Descargalo de https://ollama.com/download" }
+    } else {
+      Write-Host "    Saltado. Para instalarlo: winget install Ollama.Ollama  (o https://ollama.com/download)"
+    }
+  } else {
+    Write-Host "    Instalalo desde https://ollama.com/download (o 'winget install Ollama.Ollama')."
+    Write-Host "    Luego:  ollama pull $modelo"
+  }
 }
 
 Write-Host ""

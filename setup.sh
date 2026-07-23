@@ -20,24 +20,24 @@ if [ -z "$PY" ]; then
 fi
 echo "==> Python: $($PY --version 2>&1)"
 
-echo "==> [1/5] Backend de IRIS (:8010) — venv + dependencias"
+echo "==> [1/6] Backend de IRIS (:8010) — venv + dependencias"
 "$PY" -m venv venv
 ./venv/bin/python -m pip install --upgrade pip >/dev/null
 ./venv/bin/python -m pip install -r requirements.txt
 
-echo "==> [2/5] Backend de GERAM CORE OS (:8000) — venv + dependencias"
+echo "==> [2/6] Backend de GERAM CORE OS (:8000) — venv + dependencias"
 "$PY" -m venv geram-core-os/venv
 ./geram-core-os/venv/bin/python -m pip install --upgrade pip >/dev/null
 ./geram-core-os/venv/bin/python -m pip install -r geram-core-os/requirements.txt
 
-echo "==> [3/5] Ventana Electron (Monaco se prepara solo en el postinstall)"
+echo "==> [3/6] Ventana Electron (Monaco se prepara solo en el postinstall)"
 if command -v npm >/dev/null 2>&1; then
   ( cd geram-core-os/electron && npm install --no-audit --no-fund )
 else
   echo "    npm no está instalado — salto Electron. Igual puedes usar CORE OS en el navegador."
 fi
 
-echo "==> [4/5] Configuración"
+echo "==> [4/6] Configuración"
 if [ -f .env ]; then
   echo "    .env ya existe — lo dejo como está."
 else
@@ -46,14 +46,14 @@ else
 fi
 
 # ------------------------------------------------------------
-# [5/5] Paquetes del sistema. No son de Python, así que pip no los puede
+# [5/6] Paquetes del sistema. No son de Python, así que pip no los puede
 # instalar: hacen falta binarios del sistema operativo.
 #   pdftotext (poppler-utils) -> leer PDFs adjuntos en el chat
 #   bwrap     (bubblewrap)    -> sandbox del runner de código y la terminal
 # Sin ellos la app arranca igual; sólo esas dos features quedan apagadas.
 # Nunca ejecutamos sudo por tu cuenta sin preguntar.
 # ------------------------------------------------------------
-echo "==> [5/5] Paquetes del sistema (PDFs y sandbox)"
+echo "==> [5/6] Paquetes del sistema (PDFs y sandbox)"
 FALTAN=""
 command -v pdftotext >/dev/null 2>&1 || FALTAN="$FALTAN poppler-utils"
 if [ "$(uname -s)" = "Linux" ]; then
@@ -94,6 +94,69 @@ else
     esac
   else
     echo "    Para instalarlos: $INSTALAR"
+  fi
+fi
+
+# ------------------------------------------------------------
+# [6/6] Ollama: chat local sin API key. Con Ollama instalado, el asistente
+# responde 100% local, gratis y sin internet (modelo chico llama3.2:1b por
+# defecto; el código ya cae solo a Ollama —ver agents/offline_agent.py—).
+# Es OPCIONAL: si pones tus API keys (Gemini/Groq) no hace falta. 'ollama pull'
+# siempre trae la última versión del modelo, así que también sirve para
+# actualizarlo. Nunca instalamos ni bajamos nada sin preguntarte.
+# ------------------------------------------------------------
+echo "==> [6/6] Ollama (chat local, sin API key — opcional)"
+
+# El modelo lo tomamos del .env; si no está, usamos el chico por defecto.
+MODELO_OLLAMA="$(grep -E '^OLLAMA_MODEL=' .env 2>/dev/null | head -1 | cut -d= -f2)"
+[ -z "$MODELO_OLLAMA" ] && MODELO_OLLAMA="llama3.2:1b"
+OLLAMA_INSTALL="curl -fsSL https://ollama.com/install.sh | sh"
+
+if command -v ollama >/dev/null 2>&1; then
+  echo "    ✓ Ollama ya está instalado ($(ollama --version 2>/dev/null | head -1))."
+  if [ -t 0 ]; then
+    printf "    ¿Actualizo Ollama a la última versión? [s/N] "
+    read -r RESPUESTA || true
+    case "$RESPUESTA" in
+      [sSyY]*)
+        if command -v brew >/dev/null 2>&1 && brew list ollama >/dev/null 2>&1; then
+          brew upgrade ollama || echo "    No se pudo actualizar; hazlo a mano."
+        else
+          sh -c "$OLLAMA_INSTALL" || echo "    No se pudo actualizar; hazlo a mano: $OLLAMA_INSTALL"
+        fi ;;
+      *) echo "    Ok, lo dejo como está." ;;
+    esac
+  fi
+else
+  echo "    Ollama no está instalado. Sin él, para chatear necesitas una API key"
+  echo "    (Gemini/Groq gratis). Con él, el asistente responde local y sin internet."
+  if [ -t 0 ]; then
+    printf "    ¿Instalo Ollama ahora? [s/N] "
+    read -r RESPUESTA || true
+    case "$RESPUESTA" in
+      [sSyY]*)
+        sh -c "$OLLAMA_INSTALL" \
+          || echo "    No se pudo instalar. Hazlo a mano desde https://ollama.com/download" ;;
+      *) echo "    Saltado. Para instalarlo luego: $OLLAMA_INSTALL  (o https://ollama.com/download)" ;;
+    esac
+  else
+    echo "    Para instalarlo: $OLLAMA_INSTALL  (o https://ollama.com/download)"
+  fi
+fi
+
+# Con Ollama disponible, bajamos/actualizamos el modelo (pull = última versión).
+if command -v ollama >/dev/null 2>&1; then
+  if [ -t 0 ]; then
+    printf "    ¿Bajo/actualizo el modelo '%s' (~1.3 GB)? [s/N] " "$MODELO_OLLAMA"
+    read -r RESPUESTA || true
+    case "$RESPUESTA" in
+      [sSyY]*)
+        ollama pull "$MODELO_OLLAMA" \
+          || echo "    No se pudo bajar el modelo. Luego: ollama pull $MODELO_OLLAMA" ;;
+      *) echo "    Saltado. Para bajarlo luego: ollama pull $MODELO_OLLAMA" ;;
+    esac
+  else
+    echo "    Para bajar el modelo: ollama pull $MODELO_OLLAMA"
   fi
 fi
 
