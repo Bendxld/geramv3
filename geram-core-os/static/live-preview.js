@@ -38,7 +38,7 @@
   function abrir() {
     var controller = root.GeramWorkspaceController;
     var path = controller && controller.activePath && controller.activePath();
-    if (!path) { titulo.textContent = 'Open a web file to preview it'; }
+    if (!path) { titulo.textContent = (window.GeramI18n ? window.GeramI18n.t('lp.openweb') : 'Open a web file to preview it'); }
     if (path && !isWeb(path)) { titulo.textContent = path + ' (no es web)'; }
     previewPath = path || '';
     documentObject.body.classList.add('preview-abierto');

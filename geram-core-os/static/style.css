@@ -2598,7 +2598,9 @@ body.modo-dev.explorer-collapsed .workspace-explorador { display: none; }
    elige idioma; luego se oculta dejando la UI ya traducida.
    ============================================================ */
 .lang-gate {
-  position: fixed; inset: 0; z-index: 300;
+  /* Debe tapar TODO el primer arranque: boot (100), manual (300) y
+     setup (10020). La elección de idioma es siempre lo primero. */
+  position: fixed; inset: 0; z-index: 20000;
   display: none; align-items: center; justify-content: center;
   background: radial-gradient(circle at 50% 40%, #14141f 0%, #08080c 70%);
 }

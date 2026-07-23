@@ -349,7 +349,7 @@
         var card = documentObject.createElement('div'); card.className = 'ext-card';
         var head = documentObject.createElement('div'); head.className = 'ext-card-head';
         var nombre = documentObject.createElement('b'); nombre.textContent = e.name || e.id;
-        var borrar = documentObject.createElement('button'); borrar.className = 'ext-card-del'; borrar.type = 'button'; borrar.textContent = '×'; borrar.title = 'Remove';
+        var borrar = documentObject.createElement('button'); borrar.className = 'ext-card-del'; borrar.type = 'button'; borrar.textContent = '×'; borrar.title = (windowObject.GeramI18n ? windowObject.GeramI18n.t('aw.remove') : 'Remove');
         borrar.addEventListener('click', function () { eliminar(e.id); });
         head.appendChild(nombre); head.appendChild(borrar); card.appendChild(head);
         var meta = documentObject.createElement('p'); meta.className = 'ext-card-meta';
@@ -366,7 +366,7 @@
   }
 
   function eliminar(id) {
-    if (!windowObject.confirm('Remove this extension?')) { return; }
+    if (!windowObject.confirm(windowObject.GeramI18n ? windowObject.GeramI18n.t('ext.confirmremove') : 'Remove this extension?')) { return; }
     api('/api/extensions/' + encodeURIComponent(id), { method: 'DELETE' })
       .then(function () { aplicarTodo(); cargarLista(); })
       .catch(function (err) { estado('Could not remove: ' + err.message, true); });

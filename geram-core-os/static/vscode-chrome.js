@@ -35,6 +35,10 @@
 
   // ---- Toast ligero para acciones informativas ----
   var toastTimer = null;
+  function t(key) {
+    var i18n = root.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
   function toast(message) {
     var el = $('vscodeToast');
     if (!el) {
@@ -67,7 +71,7 @@
       // 57 ~ EditorOption.minimap; usamos getOption con fallback a un flag local.
       minimapOn = !minimapOn;
       editorAdapter.editor.updateOptions({ minimap: { enabled: minimapOn } });
-      toast('Minimapa: ' + (minimapOn ? 'ON' : 'OFF'));
+      toast(t('toast.minimap') + (minimapOn ? 'ON' : 'OFF'));
     }
   }
   var minimapOn = true;
@@ -75,23 +79,23 @@
   function runTestsActive() {
     var controller = root.GeramWorkspaceController;
     var path = controller && controller.activePath && controller.activePath();
-    if (!path) { toast('Open a file to run its tests.'); return; }
-    toast('Running Test Runner in the sandbox…');
+    if (!path) { toast(t('toast.openfiletests')); return; }
+    toast(t('toast.runningtests'));
     root.fetch('/api/ares/tests', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspace_id: 'local', runner: 'python_unittest', target: path, timeout_seconds: 30 })
     }).then(function (r) { return r.json(); })
-      .then(function (d) { toast('Test Runner: ' + (d && d.status ? d.status : 'desconocido')); })
-      .catch(function () { toast('The Test Runner could not be started.'); });
+      .then(function (d) { toast('Test Runner: ' + (d && d.status ? d.status : t('toast.unknown'))); })
+      .catch(function () { toast(t('toast.testsfail')); });
   }
 
   function runActiveFile() {
     var controller = root.GeramWorkspaceController;
     var path = controller && controller.activePath && controller.activePath();
-    if (!path) { toast('Open a Python or JavaScript file first.'); return; }
+    if (!path) { toast(t('toast.openpyjs')); return; }
     var button = $('inlineAiRunFile');
     if (!button || button.hidden) {
-      toast('Safe Run supports Python and JavaScript files.');
+      toast(t('toast.saferun'));
       return;
     }
     button.click();
@@ -103,79 +107,79 @@
       navigation.open('search');
       return;
     }
-    toast('Global search is not ready yet.');
+    toast(t('toast.searchnotready'));
   }
 
   // ---- Definición de menús (label, atajo visible, acción) ----
   var MENUS = {
     file: [
-      { label: 'New Project…', key: 'Ctrl+Shift+N', run: function () { newProject(); } },
-      { label: 'Open Folder…', key: 'Ctrl+K Ctrl+O', run: function () {
+      { label: 'menui.newproject', key: 'Ctrl+Shift+N', run: function () { newProject(); } },
+      { label: 'menui.openfolder', key: 'Ctrl+K Ctrl+O', run: function () {
         if (root.GeramOpenFolder) { root.GeramOpenFolder.open(); return; }
-        toast('The folder picker is not available.');
+        toast(t('toast.nofolderpicker'));
       } },
-      { label: 'Toggle Explorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
+      { label: 'menui.toggleexplorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
       { sep: true },
-      { label: 'Upload Files…', run: function () {
+      { label: 'menui.uploadfiles', run: function () {
         if (root.GeramWorkspaceUpload) { root.GeramWorkspaceUpload.files(); return; }
-        toast('Upload is not available.');
+        toast(t('toast.noupload'));
       } },
-      { label: 'Upload Folder…', run: function () {
+      { label: 'menui.uploadfolder', run: function () {
         if (root.GeramWorkspaceUpload) { root.GeramWorkspaceUpload.folder(); return; }
-        toast('Upload is not available.');
+        toast(t('toast.noupload'));
       } },
       { sep: true },
-      { label: 'Save', key: 'Ctrl+S', run: function () { clickIf('workspaceGuardar'); } },
-      { label: 'Sign in with GitHub…', run: openGithub }
+      { label: 'menui.save', key: 'Ctrl+S', run: function () { clickIf('workspaceGuardar'); } },
+      { label: 'menui.github', run: openGithub }
     ],
     edit: [
-      { label: 'Undo', key: 'Ctrl+Z', run: function () { triggerEditor('undo'); } },
-      { label: 'Redo', key: 'Ctrl+Y', run: function () { triggerEditor('redo'); } },
+      { label: 'menui.undo', key: 'Ctrl+Z', run: function () { triggerEditor('undo'); } },
+      { label: 'menui.redo', key: 'Ctrl+Y', run: function () { triggerEditor('redo'); } },
       { sep: true },
-      { label: 'Cut', key: 'Ctrl+X', run: function () { runEditorAction('editor.action.clipboardCutAction'); } },
-      { label: 'Copy', key: 'Ctrl+C', run: function () { runEditorAction('editor.action.clipboardCopyAction'); } },
-      { label: 'Paste', key: 'Ctrl+V', run: function () { runEditorAction('editor.action.clipboardPasteAction'); } },
+      { label: 'menui.cut', key: 'Ctrl+X', run: function () { runEditorAction('editor.action.clipboardCutAction'); } },
+      { label: 'menui.copy', key: 'Ctrl+C', run: function () { runEditorAction('editor.action.clipboardCopyAction'); } },
+      { label: 'menui.paste', key: 'Ctrl+V', run: function () { runEditorAction('editor.action.clipboardPasteAction'); } },
       { sep: true },
-      { label: 'Find', key: 'Ctrl+F', run: function () { runEditorAction('actions.find'); } },
-      { label: 'Replace', key: 'Ctrl+H', run: function () { runEditorAction('editor.action.startFindReplaceAction'); } }
+      { label: 'menui.find', key: 'Ctrl+F', run: function () { runEditorAction('actions.find'); } },
+      { label: 'menui.replace', key: 'Ctrl+H', run: function () { runEditorAction('editor.action.startFindReplaceAction'); } }
     ],
     selection: [
-      { label: 'Select All', key: 'Ctrl+A', run: function () { runEditorAction('editor.action.selectAll'); } },
-      { label: 'Copy Line Down', key: 'Shift+Alt+Down', run: function () { runEditorAction('editor.action.copyLinesDownAction'); } },
-      { label: 'Add Cursor Below', key: 'Ctrl+Alt+Down', run: function () { runEditorAction('editor.action.insertCursorBelow'); } }
+      { label: 'menui.selectall', key: 'Ctrl+A', run: function () { runEditorAction('editor.action.selectAll'); } },
+      { label: 'menui.copylinedown', key: 'Shift+Alt+Down', run: function () { runEditorAction('editor.action.copyLinesDownAction'); } },
+      { label: 'menui.addcursor', key: 'Ctrl+Alt+Down', run: function () { runEditorAction('editor.action.insertCursorBelow'); } }
     ],
     view: [
-      { label: 'Toggle Explorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
-      { label: 'Refresh Explorer', run: refreshExplorer },
-      { label: 'Toggle Terminal (Watcher)', key: 'Ctrl+`', run: function () { clickIf('toggleTerminalWatcher'); } },
-      { label: 'Toggle Minimap', run: toggleMinimap },
-      { label: 'Command Palette…', key: 'Ctrl+Shift+P', run: function () { runEditorAction('editor.action.quickCommand'); } }
+      { label: 'menui.toggleexplorer', key: 'Ctrl+Shift+E', run: toggleExplorer },
+      { label: 'menui.refreshexplorer', run: refreshExplorer },
+      { label: 'menui.toggleterminal', key: 'Ctrl+`', run: function () { clickIf('toggleTerminalWatcher'); } },
+      { label: 'menui.toggleminimap', run: toggleMinimap },
+      { label: 'menui.palette', key: 'Ctrl+Shift+P', run: function () { runEditorAction('editor.action.quickCommand'); } }
     ],
     go: [
-      { label: 'Go to Line…', key: 'Ctrl+G', run: function () { runEditorAction('editor.action.gotoLine'); } },
-      { label: 'Go to Symbol…', key: 'Ctrl+Shift+O', run: function () { runEditorAction('editor.action.quickOutline'); } }
+      { label: 'menui.gotoline', key: 'Ctrl+G', run: function () { runEditorAction('editor.action.gotoLine'); } },
+      { label: 'menui.gotosymbol', key: 'Ctrl+Shift+O', run: function () { runEditorAction('editor.action.quickOutline'); } }
     ],
     run: [
-      { label: 'Run Active File', key: 'Ctrl+F5', run: runActiveFile },
-      { label: 'Run Tests on Active File', key: 'Ctrl+Shift+T', run: runTestsActive },
-      { label: 'Ask A.R.E.S. (Inline)…', key: 'Ctrl+I', run: function () { focusAiBar(''); } }
+      { label: 'menui.runfile', key: 'Ctrl+F5', run: runActiveFile },
+      { label: 'menui.runtests', key: 'Ctrl+Shift+T', run: runTestsActive },
+      { label: 'menui.askares', key: 'Ctrl+I', run: function () { focusAiBar(''); } }
     ],
     terminal: [
-      { label: 'Toggle Terminal (Watcher)', key: 'Ctrl+`', run: function () { clickIf('toggleTerminalWatcher'); } }
+      { label: 'menui.toggleterminal', key: 'Ctrl+`', run: function () { clickIf('toggleTerminalWatcher'); } }
     ],
     help: [
-      { label: 'I.R.I.S. Manual', key: 'F1', run: function () {
+      { label: 'menui.irismanual', key: 'F1', run: function () {
         if (root.GeramManual && typeof root.GeramManual.open === 'function') {
           root.GeramManual.open('iris');
         }
       } },
-      { label: 'A.R.E.S. Manual', run: function () {
+      { label: 'menui.aresmanual', run: function () {
         if (root.GeramManual && typeof root.GeramManual.open === 'function') {
           root.GeramManual.open('ares');
         }
       } },
       { sep: true },
-      { label: 'About GERAM CORE OS', run: function () { toast('GERAM CORE OS · v3 · editor local-first con A.R.E.S.'); } }
+      { label: 'menui.about', run: function () { toast('GERAM CORE OS · v3 · editor local-first con A.R.E.S.'); } }
     ]
   };
 
@@ -206,7 +210,7 @@
       row.type = 'button';
       row.className = 'vscode-dropdown-item';
       var label = documentObject.createElement('span');
-      label.textContent = item.label;
+      label.textContent = t(item.label);
       row.appendChild(label);
       if (item.key) {
         var key = documentObject.createElement('span');
@@ -291,7 +295,7 @@
     var estado = $('githubModalEstado');
     var dot = $('actGithubDot');
     var connected = Boolean(status && status.connected);
-    if (estado) { estado.textContent = connected ? ('Connected' + (status.login ? ' as @' + status.login : '') + '.') : 'Not connected.'; }
+    if (estado) { estado.textContent = connected ? (status.login ? t('gh.connectedas').replace('{login}', status.login) : t('gh.connected')) : t('gh.notconnected'); }
     if (dot) { dot.hidden = !connected; }
     var gh = $('actGithub');
     if (gh) { gh.classList.toggle('conectado', connected); gh.title = connected ? ('GitHub: @' + (status.login || 'conectado')) : 'Sign in with GitHub'; }
@@ -304,16 +308,16 @@
   function guardarGithub() {
     var input = $('githubTokenInput');
     var token = input ? input.value.trim() : '';
-    if (!token) { var e = $('githubModalEstado'); if (e) { e.textContent = 'Paste a token to connect.'; } return; }
+    if (!token) { var e = $('githubModalEstado'); if (e) { e.textContent = t('gh.pastetoken'); } return; }
     root.fetch('/api/github/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: token }) })
       .then(function (r) { return r.json(); })
-      .then(function (s) { if (input) { input.value = ''; } pintarGithub(s); toast('GitHub conectado.'); })
-      .catch(function () { var e = $('githubModalEstado'); if (e) { e.textContent = 'Could not connect.'; } });
+      .then(function (s) { if (input) { input.value = ''; } pintarGithub(s); toast(t('gh.connectedtoast')); })
+      .catch(function () { var e = $('githubModalEstado'); if (e) { e.textContent = t('gh.connectfail'); } });
   }
   function salirGithub() {
     root.fetch('/api/github/token', { method: 'DELETE' })
       .then(function (r) { return r.json(); })
-      .then(function (s) { pintarGithub(s); toast('Signed out of GitHub.'); })
+      .then(function (s) { pintarGithub(s); toast(t('gh.signedout')); })
       .catch(function () {});
   }
   function wireGithub() {

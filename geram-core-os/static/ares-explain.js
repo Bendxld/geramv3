@@ -28,18 +28,23 @@
   var ocupado = false;
   var ultimaExplicacion = null;
 
+  function t(key) {
+    var i18n = root.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
+
   var MENSAJES = {
-    empty_selection: 'Select some code in the editor first.',
-    empty_file: 'That file has no readable content.',
-    empty_project: 'The workspace has no readable files.',
-    not_found: 'That file does not exist in the workspace.',
-    protected_path: 'That file is protected and cannot be analysed.',
-    excluded_path: 'That file is excluded from the workspace.',
-    context_too_large: 'The context exceeds the local limit. Narrow the scope.',
-    invalid_contract: 'A.R.E.S. returned a malformed explanation.',
-    invalid_reference: 'A.R.E.S. cited a location that does not exist.',
-    unsafe_content: 'The explanation was discarded: it contained markup or URLs.',
-    provider_unavailable: 'A.R.E.S. is unavailable. Try demo mode.'
+    empty_selection: 'ax.err.selection',
+    empty_file: 'ax.err.file',
+    empty_project: 'ax.err.project',
+    not_found: 'ax.err.notfound',
+    protected_path: 'ax.err.protected',
+    excluded_path: 'ax.err.excluded',
+    context_too_large: 'ax.err.toolarge',
+    invalid_contract: 'ax.err.contract',
+    invalid_reference: 'ax.err.reference',
+    unsafe_content: 'ax.err.unsafe',
+    provider_unavailable: 'ax.err.provider'
   };
 
   function crear(tag, clase, texto) {
@@ -59,7 +64,7 @@
   }
 
   function mensajeDe(codigo) {
-    return MENSAJES[codigo] || 'The explanation could not be completed.';
+    return t(MENSAJES[codigo] || 'ax.err.generic');
   }
 
   function pedir(ruta, cuerpo) {
@@ -157,7 +162,7 @@
     var cabecera = crear('div', 'ares-explica-cabecera');
     var plegar = crear('button', 'ares-explica-plegar', '▾');
     plegar.type = 'button';
-    plegar.title = 'Collapse / expand';
+    plegar.title = t('ax.collapse');
     plegar.setAttribute('aria-expanded', 'true');
     plegar.addEventListener('click', function () {
       var oculto = cuerpo.hidden;
@@ -183,7 +188,7 @@
     vaciar(cajaPreview);
     cajaPreview.hidden = false;
     var cuerpo = crear('div', 'ares-explica-cuerpo');
-    cajaPreview.appendChild(cabeceraPlegable(cajaPreview, 'Context to be sent', cuerpo));
+    cajaPreview.appendChild(cabeceraPlegable(cajaPreview, t('ax.context'), cuerpo));
     cajaPreview.appendChild(cuerpo);
     var lista = crear('ul', 'ares-explica-preview-lista');
 
@@ -194,29 +199,29 @@
       lista.appendChild(li);
     }
 
-    fila('Provider', preview.provider || '(not configured)');
+    fila(t('ax.provider'), preview.provider || t('ax.notconfigured'));
     fila('Model', preview.model || '(not configured)');
     fila('Scope', preview.scope);
     fila('Level', preview.level);
-    fila('Selection included', preview.selection_included ? 'yes' : 'no');
+    fila(t('ax.selincluded'), preview.selection_included ? t('ax.yes') : t('ax.no'));
     if (preview.selection) {
-      fila('Selection', preview.selection.path + ' · lines ' +
+      fila(t('ax.selection'), preview.selection.path + t('ax.lines') +
         preview.selection.start_line + '-' + preview.selection.end_line +
         (preview.selection.symbol ? ' · ' + preview.selection.symbol : ''));
     }
-    fila('Files included', String((preview.files || []).length));
+    fila(t('ax.filesincluded'), String((preview.files || []).length));
     (preview.files || []).forEach(function (archivo) {
       fila('· ' + archivo.path, archivo.chars + ' characters' + (archivo.truncated ? ' (truncated)' : ''));
     });
-    if (preview.diagnostics) { fila('Editor diagnostics', String(preview.diagnostics)); }
-    if (preview.references) { fila('Other occurrences of the symbol', String(preview.references)); }
-    if (preview.changed_files) { fila('Modified files (git)', String(preview.changed_files)); }
+    if (preview.diagnostics) { fila(t('ax.diagnostics'), String(preview.diagnostics)); }
+    if (preview.references) { fila(t('ax.occurrences'), String(preview.references)); }
+    if (preview.changed_files) { fila(t('ax.gitmodified'), String(preview.changed_files)); }
     var fuentes = preview.sources || {};
     Object.keys(fuentes).forEach(function (clave) {
       fila('  source · ' + clave, fuentes[clave]);
     });
-    fila('Approximate size', preview.approximate_chars + ' characters');
-    fila('Secrets excluded', preview.secrets_excluded ? 'yes (.env, credentials, .git)' : 'no');
+    fila(t('ax.size'), preview.approximate_chars + t('ax.chars'));
+    fila(t('ax.secrets'), preview.secrets_excluded ? t('ax.secretsyes') : t('ax.no'));
     cuerpo.appendChild(lista);
     (preview.notes || []).forEach(function (nota) {
       cuerpo.appendChild(crear('p', 'ares-explica-nota', nota));
@@ -253,14 +258,14 @@
 
     function revelar(intentos) {
       c.navigate(ref.file, ref.start_line, 1).then(function (ok) {
-        if (ok) { setEstado('Opened ' + ref.file + ':' + ref.start_line + '.'); return; }
+        if (ok) { setEstado(t('ax.opened').replace('{ref}', ref.file + ':' + ref.start_line)); return; }
         if (intentos <= 0) {
-          setEstado('Could not open ' + ref.file + '.', true);
+          setEstado(t('ax.openfail').replace('{file}', ref.file), true);
           return;
         }
         root.setTimeout(function () { revelar(intentos - 1); }, 150);
       }).catch(function () {
-        setEstado('Could not open ' + ref.file + '.', true);
+        setEstado(t('ax.openfail').replace('{file}', ref.file), true);
       });
     }
 
@@ -272,7 +277,7 @@
   function seccionReferencias(referencias) {
     if (!referencias || !referencias.length) { return null; }
     var bloque = crear('div', 'ares-explica-bloque');
-    bloque.appendChild(crear('h4', null, 'Code references'));
+    bloque.appendChild(crear('h4', null, t('ax.coderefs')));
     var lista = crear('ul', 'ares-explica-refs');
     referencias.forEach(function (ref) {
       var li = crear('li');
@@ -281,7 +286,7 @@
         (ref.symbol ? ' · ' + ref.symbol : '');
       var boton = crear('button', 'ares-explica-ir', etiqueta);
       boton.type = 'button';
-      boton.title = 'Open ' + ref.file + ' at line ' + ref.start_line;
+      boton.title = t('ax.openat').replace('{file}', ref.file).replace('{line}', ref.start_line);
       boton.addEventListener('click', function () { irAReferencia(ref); });
       li.appendChild(boton);
       if (ref.claim) { li.appendChild(crear('span', 'ares-explica-claim', ref.claim)); }
@@ -294,9 +299,9 @@
   function seccionInferencias(inferencias) {
     if (!inferencias || !inferencias.length) { return null; }
     var bloque = crear('div', 'ares-explica-bloque ares-explica-inferencias');
-    bloque.appendChild(crear('h4', null, 'Inferences (not confirmed)'));
+    bloque.appendChild(crear('h4', null, t('ax.inferences')));
     bloque.appendChild(crear('p', 'ares-explica-nota',
-      'The following is interpretation from what was observed, not verified fact.'));
+      t('ax.inferencesnote')));
     var lista = crear('ul');
     inferencias.forEach(function (inferencia) {
       var li = crear('li');
@@ -321,22 +326,22 @@
 
     var cuerpo = crear('div', 'ares-explica-cuerpo');
     cajaResultado.appendChild(cabeceraPlegable(
-      cajaResultado, datos.demo ? 'Explanation (demo)' : 'Explanation', cuerpo));
+      cajaResultado, datos.demo ? t('ax.explanationdemo') : t('ax.explanation'), cuerpo));
     cajaResultado.appendChild(cuerpo);
 
     if (datos.demo) {
       cuerpo.appendChild(crear('p', 'ares-explica-demo',
-        'DEMONSTRATION TEMPLATE — not an analysis of your code.'));
+        t('ax.demotpl')));
     }
 
     [
-      seccionTexto('Summary', explicacion.summary),
-      seccionTexto('Purpose', explicacion.purpose),
+      seccionTexto(t('ax.summary'), explicacion.summary),
+      seccionTexto(t('ax.purpose'), explicacion.purpose),
       seccionLista('Flow', explicacion.flow),
-      seccionLista('Inputs', explicacion.inputs),
-      seccionLista('Outputs', explicacion.outputs),
-      seccionLista('Dependencies', explicacion.dependencies),
-      seccionLista('Risks', explicacion.risks),
+      seccionLista(t('ax.inputs'), explicacion.inputs),
+      seccionLista(t('ax.outputs'), explicacion.outputs),
+      seccionLista(t('ax.deps'), explicacion.dependencies),
+      seccionLista(t('explain.risks'), explicacion.risks),
       seccionReferencias(explicacion.references),
       seccionInferencias(explicacion.inferences)
     ].forEach(function (bloque) {
@@ -346,13 +351,13 @@
     // Acción separada y explícita: SÓLO copia un resumen al cuadro de
     // A.R.E.S. No ejecuta, no edita y no crea propuesta.
     var acciones = crear('div', 'ares-explica-actions');
-    var usar = crear('button', null, 'Use explanation to create a task');
+    var usar = crear('button', null, t('ax.usetask'));
     usar.type = 'button';
     usar.addEventListener('click', usarParaTarea);
     acciones.appendChild(usar);
     // Cerrar el resultado Y el contexto de una vez: es lo que se quiere
     // cuando terminas de leer y vuelves a escribir código.
-    var ocultar = crear('button', null, 'Hide all');
+    var ocultar = crear('button', null, t('ax.hideall'));
     ocultar.type = 'button';
     ocultar.addEventListener('click', function () {
       cajaResultado.hidden = true;
@@ -369,11 +374,11 @@
     var partes = [];
     if (ultimaExplicacion.summary) { partes.push(ultimaExplicacion.summary); }
     if (ultimaExplicacion.risks && ultimaExplicacion.risks.length) {
-      partes.push('Risks reported: ' + ultimaExplicacion.risks.join('; '));
+      partes.push(t('ax.risksreported') + ultimaExplicacion.risks.join('; '));
     }
     caja.value = partes.join('\n\n');
     caja.focus();
-    setEstado('Summary copied to the A.R.E.S. box. Nothing was run or edited.');
+    setEstado(t('ax.copied'));
   }
 
   // ---- Flujo ----
@@ -392,26 +397,26 @@
       cuerpo.selection = seleccion.selection;
       cuerpo.start_line = seleccion.start_line;
       cuerpo.end_line = seleccion.end_line;
-      if (!cuerpo.path) { setEstado('Open a file before explaining a selection.', true); return; }
+      if (!cuerpo.path) { setEstado(t('ax.openselection'), true); return; }
       cuerpo.diagnostics = diagnosticosActivos(cuerpo.path);
     } else if (scope === 'file') {
       cuerpo.path = rutaActiva();
-      if (!cuerpo.path) { setEstado('Open a file before explaining it.', true); return; }
+      if (!cuerpo.path) { setEstado(t('ax.openfile'), true); return; }
       cuerpo.diagnostics = diagnosticosActivos(cuerpo.path);
     }
 
     ocupado = true;
-    setEstado('Preparing context…');
+    setEstado(t('ax.preparing'));
     cajaResultado.hidden = true;
 
     // Preview SIEMPRE primero: el usuario ve qué se envía antes de enviarlo.
     pedir(API + '/preview', cuerpo).then(function (preview) {
       pintarPreview(preview);
-      setEstado(cuerpo.offline ? 'Generating demo…' : 'Asking A.R.E.S…');
+      setEstado(cuerpo.offline ? t('ax.generatingdemo') : t('ax.asking'));
       return pedir(API, cuerpo);
     }).then(function (datos) {
       pintarResultado(datos);
-      setEstado(datos.demo ? 'Demo generated (not your code).' : 'Explanation ready.');
+      setEstado(datos.demo ? t('ax.demoready') : t('ax.ready'));
     }).catch(function (error) {
       setEstado(error.message, true);
     }).then(function () {

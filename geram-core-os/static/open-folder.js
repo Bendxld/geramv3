@@ -21,6 +21,11 @@
   var currentPath = '';
   var currentUsable = false;
 
+  function t(key) {
+    var i18n = root.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
+
   function crear(tag, clase, texto) {
     var el = documentObject.createElement(tag);
     if (clase) { el.className = clase; }
@@ -42,7 +47,7 @@
       return respuesta.json().catch(function () { return {}; }).then(function (cuerpo) {
         if (!respuesta.ok) {
           var detalle = cuerpo && cuerpo.detail;
-          var mensaje = (detalle && detalle.message) || 'The folder could not be opened';
+          var mensaje = (detalle && detalle.message) || t('of.openfail');
           throw new Error(mensaje);
         }
         return cuerpo;
@@ -60,7 +65,7 @@
       openButton.disabled = !currentUsable;
       noteElement.textContent = currentUsable
         ? ''
-        : 'This folder is too broad or protected — choose a project folder inside it.';
+        : t('of.toobroad');
 
       while (listElement.firstChild) { listElement.removeChild(listElement.firstChild); }
 
@@ -78,13 +83,13 @@
         listElement.appendChild(boton);
       });
       if (!(datos.folders || []).length) {
-        listElement.appendChild(crear('p', 'of-vacio', 'No subfolders here.'));
+        listElement.appendChild(crear('p', 'of-vacio', t('of.nosub')));
       }
       if (datos.truncated) {
-        listElement.appendChild(crear('p', 'of-vacio', 'Too many subfolders — only the first ones are shown.'));
+        listElement.appendChild(crear('p', 'of-vacio', t('of.toomany')));
       }
     }).catch(function (error) {
-      noteElement.textContent = error.message || 'That folder could not be read';
+      noteElement.textContent = error.message || t('of.readfail');
     });
   }
 
@@ -103,7 +108,7 @@
       aplicarCarpeta(datos.path || currentPath);
     }).catch(function (error) {
       openButton.disabled = false;
-      noteElement.textContent = error.message || 'The folder could not be opened';
+      noteElement.textContent = error.message || t('of.openfail');
     });
   }
 
@@ -120,7 +125,7 @@
     var caja = crear('div', 'of-caja');
     caja.setAttribute('role', 'dialog');
     caja.setAttribute('aria-modal', 'true');
-    caja.setAttribute('aria-label', 'Open folder');
+    caja.setAttribute('aria-label', t('of.aria'));
 
     var encabezado = crear('div', 'of-header');
     encabezado.appendChild(crear('h2', 'panel-titulo', 'OPEN FOLDER'));
@@ -144,21 +149,21 @@
     caja.appendChild(noteElement);
 
     var pie = crear('div', 'of-pie');
-    var nativo = crear('button', 'of-btn of-nativo', 'System dialog…');
+    var nativo = crear('button', 'of-btn of-nativo', t('of.system'));
     nativo.type = 'button';
-    nativo.title = 'Open your desktop file manager to pick a folder';
+    nativo.title = t('of.system.title');
     nativo.addEventListener('click', function () {
       elegirConDialogoDelSistema().then(function (resuelto) {
         if (resuelto) { cerrar(); }
       }).catch(function (error) {
-        noteElement.textContent = error.message || 'The system dialog is not available here';
+        noteElement.textContent = error.message || t('of.systemfail');
       });
     });
     pie.appendChild(nativo);
-    var cancelar = crear('button', 'of-btn', 'Cancel');
+    var cancelar = crear('button', 'of-btn', t('common.cancel'));
     cancelar.type = 'button';
     cancelar.addEventListener('click', cerrar);
-    openButton = crear('button', 'of-btn principal', 'Open this folder');
+    openButton = crear('button', 'of-btn principal', t('of.openthis'));
     openButton.type = 'button';
     openButton.addEventListener('click', abrir);
     pie.appendChild(cancelar);

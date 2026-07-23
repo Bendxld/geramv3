@@ -286,7 +286,8 @@
       searchOptions.style.display = searchOptions.hidden ? 'none' : ''; replacementRow.style.display = replacementRow.hidden ? 'none' : '';
       runButton.hidden = mode !== 'search';
       title.textContent = mode === 'files' ? 'QUICK OPEN' : (mode === 'symbols' ? 'WORKSPACE SYMBOLS' : 'GLOBAL SEARCH');
-      input.value = ''; input.placeholder = mode === 'files' ? 'Search files…' : (mode === 'symbols' ? 'Search symbols…' : 'Search text…');
+      input.value = ''; var qt = function(k, f) { var i = windowObject.GeramI18n; return (i && i.t) ? i.t(k) : f; };
+      input.placeholder = mode === 'files' ? qt('qo.files.ph', 'Search files…') : (mode === 'symbols' ? qt('qo.symbols.ph', 'Search symbols…') : qt('qo.text.ph', 'Search text…'));
       clearResults(); setStatus(mode === 'files' ? 'Loading files…' : ''); input.focus();
       if (mode === 'files') { jsonFetch(windowObject, '/api/navigation/files').then(function(payload) { files = payload.files || []; renderFiles(); }).catch(function() { setStatus('Files could not be loaded.'); }); }
     }

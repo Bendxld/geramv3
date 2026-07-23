@@ -154,7 +154,7 @@
     var select = $('gsBackupList');
     var backupId = select ? select.value : '';
     if (!backupId) { maintenanceStatus('Select a backup first.'); return; }
-    if (!windowObject.confirm('Restore portable state from this backup? A safety backup will be created first.')) { return; }
+    if (!windowObject.confirm(windowObject.GeramI18n ? windowObject.GeramI18n.t('gs.confirmrestore') : 'Restore portable state from this backup?')) { return; }
     maintenanceStatus('Validating and restoring backup…');
     windowObject.fetch('/api/maintenance/restore', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

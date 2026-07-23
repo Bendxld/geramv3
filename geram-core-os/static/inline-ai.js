@@ -16,6 +16,10 @@
   if (!root || !root.document) { return; }
   var documentObject = root.document;
   var $ = function (id) { return documentObject.getElementById(id); };
+  function t(key) {
+    var i18n = root.GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
 
   var controller = root.GeramWorkspaceController;
   var input = $('inlineAiInput');
@@ -53,44 +57,44 @@
   var diffEditor = null, originalModel = null, modifiedModel = null;
 
   var MESSAGES = {
-    context_too_large: 'The file is too large for A.R.E.S.',
-    file_too_large: 'The file exceeds the allowed limit.',
-    invalid_provider_response: 'A.R.E.S. returned an invalid proposal.',
-    provider_response_not_text: 'A.R.E.S. returned an unsupported response format.',
-    provider_response_encoding: 'A.R.E.S. returned text with invalid encoding.',
-    provider_response_too_large: 'The A.R.E.S. proposal exceeds the allowed limit.',
-    provider_response_truncated: 'The A.R.E.S. response was truncated; try a smaller change.',
-    provider_response_ambiguous: 'A.R.E.S. added text outside the required JSON.',
-    provider_response_invalid_json: 'A.R.E.S. returned invalid JSON.',
-    provider_response_schema_invalid: 'The A.R.E.S. response does not meet the editing contract.',
-    provider_response_path_invalid: 'A.R.E.S. proposed a disallowed path.',
-    provider_response_incomplete: 'A.R.E.S. omitted one of the selected files.',
-    provider_unavailable: 'A.R.E.S. is currently unavailable.',
-    invalid_path: 'The active file does not have a valid path inside the workspace.',
-    protected_path: 'The active file is protected and A.R.E.S. cannot modify it.',
-    proposal_too_large: 'The proposal exceeds the allowed limit.',
-    proposal_capacity: 'A.R.E.S. has too many pending proposals; discard one and try again.',
-    proposal_not_found: 'The proposal no longer exists on the backend. Generate a new one.',
-    proposal_rejected: 'The proposal was rejected and can no longer be applied.',
-    proposal_cancelled: 'The proposal was cancelled and can no longer be applied.',
-    proposal_conflicted: 'The proposal conflicts with the current file. Generate a new one.',
-    proposal_failed: 'The proposal failed safely and was not applied.',
-    proposal_digest_mismatch: 'The proposal changed after review. Generate a new one.',
-    proposal_integrity_failed: 'The integrity check failed; no changes were applied.',
-    approval_token_invalid: 'The approval is no longer valid. Generate a new proposal.',
-    approval_mismatch: 'The approval does not match the reviewed diff.',
-    diff_too_large: 'The diff exceeds the allowed limit.',
-    proposal_base_conflict: 'The file changed on disk; reopen it.',
-    proposal_expired: 'The proposal expired; request it again.',
-    version_conflict: 'The file changed; your local content was preserved.'
+    context_too_large: 'iaerr.context_too_large',
+    file_too_large: 'iaerr.file_too_large',
+    invalid_provider_response: 'iaerr.invalid_provider_response',
+    provider_response_not_text: 'iaerr.provider_response_not_text',
+    provider_response_encoding: 'iaerr.provider_response_encoding',
+    provider_response_too_large: 'iaerr.provider_response_too_large',
+    provider_response_truncated: 'iaerr.provider_response_truncated',
+    provider_response_ambiguous: 'iaerr.provider_response_ambiguous',
+    provider_response_invalid_json: 'iaerr.provider_response_invalid_json',
+    provider_response_schema_invalid: 'iaerr.provider_response_schema_invalid',
+    provider_response_path_invalid: 'iaerr.provider_response_path_invalid',
+    provider_response_incomplete: 'iaerr.provider_response_incomplete',
+    provider_unavailable: 'iaerr.provider_unavailable',
+    invalid_path: 'iaerr.invalid_path',
+    protected_path: 'iaerr.protected_path',
+    proposal_too_large: 'iaerr.proposal_too_large',
+    proposal_capacity: 'iaerr.proposal_capacity',
+    proposal_not_found: 'iaerr.proposal_not_found',
+    proposal_rejected: 'iaerr.proposal_rejected',
+    proposal_cancelled: 'iaerr.proposal_cancelled',
+    proposal_conflicted: 'iaerr.proposal_conflicted',
+    proposal_failed: 'iaerr.proposal_failed',
+    proposal_digest_mismatch: 'iaerr.proposal_digest_mismatch',
+    proposal_integrity_failed: 'iaerr.proposal_integrity_failed',
+    approval_token_invalid: 'iaerr.approval_token_invalid',
+    approval_mismatch: 'iaerr.approval_mismatch',
+    diff_too_large: 'iaerr.diff_too_large',
+    proposal_base_conflict: 'iaerr.proposal_base_conflict',
+    proposal_expired: 'iaerr.proposal_expired',
+    version_conflict: 'iaerr.version_conflict'
   };
   function safeMessage(errorOrCode) {
     var code = typeof errorOrCode === 'string' ? errorOrCode : errorOrCode && errorOrCode.message;
-    if (MESSAGES[code]) { return MESSAGES[code]; }
+    if (MESSAGES[code]) { return t(MESSAGES[code]); }
     var requestId = errorOrCode && errorOrCode.requestId;
     return requestId ?
-      'Internal A.R.E.S. error (reference: ' + requestId + ').' :
-      'Internal A.R.E.S. error with no reference available.';
+      t('iaerr.internal_ref').replace('{ref}', requestId) :
+      t('iaerr.internal');
   }
 
   function terminalProposalError(code) {
@@ -254,21 +258,21 @@
             var rounds = fixLoop.round;
             fixLoop = { round: 0, path: '', failure: '' };
             if (fixBtn) { fixBtn.hidden = true; }
-            setStatus('Tests pass ✓ — fixed in ' + rounds + ' round' + (rounds === 1 ? '' : 's') + '.', false);
+            setStatus(t('ia.testspass').replace('{n}', rounds), false);
           } else {
-            setStatus('Safe run completed.', false);
+            setStatus(t('ia.runok'), false);
           }
         } else if (cancelled) {
-          setStatus('Run cancelled.', false);
+          setStatus(t('ia.runcancelled'), false);
         } else {
-          setStatus('The safe run ended with an error.', true);
+          setStatus(t('ia.runerror'), true);
           // Only unittest failures drive the fix loop.
           if (lastRunner === 'python_unittest') { offerFix(data); }
         }
       }).catch(function () {
         currentRunId = '';
         setBusy(false);
-        setStatus('The safe run could not be queried.', true);
+        setStatus(t('ia.runquery'), true);
       });
   }
 
@@ -302,10 +306,10 @@
     var tipo = $('projTipoSelect');
     var estado = $('projModalEstado');
     var name = nombre ? nombre.value.trim() : '';
-    if (!name) { if (estado) { estado.textContent = 'Enter a folder name.'; estado.classList.add('error'); } return; }
+    if (!name) { if (estado) { estado.textContent = t('ia.entername'); estado.classList.add('error'); } return; }
     var payload = { name: name, instruction: pendingProjectInstruction };
     if (tipo && tipo.value) { payload.template = tipo.value; }
-    if (estado) { estado.textContent = 'Creating…'; estado.classList.remove('error'); }
+    if (estado) { estado.textContent = t('ia.creating'); estado.classList.remove('error'); }
     root.fetch('/api/ares/projects', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
     }).then(function (r) {
@@ -320,8 +324,8 @@
       var instruction = pendingProjectInstruction;
       pendingProjectInstruction = '';
       setStatus(instruction
-        ? 'Project "' + res.data.directory + '" created. A.R.E.S. is preparing a proposal for your instruction…'
-        : 'Project "' + res.data.directory + '" (' + res.data.template + ') created. It will appear in the explorer.', false);
+        ? t('ia.projchain').replace('{dir}', res.data.directory)
+        : t('ia.projcreated').replace('{dir}', res.data.directory).replace('{tpl}', res.data.template), false);
       // Refresco del árbol tras dar tiempo a la escritura de fondo.
       var controller = root.GeramWorkspaceController;
       if (controller && controller.reloadTree) { root.setTimeout(function () { controller.reloadTree(); }, 900); }
@@ -331,7 +335,7 @@
         chainProjectProposal(res.data.directory, res.data.template, instruction);
       }, 1200);
     }).catch(function (err) {
-      if (estado) { estado.textContent = 'Could not create: ' + err.message; estado.classList.add('error'); }
+      if (estado) { estado.textContent = t('ia.createfail') + err.message; estado.classList.add('error'); }
     });
   }
   function createProject(instruction) { openProjectModal(instruction); }
@@ -372,7 +376,7 @@
   }
   function refreshExplorer() {
     var controller = root.GeramWorkspaceController;
-    if (controller && controller.reloadTree) { controller.reloadTree(); setStatus('Explorer refreshed.', false); }
+    if (controller && controller.reloadTree) { controller.reloadTree(); setStatus(t('ia.refreshed'), false); }
   }
 
   // Shared final rendering for both the streaming and non-streaming paths.
@@ -389,7 +393,7 @@
     summaryEl.textContent = data.summary || '';
     renderWarnings(data.warnings);
     showDiff(adapter, path, info.content, change.content, data.diff);
-    setStatus('Review the diff. Accept (Ctrl+Enter) writes to disk; Reject (Esc) discards it.', false);
+    setStatus(t('ia.reviewdiff'), false);
   }
 
   // Live view of A.R.E.S. writing the proposal. Display-only: the streamed text
@@ -524,7 +528,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     }).then(function (response) {
-      setStatus('A.R.E.S. is inspecting the workspace…', false);
+      setStatus(t('ia.inspecting'), false);
       return pumpSse(response, onBlock);
     }, function () { return Promise.reject({ __fallback: true }); });
   }
@@ -536,7 +540,7 @@
     runFileBtn.hidden = true;
     runTestsBtn.hidden = true;
     setBusy(true);
-    setStatus('A.R.E.S. is generating the proposal…', false);
+    setStatus(t('ia.generating'), false);
 
     return controller.editorReady.catch(function () { return null; }).then(function (adapter) {
       var ctx = selectionContext(adapter);
@@ -547,14 +551,14 @@
       return agenticProposal(body, adapter, path, info).catch(function (error) {
         if (error && error.__fallback) {
           clearStreaming();
-          setStatus('A.R.E.S. is generating the proposal…', false);
+          setStatus(t('ia.generating'), false);
           return streamProposal(body, adapter, path, info);
         }
         throw error;
       }).catch(function (error) {
         if (error && error.__fallback) {
           clearStreaming();
-          setStatus('A.R.E.S. is generating the proposal…', false);
+          setStatus(t('ia.generating'), false);
           return postProposal(body, adapter, path, info);
         }
         throw error;
@@ -574,8 +578,8 @@
     if (isCreateProjectIntent(text)) { createProject(text); return; }
     var path = controller.activePath();
     var info = path ? controller.documentInfo(path) : null;
-    if (!info) { setStatus('Open a file from the explorer before requesting a change.', true); return; }
-    if (info.modified) { setStatus('Save your local changes before requesting a proposal.', true); return; }
+    if (!info) { setStatus(t('ia.openfirst'), true); return; }
+    if (info.modified) { setStatus(t('ia.savefirst'), true); return; }
     // A fresh typed instruction starts a new task: reset the fix loop.
     fixLoop = { round: 0, path: '', failure: '' };
     if (fixBtn) { fixBtn.hidden = true; }
@@ -597,13 +601,13 @@
   function startFix() {
     if (busy) { return; }
     if (fixLoop.round >= MAX_FIX_ROUNDS) {
-      setStatus('Reached the fix limit (' + MAX_FIX_ROUNDS + '); review the failure manually.', true);
+      setStatus(t('ia.fixlimit').replace('{n}', MAX_FIX_ROUNDS), true);
       return;
     }
     var path = fixLoop.path || controller.activePath();
     var info = path ? controller.documentInfo(path) : null;
-    if (!info) { setStatus('Open the failing file before requesting a fix.', true); return; }
-    if (info.modified) { setStatus('Save your local changes before requesting a fix.', true); return; }
+    if (!info) { setStatus(t('ia.openfailing'), true); return; }
+    if (info.modified) { setStatus(t('ia.savefix'), true); return; }
     fixLoop.round += 1;
     if (fixBtn) { fixBtn.hidden = true; }
     var instruction = 'The unittest run failed. Fix the code so the tests pass. Do not change the '
@@ -617,12 +621,12 @@
     if (!proposal || busy) { return; }
     for (var i = 0; i < (proposal.changes || []).length; i += 1) {
       if (controller.hasLocalChanges(proposal.changes[i].path)) {
-        setStatus('There are unsaved local changes; the proposal was not applied.', true);
+        setStatus(t('ia.unsaved'), true);
         return;
       }
     }
     setBusy(true);
-    setStatus('Approving and applying…', false);
+    setStatus(t('ia.applying'), false);
     root.fetch('/api/ares/proposals/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -659,10 +663,10 @@
       syncRunControls();
       if (fixLoop.round > 0 && /\.py$/i.test(lastAcceptedPath)) {
         // In a fix loop: close it by re-running the tests once busy clears.
-        setStatus('Fix applied — re-running tests…', false);
+        setStatus(t('ia.fixapplied'), false);
         root.setTimeout(runTests, 300);
       } else {
-        setStatus(/\.(?:py|js)$/i.test(lastAcceptedPath) ? 'Changes saved. You can now run the file in Bubblewrap.' : 'Changes saved; the secure runner supports Python and JavaScript files.', false);
+        setStatus(/\.(?:py|js)$/i.test(lastAcceptedPath) ? t('ia.savedrun') : t('ia.savednorun'), false);
       }
     }).catch(function (error) {
       if (terminalProposalError(error.message)) {
@@ -684,7 +688,7 @@
       if (!response.ok) { return readError(response, 'reject_failed').then(function (err) { throw err; }); }
       proposal = null; approval = null;
       closeDiff();
-      setStatus('Proposal discarded.', false);
+      setStatus(t('ia.discarded'), false);
     }).catch(function (error) {
       // Aunque el rechazo remoto falle, cerramos el diff local (nada se escribió).
       proposal = null; approval = null; closeDiff();
@@ -703,19 +707,19 @@
   function ensureSaved(path) {
     var info = controller.documentInfo(path);
     if (!info || !info.modified) { return Promise.resolve(true); }
-    if (!root.confirm('There are unsaved changes. Save them before running?')) {
-      setStatus('Run cancelled: the file has unsaved changes.', false);
+    if (!root.confirm(t('ia.confirmrun'))) {
+      setStatus(t('ia.runcancelunsaved'), false);
       return Promise.resolve(false);
     }
-    setStatus('Saving before running…', false);
+    setStatus(t('ia.savingrun'), false);
     return controller.save().then(function (result) {
       if (!result || !result.ok) {
-        setStatus('Not run: the current version could not be saved.', true);
+        setStatus(t('ia.notrunsave'), true);
         return false;
       }
       var current = controller.documentInfo(path);
       if (!current || current.modified) {
-        setStatus('Not run: unsaved changes still exist.', true);
+        setStatus(t('ia.notrununsaved'), true);
         return false;
       }
       return true;
@@ -731,7 +735,7 @@
     setBusy(true);
     ensureSaved(activePath).then(function (ready) {
       if (!ready) { setBusy(false); return null; }
-      setStatus('Running in the sandbox…', false);
+      setStatus(t('ia.runningsandbox'), false);
       renderExecution({ status: 'queued', runner: runner, sandbox_backend: 'bubblewrap', cleanup_status: 'pending' });
       return root.fetch('/api/ares/tests/runs', {
         method: 'POST',
@@ -747,14 +751,14 @@
       renderExecution(data);
       if (!data.run_id || (data.status !== 'queued' && data.status !== 'running')) {
         setBusy(false);
-        setStatus('The secure runner rejected the run.', true);
+        setStatus(t('test.rejected'), true);
         return;
       }
       currentRunId = data.run_id;
       pollRun();
     }).catch(function (error) {
       renderExecution({ status: 'unavailable', error: safeMessage(error), cleanup_status: 'not_started' });
-      setStatus('Secure runner: ' + safeMessage(error), true);
+      setStatus(t('ia.runnerprefix') + safeMessage(error), true);
       setBusy(false);
     });
   }
@@ -769,7 +773,7 @@
     if (!currentRunId) { return; }
     root.fetch('/api/terminal-watcher/runs/' + encodeURIComponent(currentRunId) + '/cancel', { method: 'POST' })
       .then(function () { if (runPollTimer) { root.clearTimeout(runPollTimer); } pollRun(); })
-      .catch(function () { setStatus('The run could not be cancelled.', true); });
+      .catch(function () { setStatus(t('test.cancelfail'), true); });
   }
 
   // ---- Wiring: botones + atajos de teclado ----

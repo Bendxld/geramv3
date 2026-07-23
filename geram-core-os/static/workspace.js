@@ -311,6 +311,10 @@
       setStatus('', false);
     }
 
+    function t(key) {
+      var i18n = windowObject.GeramI18n;
+      return (i18n && i18n.t) ? i18n.t(key) : key;
+    }
     function openFile(path, button) {
       if (state.activePath === path) {
         editorReady.then(function(adapter) { adapter.focus(); });
@@ -323,7 +327,7 @@
         return;
       }
       var request = openRequest;
-      setStatus('Opening file...', false);
+      setStatus(t('ws.opening'), false);
       api.read(path).then(function(file) {
         if (request !== openRequest) { return; }
         var documentState = state.load(file);
@@ -369,11 +373,11 @@
     function loadTree() {
       if (loadingTree) { return; }
       loadingTree = true;
-      loadingElement.textContent = 'Loading workspace...';
+      loadingElement.textContent = t('ws.loading');
       api.tree().then(function(payload) {
         renderTree(payload);
       }).catch(function() {
-        loadingElement.textContent = 'The local workspace could not be loaded.';
+        loadingElement.textContent = t('ws.loadfail');
       }).then(function() {
         loadingTree = false;
       });
@@ -386,7 +390,7 @@
       var snapshot = state.beginSave();
       if (!snapshot) { return Promise.resolve({ ok: true, skipped: true }); }
       renderState();
-      setStatus('Saving...', false);
+      setStatus(t('ws.saving'), false);
       return api.save(snapshot).then(function(result) {
         state.finishSave(snapshot, result.version);
         if (editorAdapter) { editorAdapter.markSaved(snapshot.path, snapshot.content); }
@@ -394,7 +398,7 @@
         var documentState = state.documents.get(snapshot.path);
         setStatus(
           documentState && documentState.modified ?
-            'Saved; newer changes remain.' : 'File saved.',
+            t('ws.savednewer') : t('ws.saved'),
           false
         );
         return { ok: true, path: snapshot.path, version: result.version };
@@ -491,7 +495,7 @@
     }
 
     function closePanel() {
-      if (state.hasModifiedDocuments() && !windowObject.confirm('There are unsaved changes. Close the workspace?')) {
+      if (state.hasModifiedDocuments() && !windowObject.confirm(t('ws.confirmclose'))) {
         return;
       }
       panel.classList.remove('activo');
@@ -556,7 +560,7 @@
     var editorReady;
     if (!editorModule || typeof editorModule.initializeEditor !== 'function') {
       editorReady = Promise.reject(new Error('editor_adapter_unavailable'));
-      setStatus('The local editor could not be initialized.', true);
+      setStatus(t('ws.initfail'), true);
     } else {
       editorReady = editorModule.initializeEditor({
         windowObject: windowObject,
@@ -570,7 +574,7 @@
           if (state.activePath === path) { renderState(); }
         },
         onFallback: function() {
-          setStatus('Monaco no pudo cargar. Editor de respaldo activo.', true);
+          setStatus(t('ws.monacofallback'), true);
         }
       }).then(function(result) {
         editorAdapter = result.adapter;

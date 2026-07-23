@@ -6,6 +6,11 @@
 })(typeof window !== 'undefined' ? window : null, function() {
   'use strict';
 
+  function t(key) {
+    var i18n = (typeof window !== 'undefined' ? window : {}).GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
+
   function parentPath(path) {
     var parts = String(path || '').split('/'); parts.pop(); return parts.join('/');
   }
@@ -47,9 +52,9 @@
     function toolbarButton(label, title, action) {
       var button = documentObject.createElement('button'); button.type = 'button'; button.textContent = label; button.title = title; button.addEventListener('click', action); toolbar.appendChild(button);
     }
-    toolbarButton('+ File', 'Create file', function() { createItem('file'); });
-    toolbarButton('+ Folder', 'Create folder', function() { createItem('directory'); });
-    toolbarButton('↻', 'Refrescar explorador', function() { controller.reloadTree(); });
+    toolbarButton(t('fo.newfile.btn'), t('fo.newfile.title'), function() { createItem('file'); });
+    toolbarButton(t('fo.newfolder.btn'), t('fo.newfolder.title'), function() { createItem('directory'); });
+    toolbarButton('↻', t('ws.refresh'), function() { controller.reloadTree(); });
     tree.parentNode.insertBefore(toolbar, tree);
 
     var overlay = documentObject.createElement('section'); overlay.className = 'workspace-ops-overlay'; overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true');
@@ -76,7 +81,7 @@
       heading.textContent = options.title; message.textContent = options.message || '';
       label.hidden = !options.name; destinationLabel.hidden = !options.destinations;
       label.style.display = label.hidden ? 'none' : ''; destinationLabel.style.display = destinationLabel.hidden ? 'none' : '';
-      input.value = options.value || ''; confirmButton.textContent = options.confirm || 'Continue';
+      input.value = options.value || ''; confirmButton.textContent = options.confirm || t('sc.continue');
       while (destination.firstChild) { destination.removeChild(destination.firstChild); }
       (options.destinations || []).forEach(function(path) { var item = documentObject.createElement('option'); item.value = path; item.textContent = path || '/'; destination.appendChild(item); });
       overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
@@ -93,13 +98,13 @@
     }
     function showMenu(event, item) {
       selection = item; while (menu.firstChild) { menu.removeChild(menu.firstChild); }
-      menuAction('New file', function() { createItem('file'); }, false);
-      menuAction('New folder', function() { createItem('directory'); }, false);
-      menuAction('Rename', startInlineRename, !item);
-      menuAction('Mover a…', moveSelected, !item);
-      menuAction('Duplicar', duplicateSelected, !item || item.type !== 'file');
-      menuAction('Delete', deleteSelected, !item);
-      menuAction('Copy relative path', copyPath, !item);
+      menuAction(t('fo.newfile'), function() { createItem('file'); }, false);
+      menuAction(t('fo.newfolder'), function() { createItem('directory'); }, false);
+      menuAction(t('fo.rename'), startInlineRename, !item);
+      menuAction(t('fo.moveto'), moveSelected, !item);
+      menuAction(t('fo.duplicate'), duplicateSelected, !item || item.type !== 'file');
+      menuAction(t('dash.delete'), deleteSelected, !item);
+      menuAction(t('fo.copypath'), copyPath, !item);
       menu.hidden = false; menu.style.left = event.clientX + 'px'; menu.style.top = event.clientY + 'px';
       var first = menu.querySelector('button:not(:disabled)'); if (first) { first.focus(); }
     }
@@ -113,7 +118,7 @@
     }
     function ensureClean(path, type) {
       var dirty = dirtyPaths(path, type); if (!dirty.length) { return Promise.resolve(true); }
-      if (!windowObject.confirm('There are unsaved changes in ' + dirty.length + ' file(s). Save them before continuing?')) { return Promise.resolve(false); }
+      if (!windowObject.confirm(t('fo.unsaved').replace('{n}', dirty.length))) { return Promise.resolve(false); }
       var original = controller.activePath();
       return dirty.reduce(function(chain, dirtyPath) {
         return chain.then(function(ok) {
@@ -132,18 +137,18 @@
     }
     function errorMessage(error) {
       var messages = {
-        invalid_name: 'The name is invalid.', name_collision: 'An item with that name already exists.',
-        circular_move: 'A folder cannot be moved inside itself.', protected_path: 'The path is protected.',
-        operation_conflict: 'The item changed; try again.', symlink_not_allowed: 'Symbolic links are not allowed.',
-        not_found: 'That location no longer exists; pick a folder in the tree and try again.',
-        depth_limit: 'The folder is nested too deep.'
+        invalid_name: t('fo.err.invalid'), name_collision: t('fo.err.collision'),
+        circular_move: t('fo.err.circular'), protected_path: t('fo.err.protected'),
+        operation_conflict: t('fo.err.conflict'), symlink_not_allowed: t('fo.err.symlink'),
+        not_found: t('fo.err.notfound'),
+        depth_limit: t('fo.err.depth')
       };
-      windowObject.alert(messages[error.code] || 'The operation could not be completed.');
+      windowObject.alert(messages[error.code] || t('fo.err.generic'));
     }
 
     function createItem(type) {
       var parent = selectedParent();
-      promptForm({ title: type === 'file' ? 'CREATE FILE' : 'CREATE FOLDER', message: 'Location: ' + (parent || '/'), name: true, confirm: 'Create' }).then(function(value) {
+      promptForm({ title: type === 'file' ? t('fo.create.file') : t('fo.create.folder'), message: t('fo.location') + (parent || '/'), name: true, confirm: t('proj.create') }).then(function(value) {
         if (!value) { return; }
         // El backend rechaza nombres con espacios al borde; recortarlos aquí
         // evita un 422 por algo que el usuario no ve al teclear.
@@ -163,7 +168,7 @@
       ensureClean(selection.path, selection.type).then(function(ok) {
         if (!ok) { return; }
         return request('/api/workspace/operations/move/preview', { source: selection.path, destination_parent: parentPath(selection.path), name: name }).then(function(preview) {
-          return promptForm({ title: 'CONFIRM RENAME', message: preview.source + ' → ' + preview.destination, confirm: 'Rename' }).then(function(answer) {
+          return promptForm({ title: t('fo.confirmrename'), message: preview.source + ' → ' + preview.destination, confirm: t('fo.rename') }).then(function(answer) {
             if (!answer) { return; }
             return request('/api/workspace/operations/move/apply', { token: preview.token }).then(function(result) {
               return controller.remapDocuments(result.old_path, result.new_path, result.type).then(function() {
@@ -199,7 +204,7 @@
       return ensureClean(item.path, item.type).then(function(ok) {
         if (!ok) { return; }
         return request('/api/workspace/operations/move/preview', { source: item.path, destination_parent: destinationParent }).then(function(preview) {
-          return promptForm({ title: 'CONFIRMAR MOVIMIENTO', message: preview.source + ' → ' + preview.destination + ' (' + preview.count + ' elemento(s))', confirm: 'Mover' }).then(function(answer) {
+          return promptForm({ title: t('fo.confirmmove'), message: preview.source + ' → ' + preview.destination + ' (' + preview.count + t('fo.items') + ')', confirm: t('fo.move') }).then(function(answer) {
             if (!answer) { return; }
             return request('/api/workspace/operations/move/apply', { token: preview.token }).then(function(result) {
               return controller.remapDocuments(result.old_path, result.new_path, result.type).then(function() {
@@ -214,12 +219,12 @@
     function moveSelected() {
       if (!selection) { return; }
       listDirectories().then(function(directories) {
-        return promptForm({ title: 'MOVE TO…', message: 'Source: ' + selection.path, destinations: directories, confirm: 'Preview' });
+        return promptForm({ title: t('fo.moveto.title'), message: t('fo.source') + selection.path, destinations: directories, confirm: t('ws.preview') });
       }).then(function(value) { if (value) { return moveItem(selection, value.destination); } }).catch(errorMessage);
     }
     function duplicateSelected() {
       if (!selection || selection.type !== 'file') { return; }
-      promptForm({ title: 'DUPLICATE FILE', message: 'Source: ' + selection.path, name: true, value: duplicateName(selection.path), confirm: 'Duplicate' }).then(function(value) {
+      promptForm({ title: t('fo.duplicate.title'), message: t('fo.source') + selection.path, name: true, value: duplicateName(selection.path), confirm: t('fo.duplicate') }).then(function(value) {
         if (!value) { return; }
         return request('/api/workspace/operations/duplicate', { source: selection.path, name: value.name }).then(function(result) {
           notifyChanged({ created: [result] });
@@ -232,7 +237,7 @@
       ensureClean(target.path, target.type).then(function(ok) {
         if (!ok) { return; }
         return request('/api/workspace/operations/delete/preview', { path: target.path }).then(function(preview) {
-          return promptForm({ title: 'CONFIRM DELETION', message: preview.path + ' · ' + preview.count + ' item(s). This action requires explicit approval.', confirm: 'Delete' }).then(function(answer) {
+          return promptForm({ title: t('fo.confirmdelete'), message: preview.path + ' · ' + preview.count + t('fo.deletemsg'), confirm: t('dash.delete') }).then(function(answer) {
             if (!answer) { return; }
             return request('/api/workspace/operations/delete/apply', { token: preview.token }).then(function(result) {
               return controller.removeDocuments(result.path, result.type).then(function() {
@@ -245,7 +250,7 @@
     }
     function copyPath() {
       if (!selection || !windowObject.navigator.clipboard) { return; }
-      windowObject.navigator.clipboard.writeText(selection.path).catch(function() { windowObject.alert('The path could not be copied.'); });
+      windowObject.navigator.clipboard.writeText(selection.path).catch(function() { windowObject.alert(t('fo.copyfail')); });
     }
 
     windowObject.addEventListener('geram:workspace-selection', function(event) { selection = event.detail; });

@@ -45,45 +45,58 @@
       if (textValue !== undefined) { node.textContent = textValue; } return node;
     }
 
-    var openButton = element('button', 'source-control-open', 'Source Control');
-    openButton.type = 'button'; openButton.title = 'Source Control local (Ctrl+Shift+G)';
+    function t(key) {
+      var i18n = windowObject.GeramI18n;
+      return (i18n && i18n.t) ? i18n.t(key) : key;
+    }
+    // Marca el nodo con data-i18n* para que i18n.apply() lo re-traduzca al
+    // cambiar de idioma (la UI de este panel se construye en JS).
+    function tag(node, key, attr) {
+      node.setAttribute(attr ? ('data-i18n-' + attr) : 'data-i18n', key);
+      if (!attr) { node.textContent = t(key); }
+      else if (attr === 'title') { node.title = t(key); }
+      else { node.setAttribute('aria-label', t(key)); }
+      return node;
+    }
+    var openButton = element('button', 'source-control-open', 'Source Control'); tag(openButton, 'sc.open');
+    openButton.type = 'button'; tag(openButton, 'sc.open.title', 'title');
     var badge = element('span', 'source-control-badge', '0'); badge.hidden = true; openButton.appendChild(badge);
     header.insertBefore(openButton, header.lastElementChild);
 
     var panel = element('section', 'source-control-panel'); panel.id = 'sourceControlPanel'; panel.hidden = true;
-    panel.setAttribute('aria-hidden', 'true'); panel.setAttribute('aria-label', 'Source Control local');
+    panel.setAttribute('aria-hidden', 'true'); tag(panel, 'sc.panel.aria', 'aria');
     var panelHead = element('div', 'source-control-head');
-    var title = element('h3', '', 'SOURCE CONTROL · LOCAL');
-    var branch = element('span', 'source-control-branch', 'No repository');
-    var refresh = element('button', '', '↻'); refresh.type = 'button'; refresh.title = 'Refresh Source Control';
-    var close = element('button', '', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Close Source Control');
+    var title = element('h3', '', 'SOURCE CONTROL · LOCAL'); tag(title, 'sc.title');
+    var branch = element('span', 'source-control-branch', t('sc.norepo'));
+    var refresh = element('button', '', '↻'); refresh.type = 'button'; tag(refresh, 'sc.refresh.title', 'title');
+    var close = element('button', '', '×'); close.type = 'button'; tag(close, 'sc.close.aria', 'aria');
     panelHead.appendChild(title); panelHead.appendChild(branch); panelHead.appendChild(refresh); panelHead.appendChild(close);
-    var notice = element('p', 'source-control-notice', 'User-initiated local Git operations. A.R.E.S. does not perform these actions.');
-    var state = element('p', 'source-control-state', 'Waiting to load.'); state.setAttribute('role', 'status'); state.setAttribute('aria-live', 'polite');
-    var list = element('ul', 'source-control-list'); list.setAttribute('aria-label', 'Repository changes');
+    var notice = element('p', 'source-control-notice', ''); tag(notice, 'sc.notice');
+    var state = element('p', 'source-control-state', t('ws.waiting')); state.setAttribute('role', 'status'); state.setAttribute('aria-live', 'polite');
+    var list = element('ul', 'source-control-list'); tag(list, 'sc.changes.aria', 'aria');
     var toolbar = element('div', 'source-control-toolbar');
     function action(label, handler) { var button = element('button', '', label); button.type = 'button'; button.addEventListener('click', handler); toolbar.appendChild(button); return button; }
-    var stageButton = action('Stage selected', function() { mutateSelection('/stage', false); });
-    var unstageButton = action('Unstage selected', function() { mutateSelection('/unstage', true); });
-    var commitButton = action('Commit…', commitFlow);
-    var branchButton = action('Branches…', branchFlow);
-    var newBranchButton = action('New branch…', newBranchFlow);
+    var stageButton = action(t('sc.stage'), function() { mutateSelection('/stage', false); }); stageButton.setAttribute('data-i18n', 'sc.stage');
+    var unstageButton = action(t('sc.unstage'), function() { mutateSelection('/unstage', true); }); unstageButton.setAttribute('data-i18n', 'sc.unstage');
+    var commitButton = action(t('sc.commit'), commitFlow); commitButton.setAttribute('data-i18n', 'sc.commit');
+    var branchButton = action(t('sc.branches'), branchFlow); branchButton.setAttribute('data-i18n', 'sc.branches');
+    var newBranchButton = action(t('sc.newbranch'), newBranchFlow); newBranchButton.setAttribute('data-i18n', 'sc.newbranch');
     panel.appendChild(panelHead); panel.appendChild(notice); panel.appendChild(state); panel.appendChild(list); panel.appendChild(toolbar);
 
     var diffPanel = element('section', 'source-control-diff'); diffPanel.hidden = true;
     var diffHead = element('div', 'source-control-diff-head');
     var diffTitle = element('strong', '', 'GIT DIFF'); var hunkNav = element('div', 'source-control-hunks');
-    var diffClose = element('button', '', '×'); diffClose.type = 'button'; diffClose.setAttribute('aria-label', 'Close Git diff');
+    var diffClose = element('button', '', '×'); diffClose.type = 'button'; tag(diffClose, 'sc.diffclose.aria', 'aria');
     var diffText = element('pre', 'source-control-diff-text');
     diffHead.appendChild(diffTitle); diffHead.appendChild(hunkNav); diffHead.appendChild(diffClose); diffPanel.appendChild(diffHead); diffPanel.appendChild(diffText);
     panel.appendChild(diffPanel); documentObject.body.appendChild(panel);
 
     var overlay = element('section', 'source-control-overlay'); overlay.hidden = true; overlay.setAttribute('aria-hidden', 'true');
     var dialog = element('div', 'source-control-dialog'); dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true');
-    var dialogTitle = element('h3'); var dialogMessage = element('p'); var dialogLabel = element('label', '', 'Value');
+    var dialogTitle = element('h3'); var dialogMessage = element('p'); var dialogLabel = element('label', '', t('sc.value'));
     var dialogInput = element('input'); dialogInput.type = 'text'; dialogInput.maxLength = 200; dialogInput.autocomplete = 'off'; dialogLabel.appendChild(dialogInput);
     var dialogSelect = element('select'); var dialogActions = element('div', 'source-control-dialog-actions');
-    var dialogConfirm = element('button', '', 'Continue'); dialogConfirm.type = 'button'; var dialogCancel = element('button', '', 'Cancel'); dialogCancel.type = 'button';
+    var dialogConfirm = element('button', '', t('sc.continue')); dialogConfirm.type = 'button'; var dialogCancel = element('button', '', ''); tag(dialogCancel, 'common.cancel'); dialogCancel.type = 'button';
     dialogActions.appendChild(dialogConfirm); dialogActions.appendChild(dialogCancel);
     [dialogTitle, dialogMessage, dialogLabel, dialogSelect, dialogActions].forEach(function(node) { dialog.appendChild(node); }); overlay.appendChild(dialog); documentObject.body.appendChild(overlay);
     var resolveDialog = null;
@@ -91,10 +104,10 @@
       dialogTitle.textContent = options.title; dialogMessage.textContent = options.message || '';
       dialogLabel.hidden = !options.input; dialogSelect.hidden = !options.choices; dialogInput.value = options.value || '';
       dialogLabel.style.display = options.input ? '' : 'none'; dialogSelect.style.display = options.choices ? '' : 'none';
-      dialogLabel.firstChild.nodeValue = (options.label || 'Value');
+      dialogLabel.firstChild.nodeValue = (options.label || t('sc.value'));
       while (dialogSelect.firstChild) { dialogSelect.removeChild(dialogSelect.firstChild); }
       (options.choices || []).forEach(function(value) { var item = element('option', '', value); item.value = value; dialogSelect.appendChild(item); });
-      dialogConfirm.textContent = options.confirm || 'Continue'; overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
+      dialogConfirm.textContent = options.confirm || t('sc.continue'); overlay.hidden = false; overlay.setAttribute('aria-hidden', 'false');
       windowObject.setTimeout(function() { (options.input ? dialogInput : options.choices ? dialogSelect : dialogConfirm).focus(); }, 0);
       return new Promise(function(resolve) { resolveDialog = resolve; dialogConfirm.onclick = function() { finishDialog({ value: dialogInput.value, choice: dialogSelect.value }); }; });
     }
@@ -103,13 +116,13 @@
 
     function messageFor(error) {
       var messages = {
-        git_repository_not_found: 'The active file does not belong to a workspace Git repository.',
-        unsafe_repository: 'The repository does not meet the security policy.', unsafe_repository_config: 'The Git configuration can execute code and was blocked.',
-        unsafe_repository_attributes: 'Executable Git attributes were blocked.', dirty_worktree: 'Switch branches only with a clean worktree.',
-        empty_commit: 'There are no staged changes to commit.', git_operation_conflict: 'The Git state changed; review it again.',
-        git_timeout: 'The Git operation exceeded the time limit.'
+        git_repository_not_found: t('sc.err.norepo'),
+        unsafe_repository: t('sc.err.unsafe'), unsafe_repository_config: t('sc.err.unsafeconfig'),
+        unsafe_repository_attributes: t('sc.err.unsafeattr'), dirty_worktree: t('sc.err.dirty'),
+        empty_commit: t('sc.err.empty'), git_operation_conflict: t('sc.err.conflict'),
+        git_timeout: t('sc.err.timeout')
       };
-      return messages[error.code] || 'The local Git operation could not be completed.';
+      return messages[error.code] || t('sc.err.generic');
     }
     function fail(error) { state.textContent = messageFor(error); state.classList.add('error'); }
     function updateBadge() {
@@ -129,7 +142,7 @@
       if (payload.clean) { diffPanel.hidden = true; }
       while (list.firstChild) { list.removeChild(list.firstChild); }
       if (!payload.entries.length) {
-        state.textContent = payload.restricted ? payload.restricted + ' protected change(s), unavailable.' : '✓ Clean repository';
+        state.textContent = payload.restricted ? t('sc.protected').replace('{n}', payload.restricted) : t('sc.clean');
         state.classList.toggle('error', Boolean(payload.restricted)); return;
       }
       state.textContent = payload.conflicts ? payload.conflicts + ' conflict(s)' : payload.entries.length + ' change(s)'; state.classList.toggle('error', payload.conflicts > 0);
@@ -137,7 +150,7 @@
         var row = element('li', 'source-control-item');
         var checkbox = element('input'); checkbox.type = 'checkbox'; checkbox.setAttribute('aria-label', 'Select ' + item.path);
         checkbox.addEventListener('change', function() { if (checkbox.checked) { selected.add(item.path); } else { selected.delete(item.path); } });
-        var name = element('button', 'source-control-file', item.path); name.type = 'button'; name.title = 'Open diff for ' + item.path;
+        var name = element('button', 'source-control-file', item.path); name.type = 'button'; name.title = t('sc.opendiff').replace('{path}', item.path);
         name.addEventListener('click', function() { openDiff(item); });
         var kind = element('span', 'source-control-kind', statusKind(item));
         var stagedDiff = element('button', 'source-control-staged-diff', 'Diff staged'); stagedDiff.type = 'button'; stagedDiff.hidden = !item.staged;
@@ -149,9 +162,9 @@
       });
     }
     function refreshStatus() {
-      state.textContent = 'Checking repository…'; state.classList.remove('error');
+      state.textContent = t('sc.checking'); state.classList.remove('error');
       return api('/status?project=' + encodeURIComponent(project())).then(renderStatus).catch(function(error) {
-        statusData = null; repository = ''; branch.textContent = 'No repository'; updateBadge(); fail(error);
+        statusData = null; repository = ''; branch.textContent = t('sc.norepo'); updateBadge(); fail(error);
       });
     }
     function scheduleRefresh() { if (refreshTimer) { windowObject.clearTimeout(refreshTimer); } refreshTimer = windowObject.setTimeout(function() { if (!panel.hidden) { refreshStatus(); } }, 180); }
@@ -161,17 +174,17 @@
     }
     function blockDirty(paths) {
       var dirty = dirtyWorkspacePaths(controller.state.documents, repository, paths);
-      if (dirty.length) { state.textContent = 'Save or discard Monaco changes before this operation.'; state.classList.add('error'); return true; }
+      if (dirty.length) { state.textContent = t('sc.savefirst'); state.classList.add('error'); return true; }
       return false;
     }
     function mutateSelection(endpoint, staged) {
-      var paths = selectedItems(staged); if (!paths.length) { state.textContent = 'Select files compatible with this action.'; return; }
+      var paths = selectedItems(staged); if (!paths.length) { state.textContent = t('sc.selectfiles'); return; }
       if (endpoint === '/stage' && blockDirty(paths)) { return; }
       post(endpoint, { project: project(), paths: paths }).then(function(result) { diffPanel.hidden = true; renderStatus(result); }).catch(fail);
     }
     function openDiff(item, forceStaged) {
       var staged = forceStaged === true || (item.staged && item.worktree === '.');
-      state.textContent = 'Generating local diff…';
+      state.textContent = t('sc.gendiff');
       api('/diff?project=' + encodeURIComponent(project()) + '&path=' + encodeURIComponent(item.path) + '&staged=' + String(staged)).then(function(result) {
         diffPanel.hidden = false; diffTitle.textContent = (result.staged ? 'INDEX → HEAD · ' : 'WORKTREE → INDEX · ') + result.path;
         diffText.textContent = result.diff || 'No text differences.';
@@ -181,14 +194,14 @@
             controller.navigate(joinPath(repository, result.path), line, 1);
           }); hunkNav.appendChild(button);
         });
-        state.textContent = 'Local Git diff. No changes were applied.';
+        state.textContent = t('sc.nolocal');
       }).catch(fail);
     }
     function commitFlow() {
-      ask({ title: 'LOCAL COMMIT', message: 'A message is required. Amend, signing, push, and hooks are not allowed.', input: true, label: 'Message', confirm: 'Preview' }).then(function(answer) {
+      ask({ title: t('sc.commit.title'), message: t('sc.commit.msg'), input: true, label: t('sc.message'), confirm: t('ws.preview') }).then(function(answer) {
         if (!answer) { return; }
         return post('/commit/preview', { project: project(), message: answer.value }).then(function(preview) {
-          return ask({ title: 'APPROVE COMMIT', message: preview.files.length + ' staged file(s) · “' + preview.message + '”', confirm: 'Create local commit' }).then(function(approval) {
+          return ask({ title: t('sc.approve.title'), message: t('sc.stagedfiles').replace('{n}', preview.files.length) + '“' + preview.message + '”', confirm: t('sc.createcommit') }).then(function(approval) {
             if (!approval) { return; }
             return post('/commit/apply', { token: preview.token }).then(function(result) {
               state.textContent = '✓ Commit ' + result.hash + ' · ' + result.message; return refreshStatus();
@@ -201,19 +214,19 @@
     function branchFlow() {
       api('/branches?project=' + encodeURIComponent(project())).then(function(result) {
         var names = result.branches.map(function(item) { return item.name; });
-        return ask({ title: 'LOCAL BRANCHES', message: 'Select an existing branch. Force is not used.', choices: names, confirm: 'Switch branch' }).then(function(answer) {
+        return ask({ title: t('sc.branches.title'), message: t('sc.branches.msg'), choices: names, confirm: t('sc.switchbranch') }).then(function(answer) {
           if (answer) { return switchBranch(answer.choice, false); }
         });
       }).catch(fail);
     }
     function newBranchFlow() {
-      ask({ title: 'NEW LOCAL BRANCH', message: 'No branches will be deleted and force will not be used.', input: true, label: 'Name', confirm: 'Create and switch' }).then(function(created) {
+      ask({ title: t('sc.newbranch.title'), message: t('sc.newbranch.msg'), input: true, label: t('dash.f.name'), confirm: t('sc.createswitch') }).then(function(created) {
         if (created) { return switchBranch(created.value, true); }
       }).catch(fail);
     }
     function switchBranch(name, create) {
-      if (anyDirty()) { state.textContent = 'Save or discard all Monaco changes before switching branches.'; state.classList.add('error'); return Promise.resolve(); }
-      return ask({ title: 'CONFIRM BRANCH SWITCH', message: (create ? 'Create and switch to ' : 'Switch to ') + name, confirm: 'Confirm' }).then(function(approval) {
+      if (anyDirty()) { state.textContent = t('sc.savebranches'); state.classList.add('error'); return Promise.resolve(); }
+      return ask({ title: t('sc.confirmswitch'), message: (create ? t('sc.createswitchto') : t('sc.switchto')) + name, confirm: t('sc.confirm') }).then(function(approval) {
         if (!approval) { return; }
         return post('/switch', { project: project(), branch: name, create: create }).then(function(result) {
           return controller.reloadDocuments().then(function() {
@@ -225,8 +238,8 @@
     function discardFlow(item) {
       if (blockDirty([item.path])) { return; }
       post('/discard/preview', { project: project(), path: item.path }).then(function(preview) {
-        diffPanel.hidden = false; diffTitle.textContent = 'DISCARD PREVIEW · ' + preview.path; diffText.textContent = preview.diff;
-        return ask({ title: 'DISCARD CHANGES', message: preview.path + ' · This action restores only this file and does not use reset or clean.', confirm: 'Discard file' }).then(function(approval) {
+        diffPanel.hidden = false; diffTitle.textContent = t('sc.discardpreview') + preview.path; diffText.textContent = preview.diff;
+        return ask({ title: t('sc.discard.title'), message: preview.path + t('sc.discard.msg'), confirm: t('sc.discardfile') }).then(function(approval) {
           if (!approval) { return; }
           return post('/discard/apply', { token: preview.token }).then(function(result) {
             return controller.reloadDocuments([joinPath(repository, result.path)]).then(function() {

@@ -38,6 +38,10 @@
     var discovery = { files: [], total: 0 }, scripts = [], results = new Map(), lastRequest = null;
     var currentRunId = '', currentRequest = null, queue = [], pollTimer = null, generation = 0;
 
+    function t(key) {
+      var i18n = windowObject.GeramI18n;
+      return (i18n && i18n.t) ? i18n.t(key) : key;
+    }
     function node(tag, className, text) {
       var item = documentObject.createElement(tag); if (className) { item.className = className; }
       if (text !== undefined) { item.textContent = text; } return item;
@@ -53,28 +57,28 @@
       if (controller.state.has(path)) { return controller.navigate(path, line || 1, column || 1); }
       return controller.api.read(path).then(function(file) {
         controller.state.load(file); return controller.navigate(path, line || 1, column || 1);
-      }).catch(function() { status.textContent = 'Could not open the related location.'; return false; });
+      }).catch(function() { status.textContent = t('test.openfail'); return false; });
     }
 
-    var panel = node('section', 'testing-panel'); panel.id = 'testingPanel'; panel.hidden = true; panel.setAttribute('aria-hidden', 'true'); panel.setAttribute('aria-label', 'Safe testing');
+    var panel = node('section', 'testing-panel'); panel.id = 'testingPanel'; panel.hidden = true; panel.setAttribute('aria-hidden', 'true'); panel.setAttribute('aria-label', t('test.panel.aria'));
     var header = node('div', 'testing-head'); var title = node('h3', '', 'TESTING · BUBBLEWRAP');
-    var counter = node('span', 'testing-counter', '0/0'); var refresh = node('button', '', '↻'); refresh.type = 'button'; refresh.title = 'Rediscover tests';
-    var close = node('button', '', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Close Testing');
+    var counter = node('span', 'testing-counter', '0/0'); var refresh = node('button', '', '↻'); refresh.type = 'button'; refresh.title = t('test.rediscover');
+    var close = node('button', '', '×'); close.type = 'button'; close.setAttribute('aria-label', t('test.close.aria'));
     header.appendChild(title); header.appendChild(counter); header.appendChild(refresh); header.appendChild(close);
-    var notice = node('p', 'testing-notice', 'TestRunSpec → Sandbox Guard → Bubblewrap → Terminal Watcher. No shell, network, or fallback.');
-    var status = node('p', 'testing-status', 'Discovery pending.'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+    var notice = node('p', 'testing-notice', t('test.notice'));
+    var status = node('p', 'testing-status', t('test.pending')); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     var actions = node('div', 'testing-actions');
     function action(label, handler) { var button = node('button', '', label); button.type = 'button'; button.addEventListener('click', handler); actions.appendChild(button); return button; }
-    var runActiveButton = action('Run file', runActiveFile);
-    var runAllButton = action('Run all', runAll);
-    var cancelButton = action('Cancel', cancel); cancelButton.hidden = true;
-    var repeatButton = action('Repeat last', repeatLast); repeatButton.disabled = true;
-    var clearButton = action('Clear results', clearResults);
-    var list = node('ul', 'testing-list'); list.setAttribute('aria-label', 'Detected tests and scripts');
+    var runActiveButton = action(t('test.runfile'), runActiveFile);
+    var runAllButton = action(t('test.runall'), runAll);
+    var cancelButton = action(t('common.cancel'), cancel); cancelButton.hidden = true;
+    var repeatButton = action(t('test.repeat'), repeatLast); repeatButton.disabled = true;
+    var clearButton = action(t('test.clear'), clearResults);
+    var list = node('ul', 'testing-list'); list.setAttribute('aria-label', t('test.list.aria'));
     var detail = node('section', 'testing-detail'); detail.hidden = true;
     var detailHead = node('div', 'testing-detail-head'); var detailTitle = node('strong', '', 'RESULT');
-    var navigate = node('button', '', 'Open location'); navigate.type = 'button'; navigate.hidden = true;
-    var detailClose = node('button', '', '×'); detailClose.type = 'button'; detailClose.setAttribute('aria-label', 'Close result');
+    var navigate = node('button', '', t('test.openloc')); navigate.type = 'button'; navigate.hidden = true;
+    var detailClose = node('button', '', '×'); detailClose.type = 'button'; detailClose.setAttribute('aria-label', t('test.closeresult.aria'));
     detailHead.appendChild(detailTitle); detailHead.appendChild(navigate); detailHead.appendChild(detailClose);
     var meta = node('p', 'testing-meta'); var stdoutLabel = node('strong', '', 'stdout'); var stdout = node('pre', 'testing-output');
     var stderrLabel = node('strong', '', 'stderr'); var stderr = node('pre', 'testing-output error');
@@ -114,7 +118,7 @@
       updateCounter(); runAllButton.disabled = Boolean(currentRunId) || discovery.files.length === 0; runActiveButton.disabled = Boolean(currentRunId) || !/\.(?:py|js)$/i.test(controller.activePath() || '');
     }
     function discover() {
-      var selectedGeneration = ++generation; status.textContent = 'Analyzing AST without importing modules…';
+      var selectedGeneration = ++generation; status.textContent = t('test.analyzing');
       return Promise.all([request('/api/testing/discovery'), controller.api.tree()]).then(function(values) {
         if (selectedGeneration !== generation) { return; }
         discovery = values[0]; scripts = (values[1].entries || []).filter(function(entry) { return entry.type === 'file' && entry.editable !== false && /\.js$/i.test(entry.path); }).map(function(entry) { return entry.path; });
@@ -123,7 +127,7 @@
     }
     function ensureSaved(path) {
       var info = controller.documentInfo(path); if (!info || !info.modified) { return Promise.resolve(true); }
-      if (!windowObject.confirm('There are unsaved changes in ' + path + '. Save them before running?')) { return Promise.resolve(false); }
+      if (!windowObject.confirm(t('test.unsaved').replace('{path}', path))) { return Promise.resolve(false); }
       var original = controller.activePath();
       return controller.navigate(path, 1, 1).then(function() { return controller.save(); }).then(function(result) {
         if (!result || !result.ok || (controller.documentInfo(path) && controller.documentInfo(path).modified)) { return false; }
@@ -139,17 +143,17 @@
       if (!queue.length) { currentRequest = null; cancelButton.hidden = true; render(); return; }
       var item = queue.shift(); currentRequest = item; lastRequest = Object.assign({}, item); repeatButton.disabled = false;
       ensureSaved(item.path).then(function(saved) {
-        if (!saved) { status.textContent = 'Run cancelled: the current version was not saved.'; queue = []; currentRequest = null; render(); return null; }
-        results.set(resultKey(item), { status: 'queued', duration_seconds: null }); render(); status.textContent = 'Pendiente: ' + item.label;
+        if (!saved) { status.textContent = t('test.notsaved'); queue = []; currentRequest = null; render(); return null; }
+        results.set(resultKey(item), { status: 'queued', duration_seconds: null }); render(); status.textContent = t('test.queued') + item.label;
         return post('/api/testing/runs', { runner: item.runner, target: item.path, selector: item.selector || '', timeout_seconds: 30 });
       }).then(function(result) {
         if (!result) { return; }
         if (!result.run_id || !['queued', 'running'].includes(result.status)) {
-          results.set(resultKey(item), result); status.textContent = result.error === 'sandbox_unavailable' ? 'Bubblewrap is unavailable; the run was rejected.' : (result.error === 'node_unavailable' ? 'A trusted Node runtime is unavailable.' : 'The secure runner rejected the run.');
+          results.set(resultKey(item), result); status.textContent = result.error === 'sandbox_unavailable' ? t('test.nobwrap') : (result.error === 'node_unavailable' ? t('test.nonode') : t('test.rejected'));
           queue = []; currentRequest = null; render(); return;
         }
         currentRunId = result.run_id; cancelButton.hidden = false; poll();
-      }).catch(function() { status.textContent = 'The secure runner could not be started.'; queue = []; currentRequest = null; render(); });
+      }).catch(function() { status.textContent = t('test.startfail'); queue = []; currentRequest = null; render(); });
     }
     function poll() {
       if (!currentRunId || !currentRequest) { return; }
@@ -163,7 +167,7 @@
         currentRunId = ''; cancelButton.hidden = true; showResult(requestedItem, result); runNext();
       }).catch(function() {
         if (currentRunId !== requestedRunId) { return; }
-        status.textContent = 'Terminal Watcher could not be queried.'; currentRunId = ''; queue = []; render();
+        status.textContent = t('test.twfail'); currentRunId = ''; queue = []; render();
       });
     }
     function showResult(item, result) {
@@ -176,7 +180,7 @@
     function cancel() {
       queue = [];
       if (!currentRunId) { return; }
-      post('/api/terminal-watcher/runs/' + encodeURIComponent(currentRunId) + '/cancel', {}).then(function() { if (pollTimer) { windowObject.clearTimeout(pollTimer); } poll(); }).catch(function() { status.textContent = 'The run could not be cancelled.'; });
+      post('/api/terminal-watcher/runs/' + encodeURIComponent(currentRunId) + '/cancel', {}).then(function() { if (pollTimer) { windowObject.clearTimeout(pollTimer); } poll(); }).catch(function() { status.textContent = t('test.cancelfail'); });
     }
     function runAll() {
       enqueue(discovery.files.map(function(file) { return { runner: 'python_unittest', path: file.path, selector: '', label: file.path, line: 1, kind: 'file-tests' }; }));
@@ -186,7 +190,7 @@
       enqueue([{ runner: /\.js$/i.test(path) ? 'node_script' : 'python_file', path: path, selector: '', label: path, line: 1, kind: /\.js$/i.test(path) ? 'script' : 'python-file' }]);
     }
     function repeatLast() { if (lastRequest) { enqueue([Object.assign({}, lastRequest)]); } }
-    function clearResults() { results.clear(); detail.hidden = true; render(); status.textContent = 'Session results cleared.'; }
+    function clearResults() { results.clear(); detail.hidden = true; render(); status.textContent = t('test.cleared'); }
 
     var codeLensRegistered = false;
     function registerCodeLens() {

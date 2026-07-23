@@ -1,3 +1,9 @@
+// i18n: resuelve una clave del diccionario (i18n.js) en el idioma actual.
+function gt(key) {
+  var i18n = window.GeramI18n;
+  return (i18n && i18n.t) ? i18n.t(key) : key;
+}
+
 /* ============================================================
    GERAM OS v2 · NODO IRIS · script.js
    
@@ -560,7 +566,7 @@ function subirAdjunto(archivo, nombreForzado) {
     .then(function(d) {
       adjuntoPendiente = d;
       mostrarChipAdjunto(d.nombre);
-      chatInput.placeholder = 'Ask something about the attachment, or just hit send…';
+      chatInput.placeholder = gt('chat.attachph');
       chatInput.focus();
     })
     .catch(function(err) {
@@ -966,7 +972,7 @@ function crearPantallaBloqueo() {
   input.type = 'password';
   input.className = 'chat-input';
   input.style.cssText = 'max-width:260px;text-align:center;';
-  input.placeholder = 'Password';
+  input.placeholder = gt('sj.password');
 
   var boton = document.createElement('button');
   boton.className = 'chat-enviar';
@@ -989,7 +995,7 @@ function crearPantallaBloqueo() {
           esc('DESBLOQUEO CORRECTO');
           ocultarPantallaBloqueo();
         } else {
-          error.textContent = 'Incorrect password';
+          error.textContent = gt('sj.badpassword');
           input.value = '';
           input.focus();
         }
@@ -1062,7 +1068,7 @@ function crearBotonOffline() {
   btn.className = 'sentido';
   btn.id = 'btn-offline';
   btn.dataset.sentido = 'offline';
-  btn.title = 'Forzar modo offline (Ollama)';
+  btn.title = gt('sj.offline.title');
   btn.innerHTML =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
     '<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>' +
@@ -1679,20 +1685,20 @@ function _tarjetaAgente(agente) {
   var statusBadge = document.createElement('span');
   statusBadge.className = 'dashboard-card-badge';
   statusBadge.textContent = agente.loaded ? 'loaded' : (agente.origin || agente.status || 'available');
-  statusBadge.title = agente.loaded ? 'Module loaded in this process' : 'Available for this user';
+  statusBadge.title = agente.loaded ? gt('sj.loaded') : gt('sj.available');
   card.appendChild(statusBadge);
 
   if (agente.nucleo) {
     var badge = document.createElement('span');
     badge.className = 'dashboard-card-badge core';
     badge.textContent = 'core';
-    badge.title = 'Core agent — always on';
+    badge.title = gt('sj.coreagent');
     card.appendChild(badge);
   } else {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'dashboard-card-toggle ' + (agente.enabled ? 'is-on' : 'is-off');
-    btn.textContent = agente.enabled ? 'Disable' : 'Enable';
+    btn.textContent = agente.enabled ? gt('sj.disable') : gt('sj.enable');
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       btn.disabled = true;
@@ -2328,7 +2334,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     var card = $('#configAiRequired');
     var status = $('#configAiRequiredStatus');
     if (card) { card.classList.toggle('completo', configured); }
-    if (status) { status.textContent = configured ? 'Configured' : 'Review roles'; }
+    if (status) { status.textContent = configured ? gt('sj.configured') : gt('sj.reviewroles'); }
     var providers = cuerpo.querySelectorAll('#configProviderDirectory [data-provider-id]');
     Array.prototype.forEach.call(providers, function(providerCard) {
       providerCard.classList.toggle(
@@ -2686,7 +2692,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     toggle.type = 'button';
     toggle.disabled = credencial.invalid;
     if (credencial.invalid) {
-      toggle.title = 'Replace this credential before enabling it.';
+      toggle.title = gt('sj.replacecred');
     }
     toggle.addEventListener('click', function() {
       ejecutarAccionPool(function() {
@@ -2706,7 +2712,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     var eliminar = crearElemento('button', 'config-pool-boton peligro', 'Remove');
     eliminar.type = 'button';
     eliminar.addEventListener('click', function() {
-      if (!window.confirm('Remove credential "' + credencial.label + '"?')) { return; }
+      if (!window.confirm(gt('sj.removecred').replace('{label}', credencial.label))) { return; }
       ejecutarAccionPool(function() {
         return solicitarAccionPool(
           '/config/provider-keys/' + encodeURIComponent(credencial.credential_id),
@@ -2863,7 +2869,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     aplicarVistaConfig();
     cargando = true;
     cuerpo.setAttribute('aria-busy', 'true');
-    estadoEl.textContent = 'Loading configuration...';
+    estadoEl.textContent = gt('sj.loadingcfg');
     actualizarBotonGuardar();
 
     var providersRequest = solicitarJSON('/config/providers')
@@ -2891,7 +2897,7 @@ function toggleAgente(agentId, estabaHabilitado) {
         }
       }
       if (!providerResult.ok) {
-        aiError.textContent = 'Provider catalog unavailable. Other settings remain editable.';
+        aiError.textContent = gt('sj.catalogfail');
         aiError.classList.add('activo');
       }
 
@@ -2904,7 +2910,7 @@ function toggleAgente(agentId, estabaHabilitado) {
         }
       }
       if (!poolResult.ok || !providerResult.ok) {
-        poolError.textContent = 'Credential pools are unavailable. Other settings remain editable.';
+        poolError.textContent = gt('sj.poolsfail');
         poolError.classList.add('activo');
       }
 
@@ -2914,11 +2920,11 @@ function toggleAgente(agentId, estabaHabilitado) {
           estadoEl.textContent = providerResult.ok ? '' : 'AI provider catalog unavailable.';
         } catch (_errorConfiguracion) {
           configuracionLista = false;
-          estadoEl.textContent = 'Could not load the local configuration.';
+          estadoEl.textContent = gt('sj.cfgloadfail');
         }
       } else {
         configuracionLista = false;
-        estadoEl.textContent = 'Could not load the local configuration.';
+        estadoEl.textContent = gt('sj.cfgloadfail');
       }
 
       cargando = false;
@@ -3001,13 +3007,13 @@ function toggleAgente(agentId, estabaHabilitado) {
       control.setAttribute('aria-invalid', 'true');
       mostrarNotaCampo(control, mensaje);
       control.focus();
-      estadoEl.textContent = 'Revisa el campo resaltado.';
+      estadoEl.textContent = gt('sj.checkfield');
       return;
     }
     var aiError = $('#configAiRolesError');
     aiError.textContent = mensaje;
     aiError.classList.add('activo');
-    estadoEl.textContent = 'Check the AI Roles configuration.';
+    estadoEl.textContent = gt('sj.checkroles');
   }
 
   // Poll health until the existing restart flow brings the backend back.
@@ -3021,7 +3027,7 @@ function toggleAgente(agentId, estabaHabilitado) {
         .then(function(response) {
           if (response.ok) {
             clearInterval(intervalo);
-            estadoEl.textContent = 'Backend arriba, recargando...';
+            estadoEl.textContent = gt('sj.backendup');
             location.reload();
           }
         })
@@ -3049,7 +3055,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     }
 
     guardando = true;
-    estadoEl.textContent = 'Saving...';
+    estadoEl.textContent = gt('ws.saving');
     actualizarBotonGuardar();
 
     fetch('/config/keys', {
@@ -3059,7 +3065,7 @@ function toggleAgente(agentId, estabaHabilitado) {
     })
       .then(procesarRespuestaGuardado)
       .then(function() {
-        estadoEl.textContent = 'Reiniciando el backend...';
+        estadoEl.textContent = gt('sj.restarting');
         return fetch('/config/restart', { method: 'POST' });
       })
       .then(function(response) {
@@ -3071,7 +3077,7 @@ function toggleAgente(agentId, estabaHabilitado) {
         if (error.validation) {
           mostrarErrorValidacion(error.validation);
         } else {
-          estadoEl.textContent = 'Could not save the configuration. Try again.';
+          estadoEl.textContent = gt('sj.cfgsavefail');
         }
         actualizarBotonGuardar();
       });
@@ -3195,18 +3201,18 @@ function toggleAgente(agentId, estabaHabilitado) {
       GRUPOS_INTEGRACIONES.forEach(function(g) {
         if (g.id === navConfig.integracion) { grupo = g; }
       });
-      titulo.textContent = grupo ? grupo.label : 'Integrations';
-      descripcion.textContent = 'Connect this service. Credentials stay on this device.';
+      titulo.textContent = grupo ? grupo.label : gt('sj.integrations');
+      descripcion.textContent = gt('sj.connectservice');
       return;
     }
     if (navConfig.vista === 'geram') {
-      titulo.textContent = 'Profile, appearance & privacy';
-      descripcion.textContent = 'Personalize GERAM and control which local paths remain blocked.';
+      titulo.textContent = gt('sj.profiletitle');
+      descripcion.textContent = gt('sj.profiledesc');
       return;
     }
     if (navConfig.proveedor === '__overview__') {
-      titulo.textContent = 'AI provider directory';
-      descripcion.textContent = 'Online and local providers available to I.R.I.S. and A.R.E.S.';
+      titulo.textContent = gt('sj.providerdir');
+      descripcion.textContent = gt('sj.providersdesc');
       return;
     }
     if (navConfig.proveedor === '__roles__') {
@@ -3276,13 +3282,13 @@ function toggleAgente(agentId, estabaHabilitado) {
       .then(function(payload) {
         (payload.integrations || []).forEach(function(item) {
           var status = document.getElementById('configIntegrationStatus-' + item.id);
-          if (status) { status.textContent = 'Connection state: ' + String(item.state || 'available'); }
+          if (status) { status.textContent = gt('sj.connstate') + String(item.state || 'available'); }
         });
       })
       .catch(function() {
         GRUPOS_INTEGRACIONES.forEach(function(group) {
           var status = document.getElementById('configIntegrationStatus-' + group.id);
-          if (status) { status.textContent = 'Connection state: unavailable'; }
+          if (status) { status.textContent = gt('sj.connstate') + 'unavailable'; }
         });
       });
     if (btnCerrar) { btnCerrar.focus(); }

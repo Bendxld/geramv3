@@ -20,7 +20,7 @@
       var err = documentObject.createElement('pre'); err.textContent = run.stderr || ''; err.className = 'terminal-watcher-stderr';
       item.appendChild(title); item.appendChild(meta); item.appendChild(out); item.appendChild(err);
       if (run.status === 'running' || run.status === 'queued') {
-        var button = documentObject.createElement('button'); button.type = 'button'; button.textContent = 'Cancel';
+        var button = documentObject.createElement('button'); button.type = 'button'; button.textContent = (root.GeramI18n ? root.GeramI18n.t('common.cancel') : 'Cancel');
         button.addEventListener('click', function () { fetch('/api/terminal-watcher/runs/' + encodeURIComponent(run.run_id) + '/cancel', { method: 'POST' }).then(poll); }); item.appendChild(button);
       }
       list.appendChild(item);

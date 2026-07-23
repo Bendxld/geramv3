@@ -1,6 +1,10 @@
 /* Reviewable A.R.E.S. workspace proposals. Content stays in memory only. */
 (function(root) {
   'use strict';
+  function t(key) {
+    var i18n = (typeof window !== 'undefined' ? window : {}).GeramI18n;
+    return (i18n && i18n.t) ? i18n.t(key) : key;
+  }
   if (!root || !root.document) { return; }
   var documentObject = root.document;
   var controller = root.GeramWorkspaceController;
@@ -67,7 +71,7 @@
       label.textContent = path;
       var remove = documentObject.createElement('button');
       remove.type = 'button';
-      remove.textContent = 'Quitar';
+      remove.textContent = t('aw.remove');
       remove.setAttribute('aria-label', 'Quitar ' + path);
       remove.addEventListener('click', function() { selected.delete(path); renderSelected(); });
       row.appendChild(label);
@@ -80,9 +84,9 @@
   function addActive() {
     var path = controller.activePath();
     var info = path ? controller.documentInfo(path) : null;
-    if (!info) { setStatus('Open a text file before including it.', true); return; }
-    if (info.modified) { setStatus('Save or review local changes before requesting a proposal.', true); return; }
-    if (selected.size >= 3 && !selected.has(path)) { setStatus('Maximum of 3 files per proposal.', true); return; }
+    if (!info) { setStatus(t('aw.opentext'), true); return; }
+    if (info.modified) { setStatus(t('aw.savereview'), true); return; }
+    if (selected.size >= 3 && !selected.has(path)) { setStatus(t('aw.max3'), true); return; }
     selected.set(path, { path: path, base_version: info.version });
     renderSelected();
     setStatus('', false);
@@ -108,7 +112,7 @@
       diff.appendChild(row);
     });
     proposalPanel.hidden = false;
-    applyButton.textContent = 'Approve proposal';
+    applyButton.textContent = t('aw.approve');
     applyButton.disabled = false;
     rejectButton.disabled = false;
   }
@@ -119,7 +123,7 @@
     approval = null;
     proposalPanel.hidden = true;
     renderSelected();
-    setStatus('Generating reviewable proposal…', false);
+    setStatus(t('aw.generating'), false);
     fetch('/api/ares/proposals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -129,7 +133,7 @@
       return response.json();
     }).then(function(data) {
       renderProposal(data);
-      setStatus('Review the diff before applying it.', false);
+      setStatus(t('aw.review'), false);
     }).catch(function(error) {
       proposal = null;
       approval = null;
@@ -152,7 +156,7 @@
       proposalPanel.hidden = true;
       proposal = null;
       approval = null;
-      setStatus('Proposal rejected.', false);
+      setStatus(t('aw.rejected'), false);
     }).catch(function(error) { setStatus(safeMessage(error.message), true); })
       .then(function() { busy = false; });
   }
@@ -161,7 +165,7 @@
     if (!proposal || busy) { return; }
     for (var index = 0; index < proposal.changes.length; index += 1) {
       if (controller.hasLocalChanges(proposal.changes[index].path)) {
-        setStatus('There are local changes; the proposal was not applied.', true);
+        setStatus(t('aw.localchanges'), true);
         return;
       }
     }
@@ -185,7 +189,7 @@
         approval = null;
         selected.clear();
         renderSelected();
-        setStatus('Proposal applied and Monaco synchronized.', false);
+        setStatus(t('aw.applied'), false);
       }).catch(function(error) {
         if (error.message === 'version_conflict' || error.message === 'proposal_integrity_failed' || error.message === 'proposal_expired') {
           proposal = null;
@@ -211,8 +215,8 @@
       return response.json();
     }).then(function(data) {
       approval = data;
-      applyButton.textContent = 'Apply proposal';
-      setStatus('Proposal approved. Click Apply proposal to write the files.', false);
+      applyButton.textContent = t('ares.apply');
+      setStatus(t('aw.approved'), false);
     }).catch(function(error) {
       if (error.message === 'version_conflict' || error.message === 'proposal_integrity_failed' || error.message === 'proposal_expired') {
         proposal = null;
