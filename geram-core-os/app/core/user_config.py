@@ -32,6 +32,11 @@ LEGACY_CONFIG_PATH = ROOT_DIR / ".geram-config.json"
 # Vistas admitidas para la identidad del núcleo en el HUD.
 CORE_IDENTITY_VIEWS = ("core", "pet", "minimal")
 
+# Idioma de respuesta del asistente. "auto" = detecta el idioma del mensaje
+# (comportamiento de siempre); "es"/"en" = fuerza español/inglés sin importar
+# en qué idioma escriba el usuario. Ver orchestrator._instrucciones_de_sistema.
+RESPONSE_LANGUAGES = ("auto", "es", "en")
+
 # Colores CSS: solo hex (#rgb / #rrggbb / #rrggbbaa). Restringir a hex evita
 # inyección de CSS arbitrario cuando el valor se escribe en una variable
 # --principal del HUD/Monaco.
@@ -45,6 +50,15 @@ class UserProfile(BaseModel):
     age: int | None = Field(default=None, ge=0, le=150)
     system_prompt_override: str = Field(default="", max_length=8000)
     use_tts_notifications: bool = False
+    # "auto" | "es" | "en" — idioma en el que responde el asistente.
+    language: str = Field(default="auto")
+
+    @field_validator("language")
+    @classmethod
+    def _validar_idioma(cls, value: str) -> str:
+        if value not in RESPONSE_LANGUAGES:
+            raise ValueError(f"language must be one of {RESPONSE_LANGUAGES}")
+        return value
 
 
 class UiTheme(BaseModel):
@@ -194,6 +208,12 @@ def load_config_safe(path: Path = CONFIG_PATH) -> GeramConfig:
 def system_prompt_override(path: Path = CONFIG_PATH) -> str:
     """The user's global system prompt, or '' if unset/unavailable."""
     return load_config_safe(path).user_profile.system_prompt_override.strip()
+
+
+def response_language(path: Path = CONFIG_PATH) -> str:
+    """The user's chosen assistant language: 'auto' (default), 'es' or 'en'.
+    Fail-safe: 'auto' if the config is missing/unreadable."""
+    return load_config_safe(path).user_profile.language
 
 
 def _normalize(entry: str) -> str:

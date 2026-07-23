@@ -32,7 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.core import ares_tools
 from app.core.providers.base import ProviderConfigurationError, ProviderError
 from app.core.providers.registry import provider_registry
-from app.core.user_config import system_prompt_override
+from app.core.user_config import response_language, system_prompt_override
 from app.core.security import require_local_origin, require_localhost
 from app.core.workspace import MAX_FILE_BYTES, WorkspaceError
 from app.api.workspace import workspace_service
@@ -611,11 +611,27 @@ def _context_prompt(instruction: str, files: list[dict[str, str]]) -> str:
     prefijo_usuario = (
         f"[USER SYSTEM PROMPT]\n{override}\n\n" if override else ""
     )
+    idioma = response_language()
+    if idioma == "es":
+        regla_idioma = (
+            "Write all human-readable summary and warning text in Spanish "
+            "(Mexican Spanish), regardless of the language of the user instruction."
+        )
+    elif idioma == "en":
+        regla_idioma = (
+            "Write all human-readable summary and warning text in English, "
+            "regardless of the language of the user instruction."
+        )
+    else:  # "auto"
+        regla_idioma = (
+            "Write all human-readable summary and warning text in the same "
+            "language as the user instruction. If it mixes languages, use the "
+            "predominant one."
+        )
     return (
         prefijo_usuario
-        + "You are A.R.E.S., a local-first code review assistant. Write all "
-        "human-readable summary and warning text in the same language as the "
-        "user instruction. If it mixes languages, use the predominant one.\n"
+        + "You are A.R.E.S., a local-first code review assistant. "
+        + regla_idioma + "\n"
         "OUTPUT REQUIREMENT: return exactly one valid JSON object. Do not use "
         "Markdown, code fences, commentary, prefixes, or suffixes. The object "
         "must have exactly these top-level fields: "

@@ -69,6 +69,7 @@
     $('gsName').value = perfil.name || '';
     $('gsAge').value = (perfil.age === null || perfil.age === undefined) ? '' : perfil.age;
     $('gsPrompt').value = perfil.system_prompt_override || '';
+    $('gsLanguage').value = perfil.language || 'auto';
     $('gsTts').checked = Boolean(perfil.use_tts_notifications);
 
     $('gsIdentity').value = tema.core_identity_view || 'core';
@@ -90,6 +91,7 @@
         name: $('gsName').value.trim(),
         age: edadTexto === '' ? null : parseInt(edadTexto, 10),
         system_prompt_override: $('gsPrompt').value,
+        language: $('gsLanguage').value,
         use_tts_notifications: $('gsTts').checked
       },
       ui_theme: {

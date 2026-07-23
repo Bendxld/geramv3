@@ -619,6 +619,12 @@
             <input id="gsAge" type="number" min="0" max="150" inputmode="numeric">
             <label for="gsPrompt">Global personalization prompt</label>
             <textarea id="gsPrompt" maxlength="8000" rows="4" placeholder="I'm a developer; adapt explanations to my preferences..."></textarea>
+            <label for="gsLanguage">Assistant language</label>
+            <select id="gsLanguage">
+              <option value="auto">Auto (match my message)</option>
+              <option value="es">Español (siempre)</option>
+              <option value="en">English (always)</option>
+            </select>
             <div class="gs-fila">
               <input id="gsTts" type="checkbox">
               <label for="gsTts">Voice notifications (TTS)</label>
