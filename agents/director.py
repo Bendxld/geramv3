@@ -686,6 +686,19 @@ PALABRAS_NOTION = (
     "notion", "guárdalo", "guardalo", "súbelo", "subelo",
     "mándalo", "mandalo", "mándamelo", "mandamelo", "apúntalo", "apuntalo",
 )
+
+# "qué bases tengo en Notion" / "lista mis bases de Notion": lista de solo
+# lectura las bases (databases) que el usuario registró en
+# config/notion_bases.json (ver notion_memoria.listar_bases). Todas las frases
+# incluyen "bases" para no pisar CONOCIMIENTO genérico ("qué...") ni otras
+# intenciones; se revisa al PRINCIPIO de _detectar_intencion para que gane.
+PALABRAS_NOTION_BASES = (
+    "qué bases tengo en notion", "que bases tengo en notion",
+    "qué bases de notion", "que bases de notion", "bases de notion", "bases en notion",
+    "mis bases de notion", "cuáles bases tengo en notion", "cuales bases tengo en notion",
+    "lista de bases de notion", "listar bases de notion", "lista mis bases de notion",
+    "qué bases tengo", "que bases tengo", "cuántas bases tengo", "cuantas bases tengo",
+)
 # Grupos "independientemente accionables" para el conteo de
 # _es_compuesto. Deliberadamente NO incluye conocimiento/web/chat
 # (demasiado genéricos, dispararían falsos positivos en frases
@@ -721,6 +734,11 @@ _SYSTEM_PROMPT_GROQ_NOTION = (
 
 def _detectar_intencion(texto):
     texto_bajo = texto.lower()
+    # "qué bases tengo en Notion" va PRIMERO: es una frase específica de solo
+    # lectura que, si no, caería en CONOCIMIENTO ("qué...") o chat. Ver
+    # PALABRAS_NOTION_BASES y notion_memoria.listar_bases.
+    if any(p in texto_bajo for p in PALABRAS_NOTION_BASES):
+        return "notion_bases"
     # Fase F PRIMERO que todo lo demás (incluido classroom): "busca mi
     # tarea de historia" (archivos, busca un ARCHIVO) y "busca en lo
     # que copié algo de tarea" (clipboard) contienen la palabra "tarea"
@@ -2790,6 +2808,8 @@ def _rutear_por_intencion(texto_usuario, historial, system_prompt):
         return _procesar_abrir_proyecto(texto_usuario)
     if intencion == "briefing":
         return _procesar_briefing(texto_usuario)
+    if intencion == "notion_bases":
+        return notion_memoria.listar_bases()
     if intencion == "conocimiento":
         return _procesar_conocimiento(texto_usuario, historial, system_prompt)
     if intencion == "investigacion":

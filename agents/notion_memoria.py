@@ -106,8 +106,9 @@ def elegir_base(texto=""):
 
 def listar_bases():
     """Texto legible con las bases registradas, para 'qué bases tengo en
-    Notion'. Sin bases, invita a crear config/notion_bases.json."""
-    bases = cargar_bases()
+    Notion'. Sin bases, invita a crear config/notion_bases.json. Relee el
+    archivo (recargar=True) para reflejar bases recién agregadas sin reiniciar."""
+    bases = cargar_bases(recargar=True)
     if not bases:
         return ("No tienes bases de Notion registradas todavía. Crea "
                 "config/notion_bases.json (copia config/notion_bases.example.json) "
