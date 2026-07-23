@@ -130,8 +130,19 @@ Copia `.env.example` a `.env`. **Todas las claves son opcionales** — sin ningu
 |---|---|
 | `GEMINI_FREE_1…5`, `GROQ_FREE_1…5` | Proveedores de IA de IRIS (round-robin entre varias keys) |
 | `OLLAMA_MODEL` | Modelo local de Ollama |
+| `SUPABASE_URL`, `SUPABASE_KEY` | **Memoria a largo plazo** de IRIS (opcional — ver abajo) |
 | `NOTION_API_KEY`, `TELEGRAM_BOT_TOKEN`, `SPOTIFY_*`, `GOOGLE_CALENDAR_CREDENTIALS_PATH` … | Integraciones de los agentes de IRIS |
 | `PIPER_VOICE_PATH`, `EDGE_TTS_VOICE`, `WHISPER_MODEL_SIZE` | Voz (TTS/ASR) de IRIS |
+
+**Memoria a largo plazo (opcional, con TU propio Supabase).** IRIS puede
+recordar cosas entre sesiones guardándolas en una tabla `memorias` de **tu
+propio** proyecto de [Supabase](https://supabase.com) (plan gratis). Pon
+`SUPABASE_URL` y `SUPABASE_KEY` en tu `.env` y la memoria se activa sola; **si
+las dejas vacías, el asistente funciona igual, solo sin memoria persistente**
+(no rompe nada). Los datos quedan en tu cuenta de Supabase, no en la nuestra.
+*(Nota: hoy la memoria es solo Supabase. `NOTION_API_KEY` es para documentos,
+pendientes, finanzas y proyectos en Notion — no es, por ahora, un backend de
+memoria del chat.)*
 
 **Proveedores de IA de A.R.E.S. (CORE OS)** se configuran **desde la interfaz**, no en `.env`: abre **Settings → API IA** y agrega tu key por proveedor (Anthropic/Claude, OpenAI, Gemini, Groq, Mistral, DeepSeek, xAI, Perplexity, Together, OpenRouter, Cerebras, Fireworks, Moonshot). Si pones **varias keys del mismo proveedor**, se usan en **round-robin**. Las credenciales quedan solo en tu equipo.
 
